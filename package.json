@@ -2,11 +2,6 @@
   "$schema": "https://json.schemastore.org/package.json",
   "name": "context-harness",
   "description": "Independent AI coding harness with interactive context management, based on OpenCode",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/vishal88736/context-harness.git"
-  },
   "homepage": "https://github.com/vishal88736/context-harness",
   "bugs": {
     "url": "https://github.com/vishal88736/context-harness/issues"
@@ -152,7 +147,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/anomalyco/opencode"
+    "url": "https://github.com/vishal88736/context-harness.git"
   },
   "license": "MIT",
   "prettier": {
