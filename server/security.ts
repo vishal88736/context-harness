@@ -14,6 +14,7 @@ import {
   stat,
   open,
   readdir,
+  chmod,
 } from "node:fs/promises";
 import path from "node:path";
 import type { Conversation, Source, Workspace } from "./schema";
@@ -43,6 +44,7 @@ export class Vault {
     }
     if (key.length !== 32)
       throw new Error("Invalid vault key. Restore the vault.key backup.");
+    await chmod(filename, 0o600);
     return new Vault(key);
   }
   encrypt(value: string) {
@@ -181,7 +183,9 @@ export async function authorizedPath(
   for (const source of conversation.config.sources.filter(
     (s) => !s.enabled && s.path,
   )) {
-    const blocked = path.resolve(workspace.root, source.path!);
+    const blocked = await checkedPath(workspace, source.path!, {
+      dataDir,
+    }).catch(() => path.resolve(workspace.root, source.path!));
     if (
       source.type === "folder" ? isWithin(blocked, target) : blocked === target
     )
@@ -191,6 +195,7 @@ export async function authorizedPath(
       );
   }
   for (const source of grants(conversation)) {
+    if (!source.path) continue;
     const grant = await checkedPath(workspace, source.path!, { dataDir }).catch(
       () => "",
     );

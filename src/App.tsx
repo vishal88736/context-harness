@@ -59,7 +59,9 @@ export function App() {
   const [search, setSearch] = useState("");
   const [sidebarMobile, setSidebarMobile] = useState(false);
   const [contextOpen, setContextOpen] = useState(
-    () => localStorage.getItem("canopy.contextOpen") !== "false",
+    () =>
+      window.innerWidth >= 1100 &&
+      localStorage.getItem("canopy.contextOpen") !== "false",
   );
   const [panelWidth, setPanelWidth] = useState(
     () => Number(localStorage.getItem("canopy.contextWidth")) || 344,
@@ -78,6 +80,7 @@ export function App() {
   const [running, setRunning] = useState<Set<string>>(new Set());
   const [progress, setProgress] = useState("");
   const [busy, setBusy] = useState(false);
+  const [navigating, setNavigating] = useState(true);
   const [saving, setSaving] = useState(0);
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [isPreview, setIsPreview] = useState(false);
@@ -116,6 +119,7 @@ export function App() {
     setData(b);
   }, []);
   async function load(id: string) {
+    setNavigating(true);
     setActiveId(id);
     activeRef.current = id;
     setSidebarMobile(false);
@@ -123,13 +127,18 @@ export function App() {
     setInspector(null);
     setError("");
     localStorage.setItem("canopy.activeConversation", id);
-    const d = await api<Detail>(`/conversations/${id}`);
-    if (activeRef.current !== id) return;
-    setDetail(d);
-    setWorkspaceId(d.conversation.workspaceId);
-    if (d.running) setRunning((prev) => new Set([...prev, id]));
+    try {
+      const d = await api<Detail>(`/conversations/${id}`);
+      if (activeRef.current !== id) return;
+      setDetail(d);
+      setWorkspaceId(d.conversation.workspaceId);
+      if (d.running) setRunning((prev) => new Set([...prev, id]));
+    } finally {
+      if (activeRef.current === id) setNavigating(false);
+    }
   }
   async function create(workspace = workspaceId) {
+    setNavigating(true);
     try {
       const c = await api<Conversation>("/conversations", "POST", {
         workspaceId: workspace,
@@ -142,6 +151,8 @@ export function App() {
       );
     } catch (e) {
       setError((e as Error).message);
+    } finally {
+      setNavigating(false);
     }
   }
   async function chooseWorkspace(id: string) {
@@ -197,6 +208,14 @@ export function App() {
   useEffect(() => {
     localStorage.setItem("canopy.contextOpen", String(contextOpen));
   }, [contextOpen]);
+  useEffect(() => {
+    const narrow = window.matchMedia("(max-width: 1099px)");
+    const adapt = () => {
+      if (narrow.matches) setContextOpen(false);
+    };
+    narrow.addEventListener("change", adapt);
+    return () => narrow.removeEventListener("change", adapt);
+  }, []);
   useEffect(() => {
     localStorage.setItem("canopy.contextWidth", String(panelWidth));
   }, [panelWidth]);
@@ -606,6 +625,7 @@ export function App() {
             </button>
           </div>
         </header>
+        {snapshot && !isPreview && (snapshot.warnings.length > 0 || snapshot.history.some(h => !h.included)) && <button className="request-notice" onClick={() => setInspector({ snapshot, preview: false, sendable: false })}><CircleAlert size={14}/><span>Some context was excluded or adjusted for this request. Inspect details.</span><ArrowLeft size={12} style={{ transform: 'rotate(135deg)' }}/></button>}
         {error && (
           <div className="app-error" role="alert">
             <CircleAlert size={16} />
@@ -652,6 +672,7 @@ export function App() {
           )}
         </div>
         <Composer
+          navigating={navigating}
           data={data}
           value={draft.prompt}
           onChange={(prompt) => updateDraft({ prompt })}

@@ -66,7 +66,10 @@ export async function createApp(options: {
       if (
         !["http:", "https:"].includes(url.protocol) ||
         !["localhost", "127.0.0.1", "[::1]"].includes(url.hostname) ||
-        ![String(options.frontendPort ?? 5173), String(req.socket.localPort)].includes(url.port)
+        ![
+          String(options.frontendPort ?? 5173),
+          String(req.socket.localPort),
+        ].includes(url.port)
       )
         return res.status(403).json({ error: "Cross-origin access denied." });
     }
@@ -255,14 +258,12 @@ export async function createApp(options: {
     store.conversation(req.params.id);
     if (agent.isRunning(req.params.id))
       throw new HttpError(409, "A response is already running.");
-    res
-      .status(200)
-      .set({
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache, no-transform",
-        Connection: "keep-alive",
-        "X-Accel-Buffering": "no",
-      });
+    res.status(200).set({
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+      "X-Accel-Buffering": "no",
+    });
     res.flushHeaders();
     const heartbeat = setInterval(() => res.write(": heartbeat\n\n"), 15_000);
     const close = () => {
@@ -394,20 +395,18 @@ export async function createApp(options: {
   app.post("/api/providers", (req, res) => {
     const input = providerSchema.parse(req.body);
     const providerId = id();
-    res
-      .status(201)
-      .json(
-        store.saveProvider(
-          {
-            ...input,
-            id: providerId,
-            baseUrl: validateProviderUrl(input.baseUrl),
-            keyConfigured: !!input.apiKey,
-            apiKey: undefined,
-          },
-          vault.encrypt(input.apiKey ?? ""),
-        ),
-      );
+    res.status(201).json(
+      store.saveProvider(
+        {
+          ...input,
+          id: providerId,
+          baseUrl: validateProviderUrl(input.baseUrl),
+          keyConfigured: !!input.apiKey,
+          apiKey: undefined,
+        },
+        vault.encrypt(input.apiKey ?? ""),
+      ),
+    );
   });
   app.put("/api/providers/:id", (req, res) => {
     const old = store.providers().find((p) => p.id === req.params.id);
@@ -559,14 +558,12 @@ export async function createApp(options: {
               .map((i) => `${i.path.join(".")}: ${i.message}`)
               .join("; ")
           : error.message;
-      res
-        .status(status)
-        .json({
-          error: redact(
-            message || "Unexpected server error",
-            providers.secrets(),
-          ),
-        });
+      res.status(status).json({
+        error: redact(
+          message || "Unexpected server error",
+          providers.secrets(),
+        ),
+      });
     },
   );
   return {

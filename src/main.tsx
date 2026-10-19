@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import "@fontsource-variable/inter";
 import "highlight.js/styles/github-dark.css";
 import "./styles.css";
+import "./readability.css";
 import { App } from "./App";
 
 class Boundary extends React.Component<

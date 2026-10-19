@@ -454,10 +454,17 @@ export class Store {
         "SELECT id,status,created_at AS createdAt,usage FROM invocations WHERE conversation_id=? ORDER BY rowid DESC",
       )
       .all(conversationId)
-      .map((r) => ({ id: String(r.id), status: String(r.status), createdAt: String(r.createdAt), usage: r.usage ? decode(r.usage) : null }));
+      .map((r) => ({
+        id: String(r.id),
+        status: String(r.status),
+        createdAt: String(r.createdAt),
+        usage: r.usage ? decode(r.usage) : null,
+      }));
   }
   setMessageInvocation(messageId: string, invocationId: string) {
-    this.db.prepare('UPDATE messages SET invocation_id=? WHERE id=?').run(invocationId, messageId);
+    this.db
+      .prepare("UPDATE messages SET invocation_id=? WHERE id=?")
+      .run(invocationId, messageId);
   }
   saveExecution(e: ToolExecution) {
     this.db

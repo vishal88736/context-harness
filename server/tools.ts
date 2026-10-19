@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { spawn } from "node:child_process";
-import { open, rename, unlink } from "node:fs/promises";
+import { open, rename, unlink, stat } from "node:fs/promises";
 import path from "node:path";
 import { createTwoFilesPatch } from "diff";
 import { Store, id, now } from "./store";
@@ -169,9 +169,10 @@ export class ToolRunner {
         emit(e);
       }
       let result: string;
-      if (tool === "read_file")
-        result = this.clean(await readText(target!)).slice(0, 10_000);
-      else if (tool === "search_repository") {
+      if (tool === "read_file") {
+        const text = this.clean(await readText(target!));
+        result = `${args.path}\n${text.slice(0, 10_000)}${text.length > 10_000 ? "\n[File explicitly truncated at 10,000 characters.]" : ""}`;
+      } else if (tool === "search_repository") {
         const roots = c.config.sources
           .filter(
             (s) =>
@@ -227,7 +228,10 @@ export class ToolRunner {
           path.dirname(checked),
           `.canopy-${id()}.tmp`,
         );
-        const handle = await open(temporary, "wx", 0o600);
+        const mode = await stat(checked)
+          .then((s) => s.mode & 0o777)
+          .catch(() => 0o644);
+        const handle = await open(temporary, "wx", mode);
         try {
           await handle.writeFile(String(args.content));
           await handle.sync();

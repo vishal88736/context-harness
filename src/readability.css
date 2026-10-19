@@ -1,0 +1,365 @@
+/* Keep navigation and source metadata readable on high-density displays. */
+.request-notice{display:flex;align-items:center;gap:8px;text-align:left;padding:9px 24px;font-size:11px;color:var(--warning);background:#bdac7907;border-bottom:1px solid var(--border);line-height:1.7}
+.request-notice>span{flex:1}.request-notice:hover{background:#bdac7910}
+.skip-link {
+  top: 12px;
+  left: 12px;
+  transform: translateY(-150%);
+}
+.skip-link:focus {
+  top: 12px;
+  transform: translateY(0);
+}
+.new-chat,
+.chat-link,
+.sidebar-search input {
+  font-size: 12px;
+}
+.chat-group h3 {
+  font-size: 10px;
+}
+.workspace-button strong {
+  font-size: 12px;
+}
+.workspace-button small {
+  font-size: 8px;
+}
+.sidebar-context > button,
+.sidebar-footer-link {
+  font-size: 11px;
+}
+.workspace-status strong {
+  font-size: 11px;
+}
+.workspace-status small {
+  font-size: 9px;
+}
+.workspace-breadcrumb,
+.context-header-button {
+  font-size: 11px;
+}
+.local-workspace-status {
+  font-size: 9px;
+}
+.context-heading strong {
+  font-size: 13px;
+}
+.context-intro p {
+  font-size: 14px;
+}
+.context-intro > span:last-child {
+  font-size: 10px;
+}
+.context-tabs button {
+  font-size: 11px;
+}
+.profile-picker strong,
+.sources-title h3 {
+  font-size: 12px;
+}
+.profile-picker small {
+  font-size: 8px;
+}
+.sources-title .text-button {
+  font-size: 10px;
+}
+.source-name strong {
+  font-size: 12px;
+}
+.source-name small {
+  font-size: 9px;
+}
+.source-group h4 {
+  font-size: 10px;
+}
+.source-state,
+.source-tokens {
+  font-size: 9px;
+}
+.source-expanded > p {
+  font-size: 10px;
+}
+.context-empty h3 {
+  font-size: 14px;
+}
+.context-empty p {
+  font-size: 11px;
+}
+.context-empty > .secondary-button {
+  font-size: 11px;
+}
+.context-empty > .text-button {
+  font-size: 10px;
+}
+.context-note,
+.context-footer > small {
+  font-size: 9px;
+}
+.context-budget,
+.inspect-button {
+  font-size: 10px;
+}
+.permission-row strong {
+  font-size: 12px;
+}
+.permission-row small,
+.permission-row select {
+  font-size: 10px;
+}
+.permission-row select {
+  width: 103px;
+}
+.permission-explainer p {
+  font-size: 11px;
+}
+.welcome-description {
+  font-size: 13px;
+}
+.welcome-context-link {
+  font-size: 10px;
+}
+.welcome-topline .eyebrow {
+  font-size: 8px;
+}
+.suggestion-card strong {
+  font-size: 12px;
+}
+.suggestion-card span {
+  font-size: 10px;
+}
+.welcome-footnote {
+  font-size: 10px;
+}
+.prompt-input {
+  font-size: 14px;
+}
+.composer-tool,
+.model-select-wrap select,
+.connect-model {
+  font-size: 11px;
+}
+.model-select-wrap select {
+  max-width: 160px;
+}
+.composer-caption > span:first-child {
+  font-size: 8px;
+}
+.composer-caption > button {
+  font-size: 10px;
+}
+.conversation-model-bar > button,
+.conversation-model-bar > span {
+  font-size: 9px;
+}
+.markdown {
+  font-size: 14px;
+}
+.markdown code,
+.markdown pre code {
+  font-size: 12px;
+}
+.message-meta {
+  font-size: 12px;
+}
+.message-meta time {
+  font-size: 10px;
+}
+.message-actions > button,
+.copy-button {
+  font-size: 10px;
+}
+.tool-card-heading {
+  font-size: 12px;
+}
+.tool-card-heading small,
+.tool-status {
+  font-size: 10px;
+}
+.tool-card-body > p,
+.command-preview,
+.diff-preview,
+.tool-result {
+  font-size: 11px;
+}
+.response-error,
+.app-error {
+  font-size: 12px;
+}
+.field,
+.field-help {
+  font-size: 12px;
+}
+.field input,
+.field textarea,
+.field select {
+  font-size: 12px;
+}
+.primary-button,
+.secondary-button,
+.danger-button {
+  font-size: 12px;
+}
+.field small {
+  font-size: 10px;
+}
+.profile-card h3 {
+  font-size: 14px;
+}
+.profile-card p {
+  font-size: 11px;
+}
+.profile-intro {
+  font-size: 12px;
+}
+.profile-source-count,
+.profile-card-actions > button:first-child {
+  font-size: 10px;
+}
+.source-type-nav button,
+.settings-nav button {
+  font-size: 11px;
+}
+.file-entry label,
+.file-directory,
+.file-browser-muted {
+  font-size: 12px;
+}
+.inspector-tabs > button {
+  font-size: 12px;
+}
+.inspector-source strong {
+  font-size: 12px;
+}
+.inspector-source pre,
+.inspector-pre,
+.payload-code {
+  font-size: 11px;
+}
+.inspector-model strong {
+  font-size: 14px;
+}
+.inspector-model small {
+  font-size: 11px;
+}
+.inspector-body > .field-help,
+.excluded-source p {
+  font-size: 11px;
+}
+.excluded-source strong,
+.inspector-section-heading {
+  font-size: 12px;
+}
+.provider-list-row strong {
+  font-size: 12px;
+}
+.provider-list-row small,
+.discovered-models small {
+  font-size: 10px;
+}
+.discovered-models strong {
+  font-size: 12px;
+}
+.toggle {
+  width: 29px;
+  height: 17px;
+  padding: 2px;
+}
+.toggle > span {
+  width: 11px;
+  height: 11px;
+}
+.toggle[aria-checked="true"] > span {
+  transform: translateX(11px);
+}
+@media (max-width: 1250px) and (min-width: 1100px) {
+  .composer-tool span {
+    display: none;
+  }
+  .composer-caption > span:first-child {
+    font-size: 7px;
+  }
+  .suggestion-card strong {
+    font-size: 11px;
+  }
+  .suggestion-card span {
+    font-size: 9px;
+  }
+  .model-select-wrap select {
+    max-width: 110px;
+    font-size: 10px;
+  }
+}
+@media (max-width: 768px) {
+  .welcome-description {
+    font-size: 12px;
+  }
+  .suggestion-card strong {
+    font-size: 12px;
+  }
+  .suggestion-card span {
+    font-size: 10px;
+  }
+  .welcome-footnote {
+    font-size: 9px;
+  }
+  .composer-tool span {
+    display: none;
+  }
+  .composer-caption > span:first-child {
+    display: none;
+  }
+  .composer-caption {
+    justify-content: center;
+  }
+  .composer-caption > button {
+    font-size: 10px;
+  }
+  .model-select-wrap select {
+    font-size: 10px;
+    max-width: 125px;
+  }
+  .conversation-model-bar > button {
+    font-size: 9px;
+  }
+  .source-type-nav button,
+  .settings-nav button {
+    font-size: 10px;
+  }
+  .markdown {
+    font-size: 14px;
+  }
+  .profile-card p {
+    font-size: 10px;
+  }
+  .field input,
+  .field textarea,
+  .field select {
+    font-size: 16px;
+  }
+  .permission-row select {
+    font-size: 10px;
+  }
+  .context-intro > span:last-child {
+    font-size: 10px;
+  }
+  .inspector-model small {
+    font-size: 9px;
+  }
+  .inspector-tabs > button {
+    font-size: 10px;
+  }
+}
+@media (max-height: 760px) and (max-width: 768px) {
+  .welcome-description {
+    font-size: 11px;
+  }
+  .suggestion-card strong {
+    font-size: 11px;
+  }
+  .suggestion-card span {
+    font-size: 9px;
+  }
+  .welcome-footnote {
+    font-size: 8px;
+  }
+}

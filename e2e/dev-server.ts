@@ -1,23 +1,63 @@
-import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
-import { createServer } from 'vite';
-import { createApp } from '../server/app';
-import { fixtureProvider } from '../tests/fixture-provider';
-const temp = await mkdtemp(path.join(tmpdir(), 'canopy-browser-'));
-const root = path.join(temp, 'Canopy test workspace');
-await mkdir(path.join(root, 'src'), { recursive: true });
-await writeFile(path.join(root, 'src/alpha.ts'), 'export const alpha = "BROWSER_ALPHA_SENTINEL";\n');
-await writeFile(path.join(root, 'src/beta.ts'), 'export const beta = "BROWSER_BETA_SENTINEL";\n');
-await writeFile(path.join(root, 'README.md'), '# Browser verification workspace\n');
+import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { createServer } from "vite";
+import { createApp } from "../server/app";
+import { fixtureProvider } from "../tests/fixture-provider";
+const temp = await mkdtemp(path.join(tmpdir(), "canopy-browser-"));
+const root = path.join(temp, "Canopy test workspace");
+await mkdir(path.join(root, "src"), { recursive: true });
+await writeFile(
+  path.join(root, "src/alpha.ts"),
+  'export const alpha = "BROWSER_ALPHA_SENTINEL";\n',
+);
+await writeFile(
+  path.join(root, "src/beta.ts"),
+  'export const beta = "BROWSER_BETA_SENTINEL";\n',
+);
+await writeFile(
+  path.join(root, "README.md"),
+  "# Browser verification workspace\n",
+);
 const fixture = await fixtureProvider();
-const service = await createApp({ root, dataDir: path.join(temp, 'data'), frontendPort: 5273 });
-const provider = service.store.saveProvider({ id: 'browser-fixture', name: 'Protocol fixture · not a live AI', kind: 'compatible', baseUrl: fixture.baseUrl, models: [], keyConfigured: false });
+const service = await createApp({
+  root,
+  dataDir: path.join(temp, "data"),
+  frontendPort: 5273,
+});
+const provider = service.store.saveProvider({
+  id: "browser-fixture",
+  name: "Protocol fixture · not a live AI",
+  kind: "compatible",
+  baseUrl: fixture.baseUrl,
+  models: [],
+  keyConfigured: false,
+});
 const models = await service.providers.discover(provider.id);
-service.store.setSetting('defaultModel', { providerId: provider.id, modelId: models[0].id });
-const api = service.app.listen(4318, '127.0.0.1');
-const vite = await createServer({ server: { host: '127.0.0.1', port: 5273, strictPort: true, proxy: { '/api': 'http://127.0.0.1:4318' } } });
+service.store.setSetting("defaultModel", {
+  providerId: provider.id,
+  modelId: models[0].id,
+});
+const api = service.app.listen(4318, "127.0.0.1");
+const vite = await createServer({
+  server: {
+    host: "127.0.0.1",
+    port: 5273,
+    strictPort: true,
+    proxy: { "/api": "http://127.0.0.1:4318" },
+  },
+});
 await vite.listen();
-console.log('Canopy browser fixture ready at http://127.0.0.1:5273');
-async function stop() { service.agent.stopAll(); await vite.close(); api.closeAllConnections(); await new Promise<void>(resolve => api.close(() => resolve())); service.close(); await fixture.close(); await rm(temp, { recursive: true, force: true }); process.exit(0); }
-process.once('SIGINT', () => void stop()); process.once('SIGTERM', () => void stop());
+console.log("Canopy browser fixture ready at http://127.0.0.1:5273");
+async function stop() {
+  service.agent.stopAll();
+  await vite.close();
+  api.closeAllConnections();
+  await new Promise<void>((resolve) => api.close(() => resolve()));
+  service.close();
+  await fixture.close();
+  await rm(temp, { recursive: true, force: true });
+  process.exit(0);
+}
+process.once("SIGINT", () => void stop());
+process.once("SIGTERM", () => void stop());

@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowUpRight,
   ChevronDown,
@@ -69,6 +69,13 @@ export function Sidebar({
 }) {
   const [menu, setMenu] = useState<string | null>(null);
   const [workspacesOpen, setWorkspacesOpen] = useState(false);
+  const [narrow, setNarrow] = useState(() => window.innerWidth <= 768);
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 768px)");
+    const update = () => setNarrow(media.matches);
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
   const input = useRef<HTMLInputElement>(null);
   const chats = data.conversations.filter(
     (c) =>
@@ -87,6 +94,8 @@ export function Sidebar({
         />
       )}
       <aside
+        inert={narrow && !mobile ? true : undefined}
+        aria-hidden={narrow && !mobile ? true : undefined}
         className={`sidebar ${mobile ? "mobile-open" : ""}`}
         aria-label="Conversation sidebar"
       >
@@ -113,7 +122,11 @@ export function Sidebar({
           </button>
           <span className="local-badge">LOCAL</span>
         </div>
-        <button className="new-chat" onClick={onNew}>
+        <button
+          className="new-chat"
+          onClick={onNew}
+          aria-label="Start new conversation"
+        >
           <Plus size={17} />
           <span>New conversation</span>
           <kbd>⌘ N</kbd>
@@ -291,7 +304,7 @@ export function Sidebar({
             <span>Conversation context</span>
             <span className="count">{sources}</span>
           </button>
-          <button onClick={onProfiles}>
+          <button onClick={onProfiles} aria-label="Context profiles">
             <Folder size={16} />
             <span>Context profiles</span>
             <span className="tiny-tag">5+</span>

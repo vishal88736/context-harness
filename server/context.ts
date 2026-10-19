@@ -54,10 +54,11 @@ export class ContextEngine {
   ): Promise<Snapshot> {
     const c = this.store.conversation(conversationId);
     const workspace = this.store.workspace(c.workspaceId);
-    const selection = this.store.setting<{
-      providerId?: string;
-      modelId?: string;
-    }>("defaultModel", {});
+    const selection =
+      this.store.setting<{
+        providerId?: string;
+        modelId?: string;
+      } | null>("defaultModel", null) ?? {};
     const providerId = input.providerId ?? c.providerId ?? selection.providerId;
     const modelId = input.modelId ?? c.modelId ?? selection.modelId;
     const provider = this.store.providers().find((p) => p.id === providerId);
@@ -106,22 +107,21 @@ export class ContextEngine {
       priority: number;
       image?: string;
     }[] = [];
-    const blockedPaths = new Set(
+    const blocked = await Promise.all(
       c.config.sources
         .filter((s) => !s.enabled && s.path)
-        .map((s) => path.resolve(workspace.root, s.path!)),
+        .map(async (s) => ({
+          path: await checkedPath(workspace, s.path!, {
+            dataDir: this.dataDir,
+          }).catch(() => path.resolve(workspace.root, s.path!)),
+          folder: s.type === "folder",
+        })),
     );
     const isBlocked = (filename: string) =>
-      blockedPaths.has(path.resolve(workspace.root, filename)) ||
-      c.config.sources.some(
-        (s) =>
-          !s.enabled &&
-          s.type === "folder" &&
-          s.path &&
-          isWithin(
-            path.resolve(workspace.root, s.path),
-            path.resolve(workspace.root, filename),
-          ),
+      blocked.some((b) =>
+        b.folder
+          ? isWithin(b.path, path.resolve(workspace.root, filename))
+          : b.path === path.resolve(workspace.root, filename),
       );
     for (const source of all) {
       options.signal?.throwIfAborted();
@@ -145,11 +145,14 @@ export class ContextEngine {
           (source.type === "project" && source.path)
         ) {
           if (!source.path) throw new Error("No file path configured");
-          text = await readText(
-            await checkedPath(workspace, source.path, {
-              dataDir: this.dataDir,
-            }),
-          );
+          const canonical = await checkedPath(workspace, source.path, {
+            dataDir: this.dataDir,
+          });
+          if (isBlocked(canonical))
+            throw new Error(
+              "A reference to this path is explicitly disabled in the current conversation.",
+            );
+          text = await readText(canonical);
         } else if (source.type === "folder") {
           if (!source.path) throw new Error("No folder path configured");
           await checkedPath(workspace, source.path, { dataDir: this.dataDir });
@@ -277,6 +280,7 @@ export class ContextEngine {
     const fingerprint = digest(
       JSON.stringify({
         revision: c.revision,
+        requestInstructions: digest(clean(input.instructions)),
         workspace: workspaceInstructions,
         sources: docs.map((d) => [d.report.id, d.report.hash]),
         permissions,

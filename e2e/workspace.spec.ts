@@ -1,114 +1,301 @@
-import { test, expect, type Page } from '@playwright/test';
-import { mkdir } from 'node:fs/promises';
-test.beforeEach(async ({ page }) => { await page.goto('/'); await expect(page.getByRole('textbox', { name: 'Message Canopy' })).toBeVisible(); });
+import { test, expect, type Page } from "@playwright/test";
+import { mkdir } from "node:fs/promises";
+test.beforeEach(async ({ page }) => {
+  await page.goto("/");
+  await expect(
+    page.getByRole("textbox", { name: "Message Canopy" }),
+  ).toBeVisible();
+});
 
 async function addFile(page: Page, filename: string) {
-  await page.getByRole('button', { name: 'Add source', exact: true }).click();
-  const dialog = page.getByRole('dialog', { name: 'Add to your context' });
-  await dialog.getByRole('button', { name: 'src' }).click();
-  await dialog.getByRole('checkbox', { name: filename }).check();
-  await dialog.getByRole('button', { name: 'Add to context', exact: true }).click();
+  await page.getByRole("button", { name: "Add source", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Add to your context" });
+  await dialog.getByRole("button", { name: "src" }).click();
+  await dialog.getByRole("checkbox", { name: filename }).check();
+  await dialog
+    .getByRole("button", { name: "Add to context", exact: true })
+    .click();
   await expect(dialog).not.toBeVisible();
-  await expect(page.getByRole('switch', { name: `Enable ${filename}` })).toBeVisible();
+  await expect(
+    page.getByRole("switch", { name: `Enable ${filename}` }),
+  ).toBeVisible();
 }
-async function send(page: Page, prompt: string) { await page.getByRole('textbox', { name: 'Message Canopy' }).fill(prompt); await page.getByRole('button', { name: 'Send message', exact: true }).click(); await expect(page.getByText(/Protocol fixture response from/).last()).toBeVisible(); await expect(page.getByRole('button', { name: 'Stop generation' })).not.toBeVisible(); }
-test('9. Desktop sidebar remains visible through context navigation; polished empty state', async ({ page }) => {
-  await expect(page.getByRole('complementary', { name: 'Conversation sidebar' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: /Your workspace/ })).toBeVisible();
-  await expect(page.getByRole('complementary', { name: 'Conversation context' })).toBeVisible();
-  await page.getByRole('button', { name: 'Permissions', exact: true }).click();
-  await expect(page.getByLabel('Run commands permission')).toHaveValue('deny');
-  await expect(page.getByRole('button', { name: 'New conversation' })).toBeVisible();
-  await page.getByRole('button', { name: 'Sources', exact: true }).click();
-  await mkdir('artifacts', { recursive: true });
-  await page.screenshot({ path: 'artifacts/canopy-desktop.png', fullPage: true });
+async function send(page: Page, prompt: string) {
+  await page.getByRole("textbox", { name: "Message Canopy" }).fill(prompt);
+  await page.getByRole("button", { name: "Send message", exact: true }).click();
+  await expect(
+    page.getByText(/Protocol fixture response from/).last(),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Stop generation" }),
+  ).not.toBeVisible();
+}
+test("9. Desktop sidebar remains visible through context navigation; polished empty state", async ({
+  page,
+}) => {
+  await expect(
+    page.getByRole("complementary", { name: "Conversation sidebar" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: /Your workspace/ }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("complementary", { name: "Conversation context" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Permissions", exact: true }).click();
+  await expect(page.getByLabel("Run commands permission")).toHaveValue("deny");
+  await expect(
+    page.getByRole("button", { name: "Start new conversation", exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Sources", exact: true }).click();
+  await mkdir("artifacts", { recursive: true });
+  await page.screenshot({
+    path: "artifacts/canopy-desktop.png",
+    fullPage: true,
+  });
 });
-test('Independent chats, files, disable, context preview, and provider request payload', async ({ page }) => {
-  const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
-  await page.getByRole('button', { name: 'New conversation' }).click();
-  await addFile(page, 'alpha.ts'); await send(page, 'Browser conversation Alpha');
-  await page.getByRole('button', { name: 'View context', exact: true }).last().click();
-  const inspect = page.getByRole('dialog', { name: 'What the model received.' });
-  await inspect.getByRole('button', { name: 'Request payload' }).click();
-  await expect(inspect.locator('.payload-code')).toContainText('BROWSER_ALPHA_SENTINEL');
-  await expect(inspect.locator('.payload-code')).not.toContainText('BROWSER_BETA_SENTINEL');
-  await inspect.getByRole('button', { name: 'Close inspector' }).click();
-  await page.getByRole('button', { name: 'New conversation' }).click();
-  await addFile(page, 'beta.ts'); await send(page, 'Browser conversation Beta');
-  await expect(page.locator('.messages')).not.toContainText('Browser conversation Alpha');
-  await page.getByRole('button', { name: 'Browser conversation Alpha', exact: true }).click();
-  await expect(page.locator('.messages')).toContainText('Browser conversation Alpha');
-  await expect(page.getByRole('switch', { name: 'Enable beta.ts' })).not.toBeVisible();
-  await page.getByRole('switch', { name: 'Enable alpha.ts' }).click();
-  await page.getByRole('textbox', { name: 'Message Canopy' }).fill('Inspect with alpha disabled');
-  await page.getByRole('button', { name: 'Preview request', exact: true }).click();
-  const preview = page.getByRole('dialog', { name: 'Your next request, unpacked.' });
-  await preview.getByRole('button', { name: 'Request payload' }).click();
-  await expect(preview.locator('.payload-code')).not.toContainText('BROWSER_ALPHA_SENTINEL');
-  await preview.getByRole('button', { name: 'Send this request' }).click();
-  await expect(page.locator('.message.assistant')).toHaveCount(2);
-  await expect(page.getByRole('button', { name: 'Stop generation' })).not.toBeVisible();
+test("Independent chats, files, disable, context preview, and provider request payload", async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await page
+    .getByRole("button", { name: "Start new conversation", exact: true })
+    .click();
+  await addFile(page, "alpha.ts");
+  await send(page, "Browser conversation Alpha");
+  await page
+    .getByRole("button", { name: "View context", exact: true })
+    .last()
+    .click();
+  const inspect = page.getByRole("dialog", {
+    name: "What the model received.",
+  });
+  await inspect.getByRole("button", { name: "Request payload" }).click();
+  await expect(inspect.locator(".payload-code")).toContainText(
+    "BROWSER_ALPHA_SENTINEL",
+  );
+  await expect(inspect.locator(".payload-code")).not.toContainText(
+    "BROWSER_BETA_SENTINEL",
+  );
+  await inspect.getByRole("button", { name: "Close inspector" }).click();
+  await page
+    .getByRole("button", { name: "Start new conversation", exact: true })
+    .click();
+  await addFile(page, "beta.ts");
+  await send(page, "Browser conversation Beta");
+  await expect(page.locator(".messages")).not.toContainText(
+    "Browser conversation Alpha",
+  );
+  await page
+    .getByRole("button", { name: "Browser conversation Alpha", exact: true })
+    .click();
+  await expect(page.locator(".messages")).toContainText(
+    "Browser conversation Alpha",
+  );
+  await expect(
+    page.getByRole("switch", { name: "Enable beta.ts" }),
+  ).not.toBeVisible();
+  await page.getByRole("switch", { name: "Enable alpha.ts" }).click();
+  await page
+    .getByRole("textbox", { name: "Message Canopy" })
+    .fill("Inspect with alpha disabled");
+  await page
+    .getByRole("button", { name: "Preview request", exact: true })
+    .click();
+  const preview = page.getByRole("dialog", {
+    name: "Your next request, unpacked.",
+  });
+  await preview.getByRole("button", { name: "Request payload" }).click();
+  await expect(preview.locator(".payload-code")).not.toContainText(
+    "BROWSER_ALPHA_SENTINEL",
+  );
+  await preview.getByRole("button", { name: "Send this request" }).click();
+  await expect(page.locator(".message.assistant")).toHaveCount(2);
+  await expect(
+    page.getByRole("button", { name: "Stop generation" }),
+  ).not.toBeVisible();
   expect(errors).toEqual([]);
 });
-test('Profile application, model override, renaming, pinning, searching, reload persistence', async ({ page }) => {
-  await page.getByRole('button', { name: 'New conversation' }).click();
-  await send(page, 'Persistent browser workspace');
-  await page.getByRole('button', { name: 'Context profiles', exact: true }).click();
-  const profiles = page.getByRole('dialog', { name: 'A good starting point.' });
-  await profiles.locator('.profile-card').filter({ has: page.getByRole('heading', { name: 'Debugging', exact: true }) }).getByRole('button', { name: 'Apply profile' }).click();
-  await expect(page.getByRole('switch', { name: 'Enable Debugging guidance' })).toBeVisible();
-  await expect(page.locator('.messages')).toContainText('Persistent browser workspace');
-  await page.getByLabel('Model for next request').selectOption('browser-fixture::fixture-reviewer');
-  await page.getByRole('button', { name: 'Use model for this chat' }).click();
-  await expect(page.getByLabel('Model for next request')).toHaveValue('browser-fixture::fixture-reviewer');
-  await page.getByRole('button', { name: 'Actions for Persistent browser workspace' }).click();
-  await page.getByRole('button', { name: 'Rename', exact: true }).click();
-  await page.getByLabel('Conversation title').fill('Renamed and saved');
-  await page.getByRole('button', { name: 'Save name' }).click();
-  await page.getByRole('button', { name: 'Actions for Renamed and saved' }).click();
-  await page.getByRole('button', { name: 'Pin conversation', exact: true }).click();
-  await page.getByLabel('Search conversations').fill('Renamed');
-  await expect(page.getByRole('button', { name: 'Renamed and saved', exact: true })).toBeVisible();
+test("Profile application, model override, renaming, pinning, searching, reload persistence", async ({
+  page,
+}) => {
+  await page
+    .getByRole("button", { name: "Start new conversation", exact: true })
+    .click();
+  await send(page, "Persistent browser workspace");
+  await page
+    .getByRole("button", { name: "Context profiles", exact: true })
+    .click();
+  const profiles = page.getByRole("dialog", { name: "A good starting point." });
+  await profiles
+    .locator(".profile-card")
+    .filter({
+      has: page.getByRole("heading", { name: "Debugging", exact: true }),
+    })
+    .getByRole("button", { name: "Apply profile" })
+    .click();
+  await expect(
+    page.getByRole("switch", { name: "Enable Debugging guidance" }),
+  ).toBeVisible();
+  await expect(page.locator(".messages")).toContainText(
+    "Persistent browser workspace",
+  );
+  await page
+    .getByLabel("Model for next request")
+    .selectOption("browser-fixture::fixture-reviewer");
+  await page.getByRole("button", { name: "Use model for this chat" }).click();
+  await expect(page.getByLabel("Model for next request")).toHaveValue(
+    "browser-fixture::fixture-reviewer",
+  );
+  await page
+    .getByRole("button", { name: "Actions for Persistent browser workspace" })
+    .click();
+  await page.getByRole("button", { name: "Rename", exact: true }).click();
+  await page.getByLabel("Conversation title").fill("Renamed and saved");
+  await page.getByRole("button", { name: "Save name" }).click();
+  await page
+    .getByRole("button", { name: "Actions for Renamed and saved" })
+    .click();
+  await page
+    .getByRole("button", { name: "Pin conversation", exact: true })
+    .click();
+  await page.getByLabel("Search conversations").fill("Renamed");
+  await expect(
+    page.getByRole("button", { name: "Renamed and saved", exact: true }),
+  ).toBeVisible();
   await page.reload();
-  await expect(page.locator('.messages')).toContainText('Persistent browser workspace');
-  await expect(page.getByRole('switch', { name: 'Enable Debugging guidance' })).toBeVisible();
-  await expect(page.getByLabel('Model for next request')).toHaveValue('browser-fixture::fixture-reviewer');
-  await expect(page.getByRole('heading', { name: 'Pinned', exact: true })).toBeVisible();
+  await expect(page.locator(".messages")).toContainText(
+    "Persistent browser workspace",
+  );
+  await expect(
+    page.getByRole("switch", { name: "Enable Debugging guidance" }),
+  ).toBeVisible();
+  await expect(page.getByLabel("Model for next request")).toHaveValue(
+    "browser-fixture::fixture-reviewer",
+  );
+  await expect(
+    page.getByRole("heading", { name: "Pinned", exact: true }),
+  ).toBeVisible();
 });
-test('Agent tool approval displays real diff and resumes streaming after approval', async ({ page }) => {
-  await page.getByRole('button', { name: 'New conversation' }).click(); await addFile(page, 'alpha.ts');
-  await page.getByLabel('Message Canopy').fill('TOOL_WRITE'); await page.getByRole('button', { name: 'Send message', exact: true }).click();
-  await expect(page.getByText('Needs your approval')).toBeVisible();
-  await expect(page.locator('.diff-preview')).toContainText('export const alpha = 2');
-  await expect(page.getByRole('complementary', { name: 'Conversation sidebar' })).toBeVisible();
-  await page.getByRole('button', { name: 'Approve & apply diff' }).click();
-  await expect(page.locator('.message.assistant .markdown')).toContainText('Applied approved diff');
-  await expect(page.getByRole('button', { name: 'Stop generation' })).not.toBeVisible();
-  await mkdir('artifacts', { recursive: true }); await page.screenshot({ path: 'artifacts/canopy-conversation.png', fullPage: true });
+test("Agent tool approval displays real diff and resumes streaming after approval", async ({
+  page,
+}) => {
+  await page
+    .getByRole("button", { name: "Start new conversation", exact: true })
+    .click();
+  await addFile(page, "alpha.ts");
+  await page.getByLabel("Message Canopy").fill("TOOL_WRITE");
+  await page.getByRole("button", { name: "Send message", exact: true }).click();
+  await expect(page.getByText("Needs your approval")).toBeVisible();
+  await expect(page.locator(".diff-preview")).toContainText(
+    "export const alpha = 2",
+  );
+  await expect(
+    page.getByRole("complementary", { name: "Conversation sidebar" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Approve & apply diff" }).click();
+  await expect(page.locator(".message.assistant .markdown")).toContainText(
+    "Applied approved diff",
+  );
+  await expect(
+    page.getByRole("button", { name: "Stop generation" }),
+  ).not.toBeVisible();
+  await mkdir("artifacts", { recursive: true });
+  await page.screenshot({
+    path: "artifacts/canopy-conversation.png",
+    fullPage: true,
+  });
 });
-test('Stop generation, provider error, and retry recovery remain usable', async ({ page }) => {
-  await page.getByRole('button', { name: 'New conversation' }).click();
-  await page.getByLabel('Message Canopy').fill('WAIT_FOR_STOP'); await page.getByRole('button', { name: 'Send message', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Stop generation' })).toBeVisible();
-  await page.getByRole('button', { name: 'Stop generation' }).click();
-  await expect(page.getByText('Generation stopped.', { exact: true })).toBeVisible();
-  await page.getByLabel('Message Canopy').fill('BROKEN_STREAM'); await page.getByRole('button', { name: 'Send message', exact: true }).click();
-  await expect(page.locator('.response-error').last()).toContainText('before generation completed');
-  await expect(page.getByRole('button', { name: 'Retry', exact: true }).last()).toBeEnabled();
-  await send(page, 'Recovery request');
+test("Stop generation, provider error, and retry recovery remain usable", async ({
+  page,
+}) => {
+  await page
+    .getByRole("button", { name: "Start new conversation", exact: true })
+    .click();
+  await page.getByLabel("Message Canopy").fill("WAIT_FOR_STOP");
+  await page.getByRole("button", { name: "Send message", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Stop generation" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Stop generation" }).click();
+  await expect(
+    page.getByText("Generation stopped.", { exact: true }),
+  ).toBeVisible();
+  await page.getByLabel("Message Canopy").fill("BROKEN_STREAM");
+  await page.getByRole("button", { name: "Send message", exact: true }).click();
+  await expect(page.locator(".response-error").last()).toContainText(
+    "before generation completed",
+  );
+  await expect(
+    page.getByRole("button", { name: "Retry", exact: true }).last(),
+  ).toBeEnabled();
+  await send(page, "Recovery request");
 });
-test('Mobile navigation, context, and composer remain accessible with no overflow', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 }); await page.reload();
-  await page.getByRole('button', { name: 'Open conversation sidebar' }).click();
-  await expect(page.getByRole('complementary', { name: 'Conversation sidebar' })).toBeInViewport();
-  await page.getByRole('button', { name: 'New conversation' }).click();
-  await page.getByRole('button', { name: 'Close context panel' }).click();
-  await expect(page.getByRole('textbox', { name: 'Message Canopy' })).toBeInViewport();
-  await page.getByRole('button', { name: 'Context', exact: false }).filter({ has: page.locator('.count') }).first().click();
-  await expect(page.getByRole('complementary', { name: 'Conversation context' })).toBeInViewport();
-  await page.getByRole('button', { name: 'Permissions', exact: true }).click();
-  await expect(page.getByLabel('Run commands permission')).toBeVisible();
-  await page.getByRole('button', { name: 'Close context panel' }).click();
-  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
-  await mkdir('artifacts', { recursive: true }); await page.screenshot({ path: 'artifacts/canopy-mobile.png', fullPage: true });
+test("Mobile navigation, context, and composer remain accessible with no overflow", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.reload();
+  await page.getByRole("button", { name: "Open conversation sidebar" }).click();
+  await expect(
+    page.getByRole("complementary", { name: "Conversation sidebar" }),
+  ).toBeInViewport();
+  await page
+    .getByRole("button", { name: "Start new conversation", exact: true })
+    .click();
+  await expect(
+    page.getByRole("textbox", { name: "Message Canopy" }),
+  ).toBeInViewport();
+  await page.locator(".context-header-button").click();
+  await expect(
+    page.getByRole("complementary", { name: "Conversation context" }),
+  ).toBeInViewport();
+  await page.getByRole("button", { name: "Permissions", exact: true }).click();
+  await expect(page.getByLabel("Run commands permission")).toBeVisible();
+  await page.getByRole("button", { name: "Close context panel" }).click();
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(390);
+  await mkdir("artifacts", { recursive: true });
+  await page.screenshot({
+    path: "artifacts/canopy-mobile.png",
+    fullPage: true,
+  });
+});
+
+test('Provider settings discover real HTTP models and persist the chosen default', async ({ page }) => {
+  const initial = await (await page.request.get('/api/bootstrap')).json();
+  await page.getByRole('button', { name: 'Models & providers', exact: true }).click();
+  const settings = page.getByRole('dialog', { name: 'A workspace that fits you.' });
+  await settings.getByRole('button', { name: 'Add provider', exact: true }).click();
+  await settings.getByLabel('Name', { exact: true }).fill('Browser verified connection');
+  await settings.getByLabel('Adapter', { exact: true }).selectOption('compatible');
+  await settings.getByLabel('API base URL', { exact: true }).fill(initial.providers[0].baseUrl);
+  await settings.getByLabel(/API key/).fill('browser-fixture-key-12345');
+  await settings.getByRole('button', { name: 'Save provider', exact: true }).click();
+  await settings.getByRole('button', { name: 'Discover models', exact: true }).click();
+  await expect(settings.getByText('Models discovered. Ready to chat.', { exact: true })).toBeVisible();
+  const updated = await (await page.request.get('/api/bootstrap')).json(); const provider = updated.providers.find((p: any) => p.name === 'Browser verified connection');
+  expect(provider.models).toHaveLength(2); expect(provider.keyConfigured).toBe(true); expect(JSON.stringify(updated)).not.toContain('browser-fixture-key-12345');
+  await settings.getByLabel('Default model', { exact: true }).selectOption(`${provider.id}::fixture-coder`);
+  await settings.getByRole('button', { name: 'Done', exact: true }).click(); await page.reload();
+  await expect(page.getByLabel('Model for next request')).toHaveValue(`${provider.id}::fixture-coder`);
+});
+
+test('Temporary composer instructions and uploads are sent once, with exact inspection', async ({ page }) => {
+  await page.getByRole('button', { name: 'Start new conversation', exact: true }).click();
+  await page.getByRole('button', { name: 'Instructions', exact: true }).click();
+  await page.getByRole('textbox', { name: 'Temporary instructions', exact: true }).fill('ONE_TURN_BROWSER_INSTRUCTION');
+  await page.locator('.composer input[type=file]').setInputFiles({ name: 'turn-notes.txt', mimeType: 'text/plain', buffer: Buffer.from('ONE_TURN_BROWSER_ATTACHMENT') });
+  await expect(page.locator('.attachment-chips')).toContainText('turn-notes.txt');
+  await send(page, 'Use this temporary material');
+  await page.getByRole('button', { name: 'View context', exact: true }).last().click();
+  let inspector = page.getByRole('dialog', { name: 'What the model received.' });
+  await inspector.getByRole('button', { name: 'Request payload', exact: true }).click();
+  await expect(inspector.locator('.payload-code')).toContainText('ONE_TURN_BROWSER_INSTRUCTION'); await expect(inspector.locator('.payload-code')).toContainText('ONE_TURN_BROWSER_ATTACHMENT');
+  await inspector.getByRole('button', { name: 'Close inspector' }).click();
+  await send(page, 'A fresh ordinary turn'); await page.getByRole('button', { name: 'View context', exact: true }).last().click();
+  inspector = page.getByRole('dialog', { name: 'What the model received.' }); await inspector.getByRole('button', { name: 'Request payload', exact: true }).click();
+  await expect(inspector.locator('.payload-code')).not.toContainText('ONE_TURN_BROWSER_');
 });

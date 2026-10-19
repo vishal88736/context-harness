@@ -188,6 +188,7 @@ export function SettingsDialog({
                     <label className="field">
                       Adapter
                       <select
+                        aria-label="Adapter"
                         value={draft.kind}
                         onChange={(e) =>
                           setDraft({
@@ -208,6 +209,7 @@ export function SettingsDialog({
                   <label className="field">
                     API base URL
                     <input
+                      aria-label="API base URL"
                       value={draft.baseUrl}
                       onChange={(e) =>
                         setDraft({ ...draft, baseUrl: e.target.value })
@@ -229,6 +231,7 @@ export function SettingsDialog({
                     <span className="muted">optional for local servers</span>
                     <input
                       type="password"
+                      aria-label="API key"
                       autoComplete="new-password"
                       value={draft.apiKey}
                       onChange={(e) => {

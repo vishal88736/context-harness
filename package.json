@@ -10,11 +10,13 @@
   "scripts": {
     "dev": "concurrently -k -n api,web -c green,blue \"tsx watch server/index.ts\" \"vite --host 127.0.0.1\"",
     "dev:server": "tsx watch server/index.ts",
-    "build": "npm run check && vite build && tsup server/index.ts --format esm --platform node --target node22 --out-dir dist-server --external express --external zod --external pdf-parse --external mammoth",
+    "build": "npm run check && vite build && tsup",
     "start": "node dist-server/index.js",
     "check": "tsc --noEmit",
     "test": "tsx --test --test-concurrency=1 tests/*.test.ts",
     "test:e2e": "playwright test",
+    "test:production": "tsx --test tests/production.smoke.ts",
+    "format": "prettier --write src server tests e2e *.ts *.json *.md index.html",
     "verify": "npm run check && npm test && npm run build",
     "preview": "vite preview --host 127.0.0.1"
   },
@@ -32,6 +34,9 @@
     "rehype-highlight": "^7.0.2",
     "remark-gfm": "^4.0.1",
     "zod": "^4.1.0"
+  },
+  "overrides": {
+    "mammoth": { "argparse": "2.0.1" }
   },
   "devDependencies": {
     "@playwright/test": "^1.56.0",

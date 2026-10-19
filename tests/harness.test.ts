@@ -24,6 +24,7 @@ import {
 import { id, now, Store } from "../server/store";
 import { authorizedPath, checkedPath, redact, Vault } from "../server/security";
 import { fixtureProvider } from "./fixture-provider";
+import { docxFixture, pdfFixture } from './document-fixtures';
 
 let temp: string;
 let root: string;
@@ -543,4 +544,73 @@ test("Native Ollama discovery and NDJSON streaming use the same composed context
     JSON.stringify(provider.requests.at(-1)),
     /BETA_CONTEXT_SENTINEL/,
   );
+});
+
+test('Approved terminal commands execute with recorded decisions; stopped approvals never execute', async () => {
+  let c = await conversation();
+  c = await call(`/conversations/${c.id}`, 'PATCH', { config: { ...c.config, permissions: { ...c.config.permissions, terminal: 'ask' } } });
+  const s = await preview(c); service.store.saveInvocation(s); let pending!: ToolExecution;
+  const action = service.tools.execute(c.id, s.id, 'run_command', JSON.stringify({ command: 'printf approved > approved-output.txt', reason: 'Verify explicit command approval' }), new AbortController().signal, e => { if (e.status === 'pending') pending = e; });
+  for (let i = 0; !pending && i < 100; i++) await new Promise(resolve => setTimeout(resolve, 5));
+  await assert.rejects(stat(path.join(root, 'approved-output.txt'))); service.tools.decide(pending.id, true);
+  assert.match(await action, /Exit: 0/); assert.equal(await readFile(path.join(root, 'approved-output.txt'), 'utf8'), 'approved');
+  assert.equal(service.store.db.prepare('SELECT decision FROM approvals WHERE execution_id=?').get(pending.id)?.decision, 'approve');
+  const abort = new AbortController(); let waiting!: ToolExecution;
+  const stopped = service.tools.execute(c.id, s.id, 'run_command', JSON.stringify({ command: 'touch must-not-exist', reason: 'Verify stopping a pending action' }), abort.signal, e => { if (e.status === 'pending') waiting = e; });
+  for (let i = 0; !waiting && i < 100; i++) await new Promise(resolve => setTimeout(resolve, 5));
+  abort.abort(); assert.match(await stopped, /denied|stopped/); await assert.rejects(stat(path.join(root, 'must-not-exist')));
+});
+
+test('A disabled canonical path cannot be reintroduced through another symlink reference', async () => {
+  await symlink(path.join(root, 'src/alpha.ts'), path.join(root, 'alpha-alias.ts'));
+  const disabled = { ...file('alpha'), path: 'alpha-alias.ts', enabled: false };
+  const c = await conversation([disabled, file('alpha')]); const s = await preview(c);
+  assert.doesNotMatch(JSON.stringify(s.payload), /ALPHA_CONTEXT_SENTINEL/);
+  await assert.rejects(authorizedPath(service.store.workspace(workspaceId), c, 'src/alpha.ts', path.join(temp, 'data')), /explicitly disabled/);
+});
+
+test('Previous chats import explicit user turns without stale assistant source content', async () => {
+  const first = await conversation(); service.store.addMessage(first.id, 'user', 'Selected previous user turn'); service.store.addMessage(first.id, 'assistant', 'DO_NOT_IMPORT_STALE_ASSISTANT');
+  const second = await conversation([{ id: id(), type: 'chat', name: 'Previous work', referenceId: first.id, enabled: true, createdAt: now() }]);
+  const s = await preview(second); assert.match(JSON.stringify(s.payload), /Selected previous user turn/); assert.doesNotMatch(JSON.stringify(s.payload), /DO_NOT_IMPORT_STALE_ASSISTANT/);
+});
+
+test('Folder retrieval records actual excerpts and blocked search prevents retrieval', async () => {
+  let c = await conversation([{ id: id(), type: 'folder', name: 'Source folder', path: 'src', enabled: true, createdAt: now() }]);
+  const s = await preview(c, 'Find beta'); assert.ok(s.sources.some(r => r.type === 'folder' && r.status === 'available')); assert.ok(s.sources.some(r => r.type === 'retrieved' && r.status === 'included' && r.path === 'src/beta.ts')); assert.match(JSON.stringify(s.payload), /BETA_CONTEXT_SENTINEL/);
+  c = await call(`/conversations/${c.id}`, 'PATCH', { config: { ...c.config, permissions: { ...c.config.permissions, search: 'deny' } } });
+  const blocked = await preview(c, 'Find beta'); assert.doesNotMatch(JSON.stringify(blocked.payload), /BETA_CONTEXT_SENTINEL/); assert.equal(blocked.sources.filter(r => r.type === 'retrieved').length, 0);
+});
+
+test('Temporary instructions exclude dependent assistant history on the next ordinary request', async () => {
+  const c = await conversation(); const s = await service.engine.compose(c.id, requestSchema.parse({ prompt: 'Temporary task', instructions: 'ONE_TIME_GUIDANCE' }));
+  service.store.saveInvocation(s); service.store.finishInvocation(s.id, 'complete'); service.store.addMessage(c.id, 'assistant', 'ONE_TIME_GUIDANCE repeated by assistant', s.id);
+  const next = await preview(c); assert.doesNotMatch(JSON.stringify(next.payload), /ONE_TIME_GUIDANCE/); assert.match(next.history[0].reason!, /Context changed/);
+});
+
+test('Profile CRUD edits a copy without silently mutating applied conversation context', async () => {
+  const c = await conversation([file('alpha')]); const created = await call('/profiles', 'POST', { name: 'Custom verification', description: 'Test saved profile', config: c.config });
+  await call(`/conversations/${c.id}/apply-profile`, 'POST', { profileId: created.id });
+  await call(`/profiles/${created.id}`, 'PUT', { name: 'Renamed verification', config: { ...c.config, sources: [file('beta')] } });
+  assert.equal(service.store.conversation(c.id).config.sources[0].path, 'src/alpha.ts');
+  const copy = await call('/profiles', 'POST', { ...created, name: 'Duplicate verification' }); assert.notEqual(copy.id, created.id);
+  await call(`/profiles/${created.id}`, 'DELETE'); assert.equal(service.store.conversation(c.id).config.sources[0].path, 'src/alpha.ts');
+});
+
+test('Attachment extraction sends actual uploaded text and rejects binary files', async () => {
+  const attachment = await call('/attachments', 'POST', { name: 'notes.txt', data: `data:text/plain;base64,${Buffer.from('UPLOADED_TEXT_SENTINEL').toString('base64')}` });
+  const c = await conversation(); const s = await call<Snapshot>(`/conversations/${c.id}/preview`, 'POST', { prompt: 'Read attachment', attachments: [attachment] }); assert.match(JSON.stringify(s.payload), /UPLOADED_TEXT_SENTINEL/);
+  const bad = await fetch(origin + '/api/attachments', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Canopy-CSRF': csrf, Cookie: cookie }, body: JSON.stringify({ name: 'binary.bin', data: `data:application/octet-stream;base64,${Buffer.from([0, 1, 2]).toString('base64')}` }) }); assert.equal(bad.status, 400);
+});
+
+test('PDF and DOCX uploads extract real document content; image capability exclusions are explicit', async () => {
+  for (const [name, buffer, sentinel] of [['notes.pdf', pdfFixture(), 'PDF_EXTRACTION_SENTINEL'], ['notes.docx', docxFixture(), 'DOCX_EXTRACTION_SENTINEL']] as const) {
+    const attachment = await call('/attachments', 'POST', { name, data: `data:application/octet-stream;base64,${buffer.toString('base64')}` });
+    assert.match(attachment.content, new RegExp(sentinel));
+    const c = await conversation(); const s = await call<Snapshot>(`/conversations/${c.id}/preview`, 'POST', { prompt: 'Use the document', attachments: [attachment] }); assert.match(JSON.stringify(s.payload), new RegExp(sentinel));
+  }
+  const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jx1sAAAAASUVORK5CYII=';
+  const image = await call('/attachments', 'POST', { name: 'pixel.png', data: `data:image/png;base64,${png}` }); const c = await conversation();
+  const s = await call<Snapshot>(`/conversations/${c.id}/preview`, 'POST', { prompt: 'Use image', attachments: [image] });
+  assert.ok(s.sources.some(r => r.status === 'excluded' && r.reason?.includes('image capability')));
 });

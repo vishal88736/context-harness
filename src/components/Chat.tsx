@@ -87,6 +87,9 @@ export function MarkdownBody({ content }: { content: string }) {
               </a>
             );
           },
+          img({ src, alt }) {
+            return <a href={typeof src === 'string' ? src : undefined} target="_blank" rel="noopener noreferrer">View image{alt ? `: ${alt}` : ''}</a>;
+          },
         }}
       >
         {content}
@@ -158,11 +161,7 @@ export function ToolCard({
       {(expanded || pending) && (
         <div className="tool-card-body">
           {reason && <p>{reason}</p>}
-          {command && (
-            <pre className="command-preview">
-              $ {command}
-            </pre>
-          )}
+          {command && <pre className="command-preview">$ {command}</pre>}
           {execution.diff && (
             <pre className="diff-preview">
               {execution.diff.split("\n").map((line, i) => (
@@ -455,6 +454,7 @@ export function Composer({
   busy,
   connected,
   sourceCount,
+  navigating,
 }: {
   data: Bootstrap;
   value: string;
@@ -474,6 +474,7 @@ export function Composer({
   busy: boolean;
   connected: boolean;
   sourceCount: number;
+  navigating: boolean;
 }) {
   const [temp, setTemp] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -569,6 +570,7 @@ export function Composer({
         <textarea
           ref={textarea}
           className="prompt-input"
+          disabled={navigating}
           id="message-composer"
           aria-label="Message Canopy"
           placeholder="Ask anything. Build something."
