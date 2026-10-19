@@ -1,27 +1,757 @@
-import { useState } from 'react';
-import { ArrowRight, Check, ChevronRight, Cpu, Folder, Globe, HardDrive, Info, KeyRound, Layers3, Monitor, Moon, Plus, RefreshCw, Save, Settings2, ShieldCheck, Sun, Trash2, X } from 'lucide-react';
-import { api, shortNumber, type Bootstrap, type Model, type Provider, type Workspace } from '../api';
-import { Modal, Spinner, Toggle } from './ui';
+import { useState } from "react";
+import {
+  ArrowRight,
+  Check,
+  ChevronRight,
+  Cpu,
+  Folder,
+  Globe,
+  HardDrive,
+  Info,
+  KeyRound,
+  Layers3,
+  Monitor,
+  Moon,
+  Plus,
+  RefreshCw,
+  Save,
+  Settings2,
+  ShieldCheck,
+  Sun,
+  Trash2,
+  X,
+} from "lucide-react";
+import {
+  api,
+  shortNumber,
+  type Bootstrap,
+  type Model,
+  type Provider,
+  type Workspace,
+} from "../api";
+import { Modal, Spinner, Toggle } from "./ui";
 
-export function SettingsDialog({ data, workspaceId, initialTab, onRefresh, onClose, onWorkspace }: { data: Bootstrap; workspaceId: string; initialTab?: string; onRefresh: () => Promise<void>; onClose: () => void; onWorkspace: (id: string) => void }) {
-  const [tab, setTab] = useState(initialTab ?? 'providers'); const [error, setError] = useState(''); const [success, setSuccess] = useState(''); const [busy, setBusy] = useState(false);
-  const [selectedProvider, setSelectedProvider] = useState<string | null>(data.providers[0]?.id ?? null);
-  const [draft, setDraft] = useState({ name: '', kind: 'ollama' as Provider['kind'], baseUrl: 'http://127.0.0.1:11434', apiKey: '' });
-  const [editing, setEditing] = useState(!data.providers.length); const [keyChanged, setKeyChanged] = useState(false); const [models, setModels] = useState<Model[]>([]); const [newModelId, setNewModelId] = useState('');
-  const workspace = data.workspaces.find(w => w.id === workspaceId)!;
-  const [workspaceDraft, setWorkspaceDraft] = useState({ name: workspace.name, instructions: workspace.instructions }); const [newRoot, setNewRoot] = useState(''); const [newName, setNewName] = useState('');
-  const provider = data.providers.find(p => p.id === selectedProvider);
-  async function perform(fn: () => Promise<void>, message = '') { setBusy(true); setError(''); setSuccess(''); try { await fn(); if (message) setSuccess(message); } catch (e) { setError((e as Error).message); } finally { setBusy(false); } }
-  function edit(p?: Provider) { setSelectedProvider(p?.id ?? null); setDraft({ name: p?.name ?? '', kind: p?.kind ?? 'ollama', baseUrl: p?.baseUrl ?? 'http://127.0.0.1:11434', apiKey: '' }); setModels(structuredClone(p?.models ?? [])); setKeyChanged(false); setEditing(true); setError(''); }
+export function SettingsDialog({
+  data,
+  workspaceId,
+  initialTab,
+  onRefresh,
+  onClose,
+  onWorkspace,
+}: {
+  data: Bootstrap;
+  workspaceId: string;
+  initialTab?: string;
+  onRefresh: () => Promise<void>;
+  onClose: () => void;
+  onWorkspace: (id: string) => void;
+}) {
+  const [tab, setTab] = useState(initialTab ?? "providers");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [selectedProvider, setSelectedProvider] = useState<string | null>(
+    data.providers[0]?.id ?? null,
+  );
+  const [draft, setDraft] = useState({
+    name: "",
+    kind: "ollama" as Provider["kind"],
+    baseUrl: "http://127.0.0.1:11434",
+    apiKey: "",
+  });
+  const [editing, setEditing] = useState(!data.providers.length);
+  const [keyChanged, setKeyChanged] = useState(false);
+  const [models, setModels] = useState<Model[]>([]);
+  const [newModelId, setNewModelId] = useState("");
+  const workspace = data.workspaces.find((w) => w.id === workspaceId)!;
+  const [workspaceDraft, setWorkspaceDraft] = useState({
+    name: workspace.name,
+    instructions: workspace.instructions,
+  });
+  const [newRoot, setNewRoot] = useState("");
+  const [newName, setNewName] = useState("");
+  const provider = data.providers.find((p) => p.id === selectedProvider);
+  async function perform(fn: () => Promise<void>, message = "") {
+    setBusy(true);
+    setError("");
+    setSuccess("");
+    try {
+      await fn();
+      if (message) setSuccess(message);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  function edit(p?: Provider) {
+    setSelectedProvider(p?.id ?? null);
+    setDraft({
+      name: p?.name ?? "",
+      kind: p?.kind ?? "ollama",
+      baseUrl: p?.baseUrl ?? "http://127.0.0.1:11434",
+      apiKey: "",
+    });
+    setModels(structuredClone(p?.models ?? []));
+    setKeyChanged(false);
+    setEditing(true);
+    setError("");
+  }
   async function saveProvider() {
-    const payload = { ...draft, models, apiKey: keyChanged ? draft.apiKey : undefined };
-    const saved = await api<Provider>(selectedProvider ? `/providers/${selectedProvider}` : '/providers', selectedProvider ? 'PUT' : 'POST', payload);
-    await onRefresh(); setSelectedProvider(saved.id); setEditing(false);
+    const payload = {
+      ...draft,
+      models,
+      apiKey: keyChanged ? draft.apiKey : undefined,
+    };
+    const saved = await api<Provider>(
+      selectedProvider ? `/providers/${selectedProvider}` : "/providers",
+      selectedProvider ? "PUT" : "POST",
+      payload,
+    );
+    await onRefresh();
+    setSelectedProvider(saved.id);
+    setEditing(false);
   }
   async function discover() {
-    if (!provider) return; const r = await api<{ models: Model[] }>(`/providers/${provider.id}/discover`, 'POST');
-    if (!data.settings.defaultModel && r.models.length) await api('/settings', 'PUT', { defaultModel: { providerId: provider.id, modelId: r.models[0].id } });
-    await onRefresh(); if (!r.models.length) throw new Error('The provider returned no models. Install a local model or check your provider account.');
+    if (!provider) return;
+    const r = await api<{ models: Model[] }>(
+      `/providers/${provider.id}/discover`,
+      "POST",
+    );
+    if (!data.settings.defaultModel && r.models.length)
+      await api("/settings", "PUT", {
+        defaultModel: { providerId: provider.id, modelId: r.models[0].id },
+      });
+    await onRefresh();
+    if (!r.models.length)
+      throw new Error(
+        "The provider returned no models. Install a local model or check your provider account.",
+      );
   }
-  return <Modal title="A workspace that fits you." eyebrow="SETTINGS" onClose={onClose} wide><div className="settings-layout"><nav className="settings-nav" aria-label="Settings sections">{[['providers', Cpu, 'Models & providers'], ['workspace', Folder, 'Workspaces'], ['appearance', Moon, 'Appearance'], ['about', Info, 'About & shortcuts']].map(([key, Icon, label]) => { const I = Icon as typeof Cpu; return <button key={String(key)} className={tab === key ? 'active' : ''} onClick={() => { setTab(String(key)); setError(''); setSuccess(''); }}><I size={16}/>{String(label)}</button>; })}</nav><div className="settings-content">{tab === 'providers' ? <>{editing ? <><button className="text-button" onClick={() => setEditing(false)}>← All providers</button><h3>{selectedProvider ? 'Edit provider' : 'Connect a provider'}</h3><div className="form-grid"><label className="field">Name<input value={draft.name} placeholder="My local models" onChange={e => setDraft({ ...draft, name: e.target.value })}/></label><label className="field">Adapter<select value={draft.kind} onChange={e => setDraft({ ...draft, kind: e.target.value as Provider['kind'], baseUrl: e.target.value === 'ollama' ? 'http://127.0.0.1:11434' : '' })}><option value="ollama">Ollama (native)</option><option value="compatible">OpenAI-compatible</option></select></label></div><label className="field">API base URL<input value={draft.baseUrl} onChange={e => setDraft({ ...draft, baseUrl: e.target.value })} placeholder={draft.kind === 'ollama' ? 'http://127.0.0.1:11434' : 'https://your-provider.example/v1'}/><small>{draft.kind === 'ollama' ? 'Use the server origin, without /api or /v1.' : 'Include the API prefix, usually /v1. Supports hosted endpoints, LM Studio, and compatible local servers.'}</small></label><label className="field">API key <span className="muted">optional for local servers</span><input type="password" autoComplete="new-password" value={draft.apiKey} onChange={e => { setDraft({ ...draft, apiKey: e.target.value }); setKeyChanged(true); }} placeholder={provider?.keyConfigured ? 'Saved key · leave untouched to keep' : 'Enter a key if required'}/><small>Encrypted at rest. Never returned to the browser or context inspector.</small></label><div className="model-editor"><h4>Model capabilities</h4><p className="field-help">Discover models after saving. If your provider does not publish metadata, enter verified limits and capabilities here.</p>{models.map((m, index) => <div className="model-edit-row" key={`${index}`}><label className="field">Model ID<input value={m.id} onChange={e => setModels(models.map((x, i) => i === index ? { ...x, id: e.target.value, name: e.target.value } : x))}/></label><label className="field">Context limit<input type="number" min={2048} max={10_000_000} value={m.contextWindow} onChange={e => setModels(models.map((x, i) => i === index ? { ...x, contextWindow: Number(e.target.value), contextSource: 'user' } : x))}/></label><label><input type="checkbox" checked={m.tools} onChange={e => setModels(models.map((x, i) => i === index ? { ...x, tools: e.target.checked } : x))}/>Tools</label><label><input type="checkbox" checked={m.vision} onChange={e => setModels(models.map((x, i) => i === index ? { ...x, vision: e.target.checked } : x))}/>Images</label><button className="icon-button danger-text" aria-label={`Remove model ${m.id}`} onClick={() => setModels(models.filter((_, i) => i !== index))}><X size={13}/></button></div>)}<div className="add-model-row"><input aria-label="Explicit model ID" placeholder="Exact model ID from your provider" value={newModelId} onChange={e => setNewModelId(e.target.value)}/><button className="secondary-button" disabled={!newModelId.trim() || models.some(m => m.id === newModelId.trim())} onClick={() => { setModels([...models, { id: newModelId.trim(), name: newModelId.trim(), contextWindow: 8192, contextSource: 'fallback', tools: false, vision: false }]); setNewModelId(''); }}><Plus size={14}/>Add ID</button></div></div><button className="primary-button" disabled={busy || !draft.name.trim() || !draft.baseUrl} onClick={() => perform(saveProvider, 'Provider saved. Discover models to get started.')}><Save size={14}/>Save provider</button></> : <><div className="settings-section-title"><h3>Your model connections</h3><button className="text-button" onClick={() => edit()}><Plus size={14}/>Add provider</button></div><p className="field-help">Choose your tools for thought. Connect local or hosted models; keep conversations independent of providers.</p>{!data.providers.length && <div className="provider-empty"><Cpu size={30}/><h3>Bring your own intelligence.</h3><p>Connect Ollama for local models, or a hosted service with an OpenAI-compatible API.</p><button className="primary-button" onClick={() => edit()}><Plus size={14}/>Connect a provider</button></div>}{data.providers.map(p => <button key={p.id} className={`provider-list-row ${p.id === selectedProvider ? 'active' : ''}`} onClick={() => setSelectedProvider(p.id)}><span className="provider-logo">{p.kind === 'ollama' ? <HardDrive size={20}/> : <Globe size={20}/>}</span><span><strong>{p.name}</strong><small>{p.baseUrl}</small></span><span className="provider-model-count">{p.models.length} models</span><ChevronRight size={14}/></button>)}{provider && <div className="provider-detail"><div className="provider-detail-heading"><h4>{provider.name}</h4><button className="text-button" onClick={() => edit(provider)}>Edit connection</button></div><div className="provider-actions"><button className="secondary-button" disabled={busy} onClick={() => perform(discover, 'Models discovered. Ready to chat.')}><RefreshCw size={14} className={busy ? 'spin' : ''}/>Discover models</button><button className="icon-button danger-text" aria-label={`Remove ${provider.name} provider`} onClick={() => perform(async () => { await api(`/providers/${provider.id}`, 'DELETE'); await onRefresh(); setSelectedProvider(null); })}><Trash2 size={14}/></button><span className="key-status"><ShieldCheck size={12}/>{provider.keyConfigured ? 'Key encrypted' : 'No key stored'}</span></div><div className="discovered-models">{provider.models.map(m => <div key={m.id}><span><strong>{m.name}</strong><small>{shortNumber(m.contextWindow)} context · {m.contextSource === 'fallback' ? 'fallback limit' : m.contextSource === 'user' ? 'user configured' : 'provider metadata'}</small></span>{m.tools && <span className="tiny-tag">TOOLS</span>}{m.vision && <span className="tiny-tag">IMAGES</span>}</div>)}</div></div>}<label className="field default-model-field">Default model<select aria-label="Default model" value={data.settings.defaultModel ? `${data.settings.defaultModel.providerId}::${data.settings.defaultModel.modelId}` : ''} onChange={e => perform(async () => { const [providerId, ...rest] = e.target.value.split('::'); await api('/settings', 'PUT', { defaultModel: { providerId, modelId: rest.join('::') } }); await onRefresh(); }, 'Default model updated.')}><option value="" disabled>Select a model</option>{data.providers.map(p => <optgroup label={p.name} key={p.id}>{p.models.map(m => <option value={`${p.id}::${m.id}`} key={m.id}>{m.name}</option>)}</optgroup>)}</select><small>New conversations inherit this model. Each conversation can choose its own.</small></label></>}</> : tab === 'workspace' ? <><h3>Current workspace</h3><label className="field">Project name<input value={workspaceDraft.name} onChange={e => setWorkspaceDraft({ ...workspaceDraft, name: e.target.value })}/></label><div className="root-path"><Folder size={14}/><code>{workspace.root}</code></div><label className="field">Workspace instructions<textarea rows={6} value={workspaceDraft.instructions} onChange={e => setWorkspaceDraft({ ...workspaceDraft, instructions: e.target.value })} placeholder="Shared guidance for conversations in this workspace…"/><small>Included explicitly in requests for this workspace. Repository instruction files must be selected in Context.</small></label><button className="primary-button" disabled={busy} onClick={() => perform(async () => { await api(`/workspaces/${workspaceId}`, 'PATCH', workspaceDraft); await onRefresh(); }, 'Workspace saved.')}><Save size={14}/>Save workspace</button><div className="settings-divider"/><h3>Add a workspace</h3><label className="field">Name<input value={newName} onChange={e => setNewName(e.target.value)} placeholder="My project"/></label><label className="field">Absolute folder path<input value={newRoot} onChange={e => setNewRoot(e.target.value)} placeholder="/home/you/projects/my-project"/></label><button className="secondary-button" disabled={busy || !newRoot || !newName} onClick={() => perform(async () => { const w = await api<Workspace>('/workspaces', 'POST', { name: newName, root: newRoot }); await onRefresh(); onWorkspace(w.id); onClose(); })}><Plus size={14}/>Add workspace</button></> : tab === 'appearance' ? <><h3>Set the mood.</h3><p className="field-help">A considered workspace, in the light that works for you.</p><div className="theme-options">{[['dark', Moon, 'Dark'], ['light', Sun, 'Light'], ['system', Monitor, 'System']].map(([key, Icon, label]) => { const I = Icon as typeof Moon; return <button key={String(key)} className={data.settings.theme === key ? 'active' : ''} onClick={() => perform(async () => { await api('/settings', 'PUT', { theme: key }); await onRefresh(); })}><span className={`theme-preview ${key}`}><i/><i/><i/></span><span><I size={14}/>{String(label)}{data.settings.theme === key && <Check size={13}/>}</span></button>; })}</div></> : <><div className="about-logo"><Layers3 size={24}/><h3>Canopy <small>1.0.0</small></h3></div><p className="field-help">An independent context for every conversation. Built for thoughtful work, with local persistence and transparent requests.</p><h4>Keyboard shortcuts</h4><div className="shortcut-list">{[['New conversation', '⌘ / Ctrl N'], ['Search conversations', '⌘ / Ctrl K'], ['Toggle context panel', '⌘ / Ctrl Shift C'], ['Send message', 'Enter'], ['New line', 'Shift Enter'], ['Close dialog', 'Escape'], ['Navigate conversation history', '↑ / ↓']].map(([label, key]) => <div key={label}><span>{label}</span><kbd>{key}</kbd></div>)}</div><div className="notice"><ShieldCheck size={15}/><p>Runs on loopback. Your database and encrypted provider keys stay in the local data directory. Only the composed request goes to your selected provider.</p></div><p className="field-help">Reference: <a href="https://github.com/anomalyco/opencode/tree/v2.0.32" target="_blank" rel="noreferrer">OpenCode v2.0.32</a>. Independently built; not affiliated with the OpenCode team.</p></>}{busy && <Spinner label="Working…"/>}{error && <div className="error-inline" role="alert">{error}</div>}{success && <div className="success-inline" role="status"><Check size={14}/>{success}</div>}</div></div><div className="modal-actions"><span className="settings-footer-note"><HardDrive size={12}/>Stored on this device</span><button className="secondary-button" onClick={onClose}>Done</button></div></Modal>;
+  return (
+    <Modal
+      title="A workspace that fits you."
+      eyebrow="SETTINGS"
+      onClose={onClose}
+      wide
+    >
+      <div className="settings-layout">
+        <nav className="settings-nav" aria-label="Settings sections">
+          {[
+            ["providers", Cpu, "Models & providers"],
+            ["workspace", Folder, "Workspaces"],
+            ["appearance", Moon, "Appearance"],
+            ["about", Info, "About & shortcuts"],
+          ].map(([key, Icon, label]) => {
+            const I = Icon as typeof Cpu;
+            return (
+              <button
+                key={String(key)}
+                className={tab === key ? "active" : ""}
+                onClick={() => {
+                  setTab(String(key));
+                  setError("");
+                  setSuccess("");
+                }}
+              >
+                <I size={16} />
+                {String(label)}
+              </button>
+            );
+          })}
+        </nav>
+        <div className="settings-content">
+          {tab === "providers" ? (
+            <>
+              {editing ? (
+                <>
+                  <button
+                    className="text-button"
+                    onClick={() => setEditing(false)}
+                  >
+                    ← All providers
+                  </button>
+                  <h3>
+                    {selectedProvider ? "Edit provider" : "Connect a provider"}
+                  </h3>
+                  <div className="form-grid">
+                    <label className="field">
+                      Name
+                      <input
+                        value={draft.name}
+                        placeholder="My local models"
+                        onChange={(e) =>
+                          setDraft({ ...draft, name: e.target.value })
+                        }
+                      />
+                    </label>
+                    <label className="field">
+                      Adapter
+                      <select
+                        value={draft.kind}
+                        onChange={(e) =>
+                          setDraft({
+                            ...draft,
+                            kind: e.target.value as Provider["kind"],
+                            baseUrl:
+                              e.target.value === "ollama"
+                                ? "http://127.0.0.1:11434"
+                                : "",
+                          })
+                        }
+                      >
+                        <option value="ollama">Ollama (native)</option>
+                        <option value="compatible">OpenAI-compatible</option>
+                      </select>
+                    </label>
+                  </div>
+                  <label className="field">
+                    API base URL
+                    <input
+                      value={draft.baseUrl}
+                      onChange={(e) =>
+                        setDraft({ ...draft, baseUrl: e.target.value })
+                      }
+                      placeholder={
+                        draft.kind === "ollama"
+                          ? "http://127.0.0.1:11434"
+                          : "https://your-provider.example/v1"
+                      }
+                    />
+                    <small>
+                      {draft.kind === "ollama"
+                        ? "Use the server origin, without /api or /v1."
+                        : "Include the API prefix, usually /v1. Supports hosted endpoints, LM Studio, and compatible local servers."}
+                    </small>
+                  </label>
+                  <label className="field">
+                    API key{" "}
+                    <span className="muted">optional for local servers</span>
+                    <input
+                      type="password"
+                      autoComplete="new-password"
+                      value={draft.apiKey}
+                      onChange={(e) => {
+                        setDraft({ ...draft, apiKey: e.target.value });
+                        setKeyChanged(true);
+                      }}
+                      placeholder={
+                        provider?.keyConfigured
+                          ? "Saved key · leave untouched to keep"
+                          : "Enter a key if required"
+                      }
+                    />
+                    <small>
+                      Encrypted at rest. Never returned to the browser or
+                      context inspector.
+                    </small>
+                  </label>
+                  <div className="model-editor">
+                    <h4>Model capabilities</h4>
+                    <p className="field-help">
+                      Discover models after saving. If your provider does not
+                      publish metadata, enter verified limits and capabilities
+                      here.
+                    </p>
+                    {models.map((m, index) => (
+                      <div className="model-edit-row" key={`${index}`}>
+                        <label className="field">
+                          Model ID
+                          <input
+                            value={m.id}
+                            onChange={(e) =>
+                              setModels(
+                                models.map((x, i) =>
+                                  i === index
+                                    ? {
+                                        ...x,
+                                        id: e.target.value,
+                                        name: e.target.value,
+                                      }
+                                    : x,
+                                ),
+                              )
+                            }
+                          />
+                        </label>
+                        <label className="field">
+                          Context limit
+                          <input
+                            type="number"
+                            min={2048}
+                            max={10_000_000}
+                            value={m.contextWindow}
+                            onChange={(e) =>
+                              setModels(
+                                models.map((x, i) =>
+                                  i === index
+                                    ? {
+                                        ...x,
+                                        contextWindow: Number(e.target.value),
+                                        contextSource: "user",
+                                      }
+                                    : x,
+                                ),
+                              )
+                            }
+                          />
+                        </label>
+                        <label>
+                          <input
+                            type="checkbox"
+                            checked={m.tools}
+                            onChange={(e) =>
+                              setModels(
+                                models.map((x, i) =>
+                                  i === index
+                                    ? { ...x, tools: e.target.checked }
+                                    : x,
+                                ),
+                              )
+                            }
+                          />
+                          Tools
+                        </label>
+                        <label>
+                          <input
+                            type="checkbox"
+                            checked={m.vision}
+                            onChange={(e) =>
+                              setModels(
+                                models.map((x, i) =>
+                                  i === index
+                                    ? { ...x, vision: e.target.checked }
+                                    : x,
+                                ),
+                              )
+                            }
+                          />
+                          Images
+                        </label>
+                        <button
+                          className="icon-button danger-text"
+                          aria-label={`Remove model ${m.id}`}
+                          onClick={() =>
+                            setModels(models.filter((_, i) => i !== index))
+                          }
+                        >
+                          <X size={13} />
+                        </button>
+                      </div>
+                    ))}
+                    <div className="add-model-row">
+                      <input
+                        aria-label="Explicit model ID"
+                        placeholder="Exact model ID from your provider"
+                        value={newModelId}
+                        onChange={(e) => setNewModelId(e.target.value)}
+                      />
+                      <button
+                        className="secondary-button"
+                        disabled={
+                          !newModelId.trim() ||
+                          models.some((m) => m.id === newModelId.trim())
+                        }
+                        onClick={() => {
+                          setModels([
+                            ...models,
+                            {
+                              id: newModelId.trim(),
+                              name: newModelId.trim(),
+                              contextWindow: 8192,
+                              contextSource: "fallback",
+                              tools: false,
+                              vision: false,
+                            },
+                          ]);
+                          setNewModelId("");
+                        }}
+                      >
+                        <Plus size={14} />
+                        Add ID
+                      </button>
+                    </div>
+                  </div>
+                  <button
+                    className="primary-button"
+                    disabled={busy || !draft.name.trim() || !draft.baseUrl}
+                    onClick={() =>
+                      perform(
+                        saveProvider,
+                        "Provider saved. Discover models to get started.",
+                      )
+                    }
+                  >
+                    <Save size={14} />
+                    Save provider
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div className="settings-section-title">
+                    <h3>Your model connections</h3>
+                    <button className="text-button" onClick={() => edit()}>
+                      <Plus size={14} />
+                      Add provider
+                    </button>
+                  </div>
+                  <p className="field-help">
+                    Choose your tools for thought. Connect local or hosted
+                    models; keep conversations independent of providers.
+                  </p>
+                  {!data.providers.length && (
+                    <div className="provider-empty">
+                      <Cpu size={30} />
+                      <h3>Bring your own intelligence.</h3>
+                      <p>
+                        Connect Ollama for local models, or a hosted service
+                        with an OpenAI-compatible API.
+                      </p>
+                      <button className="primary-button" onClick={() => edit()}>
+                        <Plus size={14} />
+                        Connect a provider
+                      </button>
+                    </div>
+                  )}
+                  {data.providers.map((p) => (
+                    <button
+                      key={p.id}
+                      className={`provider-list-row ${p.id === selectedProvider ? "active" : ""}`}
+                      onClick={() => setSelectedProvider(p.id)}
+                    >
+                      <span className="provider-logo">
+                        {p.kind === "ollama" ? (
+                          <HardDrive size={20} />
+                        ) : (
+                          <Globe size={20} />
+                        )}
+                      </span>
+                      <span>
+                        <strong>{p.name}</strong>
+                        <small>{p.baseUrl}</small>
+                      </span>
+                      <span className="provider-model-count">
+                        {p.models.length} models
+                      </span>
+                      <ChevronRight size={14} />
+                    </button>
+                  ))}
+                  {provider && (
+                    <div className="provider-detail">
+                      <div className="provider-detail-heading">
+                        <h4>{provider.name}</h4>
+                        <button
+                          className="text-button"
+                          onClick={() => edit(provider)}
+                        >
+                          Edit connection
+                        </button>
+                      </div>
+                      <div className="provider-actions">
+                        <button
+                          className="secondary-button"
+                          disabled={busy}
+                          onClick={() =>
+                            perform(
+                              discover,
+                              "Models discovered. Ready to chat.",
+                            )
+                          }
+                        >
+                          <RefreshCw size={14} className={busy ? "spin" : ""} />
+                          Discover models
+                        </button>
+                        <button
+                          className="icon-button danger-text"
+                          aria-label={`Remove ${provider.name} provider`}
+                          onClick={() =>
+                            perform(async () => {
+                              await api(`/providers/${provider.id}`, "DELETE");
+                              await onRefresh();
+                              setSelectedProvider(null);
+                            })
+                          }
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                        <span className="key-status">
+                          <ShieldCheck size={12} />
+                          {provider.keyConfigured
+                            ? "Key encrypted"
+                            : "No key stored"}
+                        </span>
+                      </div>
+                      <div className="discovered-models">
+                        {provider.models.map((m) => (
+                          <div key={m.id}>
+                            <span>
+                              <strong>{m.name}</strong>
+                              <small>
+                                {shortNumber(m.contextWindow)} context ·{" "}
+                                {m.contextSource === "fallback"
+                                  ? "fallback limit"
+                                  : m.contextSource === "user"
+                                    ? "user configured"
+                                    : "provider metadata"}
+                              </small>
+                            </span>
+                            {m.tools && <span className="tiny-tag">TOOLS</span>}
+                            {m.vision && (
+                              <span className="tiny-tag">IMAGES</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <label className="field default-model-field">
+                    Default model
+                    <select
+                      aria-label="Default model"
+                      value={
+                        data.settings.defaultModel
+                          ? `${data.settings.defaultModel.providerId}::${data.settings.defaultModel.modelId}`
+                          : ""
+                      }
+                      onChange={(e) =>
+                        perform(async () => {
+                          const [providerId, ...rest] =
+                            e.target.value.split("::");
+                          await api("/settings", "PUT", {
+                            defaultModel: {
+                              providerId,
+                              modelId: rest.join("::"),
+                            },
+                          });
+                          await onRefresh();
+                        }, "Default model updated.")
+                      }
+                    >
+                      <option value="" disabled>
+                        Select a model
+                      </option>
+                      {data.providers.map((p) => (
+                        <optgroup label={p.name} key={p.id}>
+                          {p.models.map((m) => (
+                            <option value={`${p.id}::${m.id}`} key={m.id}>
+                              {m.name}
+                            </option>
+                          ))}
+                        </optgroup>
+                      ))}
+                    </select>
+                    <small>
+                      New conversations inherit this model. Each conversation
+                      can choose its own.
+                    </small>
+                  </label>
+                </>
+              )}
+            </>
+          ) : tab === "workspace" ? (
+            <>
+              <h3>Current workspace</h3>
+              <label className="field">
+                Project name
+                <input
+                  value={workspaceDraft.name}
+                  onChange={(e) =>
+                    setWorkspaceDraft({
+                      ...workspaceDraft,
+                      name: e.target.value,
+                    })
+                  }
+                />
+              </label>
+              <div className="root-path">
+                <Folder size={14} />
+                <code>{workspace.root}</code>
+              </div>
+              <label className="field">
+                Workspace instructions
+                <textarea
+                  rows={6}
+                  value={workspaceDraft.instructions}
+                  onChange={(e) =>
+                    setWorkspaceDraft({
+                      ...workspaceDraft,
+                      instructions: e.target.value,
+                    })
+                  }
+                  placeholder="Shared guidance for conversations in this workspace…"
+                />
+                <small>
+                  Included explicitly in requests for this workspace. Repository
+                  instruction files must be selected in Context.
+                </small>
+              </label>
+              <button
+                className="primary-button"
+                disabled={busy}
+                onClick={() =>
+                  perform(async () => {
+                    await api(
+                      `/workspaces/${workspaceId}`,
+                      "PATCH",
+                      workspaceDraft,
+                    );
+                    await onRefresh();
+                  }, "Workspace saved.")
+                }
+              >
+                <Save size={14} />
+                Save workspace
+              </button>
+              <div className="settings-divider" />
+              <h3>Add a workspace</h3>
+              <label className="field">
+                Name
+                <input
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  placeholder="My project"
+                />
+              </label>
+              <label className="field">
+                Absolute folder path
+                <input
+                  value={newRoot}
+                  onChange={(e) => setNewRoot(e.target.value)}
+                  placeholder="/home/you/projects/my-project"
+                />
+              </label>
+              <button
+                className="secondary-button"
+                disabled={busy || !newRoot || !newName}
+                onClick={() =>
+                  perform(async () => {
+                    const w = await api<Workspace>("/workspaces", "POST", {
+                      name: newName,
+                      root: newRoot,
+                    });
+                    await onRefresh();
+                    onWorkspace(w.id);
+                    onClose();
+                  })
+                }
+              >
+                <Plus size={14} />
+                Add workspace
+              </button>
+            </>
+          ) : tab === "appearance" ? (
+            <>
+              <h3>Set the mood.</h3>
+              <p className="field-help">
+                A considered workspace, in the light that works for you.
+              </p>
+              <div className="theme-options">
+                {[
+                  ["dark", Moon, "Dark"],
+                  ["light", Sun, "Light"],
+                  ["system", Monitor, "System"],
+                ].map(([key, Icon, label]) => {
+                  const I = Icon as typeof Moon;
+                  return (
+                    <button
+                      key={String(key)}
+                      className={data.settings.theme === key ? "active" : ""}
+                      onClick={() =>
+                        perform(async () => {
+                          await api("/settings", "PUT", { theme: key });
+                          await onRefresh();
+                        })
+                      }
+                    >
+                      <span className={`theme-preview ${key}`}>
+                        <i />
+                        <i />
+                        <i />
+                      </span>
+                      <span>
+                        <I size={14} />
+                        {String(label)}
+                        {data.settings.theme === key && <Check size={13} />}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="about-logo">
+                <Layers3 size={24} />
+                <h3>
+                  Canopy <small>1.0.0</small>
+                </h3>
+              </div>
+              <p className="field-help">
+                An independent context for every conversation. Built for
+                thoughtful work, with local persistence and transparent
+                requests.
+              </p>
+              <h4>Keyboard shortcuts</h4>
+              <div className="shortcut-list">
+                {[
+                  ["New conversation", "⌘ / Ctrl N"],
+                  ["Search conversations", "⌘ / Ctrl K"],
+                  ["Toggle context panel", "⌘ / Ctrl Shift C"],
+                  ["Send message", "Enter"],
+                  ["New line", "Shift Enter"],
+                  ["Close dialog", "Escape"],
+                  ["Navigate conversation history", "↑ / ↓"],
+                ].map(([label, key]) => (
+                  <div key={label}>
+                    <span>{label}</span>
+                    <kbd>{key}</kbd>
+                  </div>
+                ))}
+              </div>
+              <div className="notice">
+                <ShieldCheck size={15} />
+                <p>
+                  Runs on loopback. Your database and encrypted provider keys
+                  stay in the local data directory. Only the composed request
+                  goes to your selected provider.
+                </p>
+              </div>
+              <p className="field-help">
+                Reference:{" "}
+                <a
+                  href="https://github.com/anomalyco/opencode/tree/v2.0.32"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  OpenCode v2.0.32
+                </a>
+                . Independently built; not affiliated with the OpenCode team.
+              </p>
+            </>
+          )}
+          {busy && <Spinner label="Working…" />}
+          {error && (
+            <div className="error-inline" role="alert">
+              {error}
+            </div>
+          )}
+          {success && (
+            <div className="success-inline" role="status">
+              <Check size={14} />
+              {success}
+            </div>
+          )}
+        </div>
+      </div>
+      <div className="modal-actions">
+        <span className="settings-footer-note">
+          <HardDrive size={12} />
+          Stored on this device
+        </span>
+        <button className="secondary-button" onClick={onClose}>
+          Done
+        </button>
+      </div>
+    </Modal>
+  );
 }

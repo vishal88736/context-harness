@@ -1,74 +1,884 @@
-import { useEffect, useRef, useState } from 'react';
-import { BookOpen, Check, ChevronDown, ChevronRight, Code2, File, FileCode2, Folder, GripVertical, Layers3, Link2, ListFilter, MessageSquare, Plus, Search, ShieldCheck, SlidersHorizontal, Trash2, Upload, X, Brain, Eye, Terminal, PenLine, Info } from 'lucide-react';
-import { api, makeSource, shortNumber, type Bootstrap, type ContextConfig, type Conversation, type Permissions, type Snapshot, type Source, type Workspace } from '../api';
-import { Modal, Spinner, Toggle } from './ui';
+import { useEffect, useRef, useState } from "react";
+import {
+  BookOpen,
+  Check,
+  ChevronDown,
+  ChevronRight,
+  Code2,
+  File,
+  FileCode2,
+  Folder,
+  GripVertical,
+  Layers3,
+  Link2,
+  ListFilter,
+  MessageSquare,
+  Plus,
+  Search,
+  ShieldCheck,
+  SlidersHorizontal,
+  Trash2,
+  Upload,
+  X,
+  Brain,
+  Eye,
+  Terminal,
+  PenLine,
+  Info,
+} from "lucide-react";
+import {
+  api,
+  makeSource,
+  shortNumber,
+  type Bootstrap,
+  type ContextConfig,
+  type Conversation,
+  type Permissions,
+  type Snapshot,
+  type Source,
+  type Workspace,
+} from "../api";
+import { Modal, Spinner, Toggle } from "./ui";
 
-export const sourceLabels: Record<Source['type'], string> = { file: 'Files & snippets', folder: 'Folders & repositories', project: 'Project instructions', instruction: 'Custom instructions', chat: 'Previous conversations', memory: 'Saved memories', attachment: 'Attachments', retrieved: 'Retrieved content' };
-export const SourceIcon = ({ type, size = 15 }: { type: Source['type']; size?: number }) => { const Icon = { file: FileCode2, folder: Folder, project: BookOpen, instruction: PenLine, chat: MessageSquare, memory: Brain, attachment: File, retrieved: Search }[type]; return <Icon size={size}/>; };
+export const sourceLabels: Record<Source["type"], string> = {
+  file: "Files & snippets",
+  folder: "Folders & repositories",
+  project: "Project instructions",
+  instruction: "Custom instructions",
+  chat: "Previous conversations",
+  memory: "Saved memories",
+  attachment: "Attachments",
+  retrieved: "Retrieved content",
+};
+export const SourceIcon = ({
+  type,
+  size = 15,
+}: {
+  type: Source["type"];
+  size?: number;
+}) => {
+  const Icon = {
+    file: FileCode2,
+    folder: Folder,
+    project: BookOpen,
+    instruction: PenLine,
+    chat: MessageSquare,
+    memory: Brain,
+    attachment: File,
+    retrieved: Search,
+  }[type];
+  return <Icon size={size} />;
+};
 
-export function PermissionEditor({ permissions, onChange }: { permissions: Permissions; onChange: (p: Permissions) => void }) {
-  return <div className="permissions-editor"><div className="permission-explainer"><ShieldCheck size={18}/><p>Permissions are enforced by the server, independently of model instructions.</p></div>{([
-    ['read', 'Read files', 'Enabled files and folders only', Eye], ['search', 'Search & retrieval', 'Relevant excerpts from enabled sources', Search], ['write', 'Apply file changes', 'Review a diff before every file write', PenLine], ['terminal', 'Run commands', 'Review and approve every command', Terminal],
-  ] as const).map(([key, label, description, Icon]) => <div className="permission-row" key={key}><Icon size={16}/><span><strong>{label}</strong><small>{description}</small></span><select aria-label={`${label} permission`} value={permissions[key]} onChange={e => onChange({ ...permissions, [key]: e.target.value })}><option value="deny">Blocked</option><option value={key === 'read' || key === 'search' ? 'allow' : 'ask'}>{key === 'read' || key === 'search' ? 'Allowed' : 'Ask each time'}</option></select></div>)}{permissions.terminal === 'ask' && <div className="notice warning"><Info size={15}/><p>Approved commands run as your OS user and can access files beyond selected context. Inspect each command before approving.</p></div>}</div>;
-}
-export function SourceList({ sources, onChange, snapshot, preview = false }: { sources: Source[]; onChange: (s: Source[]) => void; snapshot?: Snapshot | null; preview?: boolean }) {
-  const [expanded, setExpanded] = useState<string | null>(null);
-  return <div className="source-groups">{(Object.keys(sourceLabels) as Source['type'][]).map(type => {
-    const items = sources.filter(s => s.type === type); if (!items.length) return null;
-    return <section className="source-group" key={type}><h4><SourceIcon type={type}/>{sourceLabels[type]}<span>{items.length}</span></h4>{items.map(s => {
-      const report = snapshot?.sources.find(r => r.id === s.id);
-      const state = !s.enabled ? 'Disabled' : report?.status === 'included' ? preview ? 'In preview' : 'Included' : report?.status === 'excluded' ? 'Excluded' : s.type === 'folder' || report?.status === 'available' ? 'Retrieval ready' : 'Configured';
-      return <div className={`source-card ${!s.enabled ? 'disabled-source' : ''}`} key={s.id}><div className="source-card-top"><button className="source-name" onClick={() => setExpanded(expanded === s.id ? null : s.id)} aria-expanded={expanded === s.id}><span className={`file-icon ${s.type}`}><SourceIcon type={s.type}/></span><span><strong title={s.name}>{s.name}</strong><small title={s.path}>{s.path ?? (s.type === 'instruction' ? 'Conversation guidance' : s.type === 'memory' ? 'Approved reusable information' : sourceLabels[s.type])}</small></span></button><Toggle checked={s.enabled} onChange={() => onChange(sources.map(item => item.id === s.id ? { ...item, enabled: !item.enabled } : item))} label={`Enable ${s.name}`}/></div><div className="source-card-bottom"><span className={`source-state ${state.toLowerCase().replace(' ', '-')}`}><i/>{state}</span>{report?.tokens ? <span className="source-tokens">~{shortNumber(report.tokens)} tokens</span> : null}<button className="source-remove" aria-label={`Remove ${s.name}`} onClick={() => onChange(sources.filter(item => item.id !== s.id))}><X size={12}/></button></div>{expanded === s.id && <div className="source-expanded"><p>{report?.reason ?? `Added ${new Date(s.createdAt).toLocaleDateString()}`}</p>{s.content && !s.mime?.startsWith('image/') && <textarea aria-label={`Edit ${s.name}`} value={s.content} onChange={e => onChange(sources.map(item => item.id === s.id ? { ...item, content: e.target.value } : item))}/>}<button className="text-button danger-text" onClick={() => onChange(sources.filter(item => item.id !== s.id))}><Trash2 size={12}/>Remove source</button></div>}</div>;
-    })}</section>;
-  })}</div>;
-}
-export function ContextPanel({ conversation, workspace, data, onChange, onAdd, onProfiles, onInspect, onClose, snapshot, preview, width, onResize }: {
-  conversation?: Conversation | null; workspace?: Workspace; data: Bootstrap;
-  onChange: (config: ContextConfig) => void; onAdd: () => void; onProfiles: () => void; onInspect: () => void;
-  onClose: () => void; snapshot: Snapshot | null; preview: boolean; width: number; onResize: (n: number) => void;
+export function PermissionEditor({
+  permissions,
+  onChange,
+}: {
+  permissions: Permissions;
+  onChange: (p: Permissions) => void;
 }) {
-  const [tab, setTab] = useState('sources'); const config = conversation?.config;
-  const enabled = config?.sources.filter(s => s.enabled).length ?? 0;
-  const profile = data.profiles.find(p => p.id === config?.profileId);
-  const drag = (event: React.PointerEvent) => {
-    event.preventDefault(); event.currentTarget.setPointerCapture(event.pointerId);
-    const start = event.clientX; const initial = width;
-    const move = (e: PointerEvent) => onResize(Math.max(300, Math.min(540, initial + start - e.clientX)));
-    const stop = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', stop); };
-    window.addEventListener('pointermove', move); window.addEventListener('pointerup', stop, { once: true });
-  };
-  return <aside className="context-panel" style={{ width }} aria-label="Conversation context"><div className="panel-resizer" role="separator" aria-label="Resize context panel" aria-orientation="vertical" tabIndex={0} onPointerDown={drag} onKeyDown={e => { if (e.key === 'ArrowLeft') onResize(Math.min(540, width + 20)); if (e.key === 'ArrowRight') onResize(Math.max(300, width - 20)); }}><GripVertical size={12}/></div><div className="context-head"><span className="context-heading"><Layers3 size={18}/><strong>Context</strong><span className="count">{enabled}</span></span><button className="icon-button" onClick={onClose} aria-label="Close context panel"><X size={17}/></button></div><div className="context-intro"><span className="eyebrow">A CLEARER PICTURE</span><p>Choose what this conversation knows.</p><span>Independent context. Always in your control.</span></div><div className="context-tabs"><button className={tab === 'sources' ? 'selected' : ''} onClick={() => setTab('sources')}><Layers3 size={14}/>Sources</button><button className={tab === 'permissions' ? 'selected' : ''} onClick={() => setTab('permissions')}><ShieldCheck size={14}/>Permissions</button></div><div className="context-body">{tab === 'sources' ? <><div className="profile-picker"><span className="profile-icon"><SlidersHorizontal size={17}/></span><span><small>CONTEXT PROFILE</small><strong>{profile?.name ?? 'Your own configuration'}</strong></span><button onClick={onProfiles} aria-label="Choose context profile"><ChevronDown size={16}/></button></div><div className="sources-title"><h3>Context sources</h3><button className="text-button" onClick={onAdd}><Plus size={14}/>Add source</button></div>{!config?.sources.length ? <div className="context-empty"><div className="context-orbit"><FileCode2 size={18}/><Folder size={17}/><BookOpen size={17}/></div><h3>Start with what matters.</h3><p>Add files, instructions, or a folder.<br/>Only enabled sources enter your context.</p><button className="secondary-button" onClick={onAdd}><Plus size={14}/>Add your first source</button><button className="text-button" onClick={onProfiles}>Or start from a profile <ChevronRight size={13}/></button></div> : <SourceList sources={config.sources} snapshot={snapshot} preview={preview} onChange={sources => onChange({ ...config, sources })}/>}<div className="context-note"><ShieldCheck size={14}/><span>Changes apply to your next request. Your conversation stays right here.</span></div></> : config ? <PermissionEditor permissions={config.permissions} onChange={permissions => onChange({ ...config, permissions })}/> : <p className="muted padded">Start a conversation to configure its tools.</p>}</div><div className="context-footer"><div className="context-budget"><span>Context window</span><span>{snapshot ? `${shortNumber(snapshot.budget.estimated)} / ${shortNumber(snapshot.budget.limit)}` : 'Not composed yet'}</span></div><div className="budget-track"><span style={{ width: snapshot ? `${Math.min(100, snapshot.budget.estimated / snapshot.budget.limit * 100)}%` : '0%' }}/></div><button className="inspect-button" onClick={onInspect}><Eye size={15}/><span>Inspect effective context</span><ArrowIcon/></button><small>{snapshot ? preview ? 'Preview · estimated token usage' : 'Last request · estimated token usage' : 'Preview exactly what will be sent'}</small></div></aside>;
+  return (
+    <div className="permissions-editor">
+      <div className="permission-explainer">
+        <ShieldCheck size={18} />
+        <p>
+          Permissions are enforced by the server, independently of model
+          instructions.
+        </p>
+      </div>
+      {(
+        [
+          ["read", "Read files", "Enabled files and folders only", Eye],
+          [
+            "search",
+            "Search & retrieval",
+            "Relevant excerpts from enabled sources",
+            Search,
+          ],
+          [
+            "write",
+            "Apply file changes",
+            "Review a diff before every file write",
+            PenLine,
+          ],
+          [
+            "terminal",
+            "Run commands",
+            "Review and approve every command",
+            Terminal,
+          ],
+        ] as const
+      ).map(([key, label, description, Icon]) => (
+        <div className="permission-row" key={key}>
+          <Icon size={16} />
+          <span>
+            <strong>{label}</strong>
+            <small>{description}</small>
+          </span>
+          <select
+            aria-label={`${label} permission`}
+            value={permissions[key]}
+            onChange={(e) =>
+              onChange({ ...permissions, [key]: e.target.value })
+            }
+          >
+            <option value="deny">Blocked</option>
+            <option
+              value={key === "read" || key === "search" ? "allow" : "ask"}
+            >
+              {key === "read" || key === "search" ? "Allowed" : "Ask each time"}
+            </option>
+          </select>
+        </div>
+      ))}
+      {permissions.terminal === "ask" && (
+        <div className="notice warning">
+          <Info size={15} />
+          <p>
+            Approved commands run as your OS user and can access files beyond
+            selected context. Inspect each command before approving.
+          </p>
+        </div>
+      )}
+    </div>
+  );
 }
-function ArrowIcon() { return <span aria-hidden="true">↗</span>; }
+export function SourceList({
+  sources,
+  onChange,
+  snapshot,
+  preview = false,
+}: {
+  sources: Source[];
+  onChange: (s: Source[]) => void;
+  snapshot?: Snapshot | null;
+  preview?: boolean;
+}) {
+  const [expanded, setExpanded] = useState<string | null>(null);
+  return (
+    <div className="source-groups">
+      {(Object.keys(sourceLabels) as Source["type"][]).map((type) => {
+        const items = sources.filter((s) => s.type === type);
+        if (!items.length) return null;
+        return (
+          <section className="source-group" key={type}>
+            <h4>
+              <SourceIcon type={type} />
+              {sourceLabels[type]}
+              <span>{items.length}</span>
+            </h4>
+            {items.map((s) => {
+              const report = snapshot?.sources.find((r) => r.id === s.id);
+              const state = !s.enabled
+                ? "Disabled"
+                : report?.status === "included"
+                  ? preview
+                    ? "In preview"
+                    : "Included"
+                  : report?.status === "excluded"
+                    ? "Excluded"
+                    : s.type === "folder" || report?.status === "available"
+                      ? "Retrieval ready"
+                      : "Configured";
+              return (
+                <div
+                  className={`source-card ${!s.enabled ? "disabled-source" : ""}`}
+                  key={s.id}
+                >
+                  <div className="source-card-top">
+                    <button
+                      className="source-name"
+                      onClick={() =>
+                        setExpanded(expanded === s.id ? null : s.id)
+                      }
+                      aria-expanded={expanded === s.id}
+                    >
+                      <span className={`file-icon ${s.type}`}>
+                        <SourceIcon type={s.type} />
+                      </span>
+                      <span>
+                        <strong title={s.name}>{s.name}</strong>
+                        <small title={s.path}>
+                          {s.path ??
+                            (s.type === "instruction"
+                              ? "Conversation guidance"
+                              : s.type === "memory"
+                                ? "Approved reusable information"
+                                : sourceLabels[s.type])}
+                        </small>
+                      </span>
+                    </button>
+                    <Toggle
+                      checked={s.enabled}
+                      onChange={() =>
+                        onChange(
+                          sources.map((item) =>
+                            item.id === s.id
+                              ? { ...item, enabled: !item.enabled }
+                              : item,
+                          ),
+                        )
+                      }
+                      label={`Enable ${s.name}`}
+                    />
+                  </div>
+                  <div className="source-card-bottom">
+                    <span
+                      className={`source-state ${state.toLowerCase().replace(" ", "-")}`}
+                    >
+                      <i />
+                      {state}
+                    </span>
+                    {report?.tokens ? (
+                      <span className="source-tokens">
+                        ~{shortNumber(report.tokens)} tokens
+                      </span>
+                    ) : null}
+                    <button
+                      className="source-remove"
+                      aria-label={`Remove ${s.name}`}
+                      onClick={() =>
+                        onChange(sources.filter((item) => item.id !== s.id))
+                      }
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                  {expanded === s.id && (
+                    <div className="source-expanded">
+                      <p>
+                        {report?.reason ??
+                          `Added ${new Date(s.createdAt).toLocaleDateString()}`}
+                      </p>
+                      {s.content && !s.mime?.startsWith("image/") && (
+                        <textarea
+                          aria-label={`Edit ${s.name}`}
+                          value={s.content}
+                          onChange={(e) =>
+                            onChange(
+                              sources.map((item) =>
+                                item.id === s.id
+                                  ? { ...item, content: e.target.value }
+                                  : item,
+                              ),
+                            )
+                          }
+                        />
+                      )}
+                      <button
+                        className="text-button danger-text"
+                        onClick={() =>
+                          onChange(sources.filter((item) => item.id !== s.id))
+                        }
+                      >
+                        <Trash2 size={12} />
+                        Remove source
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+export function ContextPanel({
+  conversation,
+  workspace,
+  data,
+  onChange,
+  onAdd,
+  onProfiles,
+  onInspect,
+  onClose,
+  snapshot,
+  preview,
+  width,
+  onResize,
+}: {
+  conversation?: Conversation | null;
+  workspace?: Workspace;
+  data: Bootstrap;
+  onChange: (config: ContextConfig) => void;
+  onAdd: () => void;
+  onProfiles: () => void;
+  onInspect: () => void;
+  onClose: () => void;
+  snapshot: Snapshot | null;
+  preview: boolean;
+  width: number;
+  onResize: (n: number) => void;
+}) {
+  const [tab, setTab] = useState("sources");
+  const config = conversation?.config;
+  const enabled = config?.sources.filter((s) => s.enabled).length ?? 0;
+  const profile = data.profiles.find((p) => p.id === config?.profileId);
+  const drag = (event: React.PointerEvent) => {
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    const start = event.clientX;
+    const initial = width;
+    const move = (e: PointerEvent) =>
+      onResize(Math.max(300, Math.min(540, initial + start - e.clientX)));
+    const stop = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", stop);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", stop, { once: true });
+  };
+  return (
+    <aside
+      className="context-panel"
+      style={{ width }}
+      aria-label="Conversation context"
+    >
+      <div
+        className="panel-resizer"
+        role="separator"
+        aria-label="Resize context panel"
+        aria-orientation="vertical"
+        tabIndex={0}
+        onPointerDown={drag}
+        onKeyDown={(e) => {
+          if (e.key === "ArrowLeft") onResize(Math.min(540, width + 20));
+          if (e.key === "ArrowRight") onResize(Math.max(300, width - 20));
+        }}
+      >
+        <GripVertical size={12} />
+      </div>
+      <div className="context-head">
+        <span className="context-heading">
+          <Layers3 size={18} />
+          <strong>Context</strong>
+          <span className="count">{enabled}</span>
+        </span>
+        <button
+          className="icon-button"
+          onClick={onClose}
+          aria-label="Close context panel"
+        >
+          <X size={17} />
+        </button>
+      </div>
+      <div className="context-intro">
+        <span className="eyebrow">A CLEARER PICTURE</span>
+        <p>Choose what this conversation knows.</p>
+        <span>Independent context. Always in your control.</span>
+      </div>
+      <div className="context-tabs">
+        <button
+          className={tab === "sources" ? "selected" : ""}
+          onClick={() => setTab("sources")}
+        >
+          <Layers3 size={14} />
+          Sources
+        </button>
+        <button
+          className={tab === "permissions" ? "selected" : ""}
+          onClick={() => setTab("permissions")}
+        >
+          <ShieldCheck size={14} />
+          Permissions
+        </button>
+      </div>
+      <div className="context-body">
+        {tab === "sources" ? (
+          <>
+            <div className="profile-picker">
+              <span className="profile-icon">
+                <SlidersHorizontal size={17} />
+              </span>
+              <span>
+                <small>CONTEXT PROFILE</small>
+                <strong>{profile?.name ?? "Your own configuration"}</strong>
+              </span>
+              <button onClick={onProfiles} aria-label="Choose context profile">
+                <ChevronDown size={16} />
+              </button>
+            </div>
+            <div className="sources-title">
+              <h3>Context sources</h3>
+              <button className="text-button" onClick={onAdd}>
+                <Plus size={14} />
+                Add source
+              </button>
+            </div>
+            {!config?.sources.length ? (
+              <div className="context-empty">
+                <div className="context-orbit">
+                  <FileCode2 size={18} />
+                  <Folder size={17} />
+                  <BookOpen size={17} />
+                </div>
+                <h3>Start with what matters.</h3>
+                <p>
+                  Add files, instructions, or a folder.
+                  <br />
+                  Only enabled sources enter your context.
+                </p>
+                <button className="secondary-button" onClick={onAdd}>
+                  <Plus size={14} />
+                  Add your first source
+                </button>
+                <button className="text-button" onClick={onProfiles}>
+                  Or start from a profile <ChevronRight size={13} />
+                </button>
+              </div>
+            ) : (
+              <SourceList
+                sources={config.sources}
+                snapshot={snapshot}
+                preview={preview}
+                onChange={(sources) => onChange({ ...config, sources })}
+              />
+            )}
+            <div className="context-note">
+              <ShieldCheck size={14} />
+              <span>
+                Changes apply to your next request. Your conversation stays
+                right here.
+              </span>
+            </div>
+          </>
+        ) : config ? (
+          <PermissionEditor
+            permissions={config.permissions}
+            onChange={(permissions) => onChange({ ...config, permissions })}
+          />
+        ) : (
+          <p className="muted padded">
+            Start a conversation to configure its tools.
+          </p>
+        )}
+      </div>
+      <div className="context-footer">
+        <div className="context-budget">
+          <span>Context window</span>
+          <span>
+            {snapshot
+              ? `${shortNumber(snapshot.budget.estimated)} / ${shortNumber(snapshot.budget.limit)}`
+              : "Not composed yet"}
+          </span>
+        </div>
+        <div className="budget-track">
+          <span
+            style={{
+              width: snapshot
+                ? `${Math.min(100, (snapshot.budget.estimated / snapshot.budget.limit) * 100)}%`
+                : "0%",
+            }}
+          />
+        </div>
+        <button className="inspect-button" onClick={onInspect}>
+          <Eye size={15} />
+          <span>Inspect effective context</span>
+          <ArrowIcon />
+        </button>
+        <small>
+          {snapshot
+            ? preview
+              ? "Preview · estimated token usage"
+              : "Last request · estimated token usage"
+            : "Preview exactly what will be sent"}
+        </small>
+      </div>
+    </aside>
+  );
+}
+function ArrowIcon() {
+  return <span aria-hidden="true">↗</span>;
+}
 
-export function AddSourceDialog({ workspace, data, conversationId, onAdd, onClose }: { workspace: Workspace; data: Bootstrap; conversationId?: string; onAdd: (s: Source[]) => Promise<void>; onClose: () => void }) {
-  const [type, setType] = useState<Source['type']>('file'); const [folder, setFolder] = useState('.');
-  const [listing, setListing] = useState<{ name: string; path: string; directory: boolean }[] | null>(null);
-  const [selected, setSelected] = useState<Record<string, boolean>>({}); const [name, setName] = useState(''); const [content, setContent] = useState('');
-  const [referenceId, setReferenceId] = useState(''); const [error, setError] = useState(''); const [busy, setBusy] = useState(false); const [mode, setMode] = useState('browse');
+export function AddSourceDialog({
+  workspace,
+  data,
+  conversationId,
+  onAdd,
+  onClose,
+}: {
+  workspace: Workspace;
+  data: Bootstrap;
+  conversationId?: string;
+  onAdd: (s: Source[]) => Promise<void>;
+  onClose: () => void;
+}) {
+  const [type, setType] = useState<Source["type"]>("file");
+  const [folder, setFolder] = useState(".");
+  const [listing, setListing] = useState<
+    { name: string; path: string; directory: boolean }[] | null
+  >(null);
+  const [selected, setSelected] = useState<Record<string, boolean>>({});
+  const [name, setName] = useState("");
+  const [content, setContent] = useState("");
+  const [referenceId, setReferenceId] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [mode, setMode] = useState("browse");
   const upload = useRef<HTMLInputElement>(null);
-  async function browse(next: string) { setFolder(next); setListing(null); setError(''); try { const r = await api<{ entries: NonNullable<typeof listing> }>(`/workspaces/${workspace.id}/files?path=${encodeURIComponent(next)}`); setListing(r.entries); } catch (e) { setError((e as Error).message); } }
+  async function browse(next: string) {
+    setFolder(next);
+    setListing(null);
+    setError("");
+    try {
+      const r = await api<{ entries: NonNullable<typeof listing> }>(
+        `/workspaces/${workspace.id}/files?path=${encodeURIComponent(next)}`,
+      );
+      setListing(r.entries);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
   // Explicit loading is initiated when the dialog opens or when the selected type changes.
-  useEffect(() => { void browse('.'); }, [workspace.id]);
+  useEffect(() => {
+    void browse(".");
+  }, [workspace.id]);
   async function submit() {
-    setBusy(true); setError('');
+    setBusy(true);
+    setError("");
     try {
       let sources: Source[] = [];
-      if (type === 'folder') sources = [makeSource('folder', folder === '.' ? workspace.name : folder.split('/').pop()!, { path: folder })];
-      else if ((type === 'file' && mode === 'browse') || (type === 'project' && mode === 'browse')) sources = Object.keys(selected).filter(p => selected[p]).map(p => makeSource(type, p.split('/').pop()!, { path: p }));
-      else if (type === 'chat') { const c = data.conversations.find(c => c.id === referenceId); if (!c) throw new Error('Choose a conversation.'); sources = [makeSource('chat', c.title, { referenceId })]; }
-      else if (type === 'memory' && referenceId) { const m = data.memories.find(m => m.id === referenceId)!; sources = [makeSource('memory', m.name, { referenceId })]; }
-      else if (type === 'memory') { if (!name.trim() || !content.trim()) throw new Error('Add a name and content to approve this memory.'); const m = await api<{ id: string }>('/memories', 'POST', { name, content }); sources = [makeSource('memory', name, { referenceId: m.id })]; }
-      else if (type === 'retrieved') { if (!name.trim()) throw new Error('Enter a workspace file path.'); sources = [makeSource('retrieved', name.split('/').pop()!, { path: name })]; }
-      else { if (!name.trim() || !content.trim()) throw new Error('Add a name and content.'); sources = [makeSource(type, name, { content })]; }
-      if (!sources.length) throw new Error('Select at least one file.');
-      await onAdd(sources); onClose();
-    } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
+      if (type === "folder")
+        sources = [
+          makeSource(
+            "folder",
+            folder === "." ? workspace.name : folder.split("/").pop()!,
+            { path: folder },
+          ),
+        ];
+      else if (
+        (type === "file" && mode === "browse") ||
+        (type === "project" && mode === "browse")
+      )
+        sources = Object.keys(selected)
+          .filter((p) => selected[p])
+          .map((p) => makeSource(type, p.split("/").pop()!, { path: p }));
+      else if (type === "chat") {
+        const c = data.conversations.find((c) => c.id === referenceId);
+        if (!c) throw new Error("Choose a conversation.");
+        sources = [makeSource("chat", c.title, { referenceId })];
+      } else if (type === "memory" && referenceId) {
+        const m = data.memories.find((m) => m.id === referenceId)!;
+        sources = [makeSource("memory", m.name, { referenceId })];
+      } else if (type === "memory") {
+        if (!name.trim() || !content.trim())
+          throw new Error("Add a name and content to approve this memory.");
+        const m = await api<{ id: string }>("/memories", "POST", {
+          name,
+          content,
+        });
+        sources = [makeSource("memory", name, { referenceId: m.id })];
+      } else if (type === "retrieved") {
+        if (!name.trim()) throw new Error("Enter a workspace file path.");
+        sources = [
+          makeSource("retrieved", name.split("/").pop()!, { path: name }),
+        ];
+      } else {
+        if (!name.trim() || !content.trim())
+          throw new Error("Add a name and content.");
+        sources = [makeSource(type, name, { content })];
+      }
+      if (!sources.length) throw new Error("Select at least one file.");
+      await onAdd(sources);
+      onClose();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
   }
   async function attach(files: FileList | null) {
-    if (!files?.length) return; setBusy(true); setError('');
-    try { const sources: Source[] = []; for (const file of [...files]) { if (file.size > 4_000_000) throw new Error('Each attachment must be 4 MB or smaller.'); const data = await new Promise<string>((resolve, reject) => { const r = new FileReader(); r.onload = () => resolve(String(r.result)); r.onerror = reject; r.readAsDataURL(file); }); sources.push(await api<Source>('/attachments', 'POST', { name: file.name, data })); } await onAdd(sources); onClose(); }
-    catch (e) { setError((e as Error).message); } finally { setBusy(false); }
+    if (!files?.length) return;
+    setBusy(true);
+    setError("");
+    try {
+      const sources: Source[] = [];
+      for (const file of [...files]) {
+        if (file.size > 4_000_000)
+          throw new Error("Each attachment must be 4 MB or smaller.");
+        const data = await new Promise<string>((resolve, reject) => {
+          const r = new FileReader();
+          r.onload = () => resolve(String(r.result));
+          r.onerror = reject;
+          r.readAsDataURL(file);
+        });
+        sources.push(
+          await api<Source>("/attachments", "POST", { name: file.name, data }),
+        );
+      }
+      await onAdd(sources);
+      onClose();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
   }
-  return <Modal title="Add to your context" eyebrow="JUST THIS CONVERSATION" onClose={onClose} wide><div className="source-dialog-layout"><nav className="source-type-nav" aria-label="Source type">{(Object.keys(sourceLabels) as Source['type'][]).map(t => <button key={t} className={type === t ? 'active' : ''} onClick={() => { setType(t); setMode('browse'); setError(''); setSelected({}); }}><SourceIcon type={t}/>{sourceLabels[t]}</button>)}</nav><div className="source-dialog-body">{['file', 'project'].includes(type) && <div className="segmented"><button className={mode === 'browse' ? 'active' : ''} onClick={() => setMode('browse')}>Browse workspace</button><button className={mode === 'text' ? 'active' : ''} onClick={() => setMode('text')}>{type === 'file' ? 'Paste snippet' : 'Write instructions'}</button></div>}{(type === 'folder' || (['file', 'project'].includes(type) && mode === 'browse')) ? <><div className="file-breadcrumb"><button disabled={folder === '.'} onClick={() => browse(folder.split('/').slice(0, -1).join('/') || '.')} aria-label="Parent folder">←</button><Folder size={14}/><span>{workspace.name}/{folder === '.' ? '' : folder}</span></div>{type === 'folder' && <p className="field-help">Authorize this folder for scoped retrieval and tools. Folder contents are included only as relevant excerpts.</p>}<div className="file-browser">{listing ? listing.map(entry => <div className="file-entry" key={entry.path}>{entry.directory ? <button className="file-directory" onClick={() => browse(entry.path)}><Folder size={16}/><span>{entry.name}</span><ChevronRight size={14}/></button> : type !== 'folder' ? <label><input type="checkbox" checked={!!selected[entry.path]} onChange={e => setSelected(v => ({ ...v, [entry.path]: e.target.checked }))}/><FileCode2 size={15}/><span>{entry.name}</span></label> : <span className="file-browser-muted"><File size={14}/>{entry.name}</span>}</div>) : <Spinner label="Reading workspace…"/>}{listing?.length === 0 && <p className="muted">This folder is empty.</p>}</div></> : type === 'chat' ? <><p className="field-help">Explicitly import user-authored turns. Assistant replies are excluded so revoked source data cannot re-enter through another chat.</p><label className="field">Conversation<select value={referenceId} onChange={e => setReferenceId(e.target.value)}><option value="">Select a conversation</option>{data.conversations.filter(c => c.id !== conversationId && c.workspaceId === workspace.id).map(c => <option key={c.id} value={c.id}>{c.title}</option>)}</select></label></> : type === 'attachment' ? <><button className="upload-zone" onClick={() => upload.current?.click()}><Upload size={26}/><strong>Bring a little more context.</strong><span>Choose documents, images, or code files</span><small>Text, PDF, DOCX, PNG, JPEG, WebP · up to 4 MB each</small></button><input ref={upload} type="file" multiple hidden onChange={e => attach(e.target.files)}/></> : type === 'retrieved' ? <><p className="field-help">Reference a file inside an enabled folder. Its current contents are resolved for each request; an old cached excerpt is never reused.</p><label className="field">Workspace file path<input value={name} onChange={e => setName(e.target.value)} placeholder="src/lib/context.ts"/></label></> : <>{type === 'memory' && <label className="field">Saved memory<select value={referenceId} onChange={e => setReferenceId(e.target.value)}><option value="">Approve a new memory…</option>{data.memories.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}</select></label>}{!(type === 'memory' && referenceId) && <><label className="field">{type === 'file' ? 'Snippet name' : 'Name'}<input value={name} onChange={e => setName(e.target.value)} placeholder={type === 'instruction' ? 'How I like to work' : 'Give this source a name'}/></label><label className="field">{type === 'file' ? 'Code snippet' : 'Instructions / content'}<textarea rows={8} value={content} onChange={e => setContent(e.target.value)} placeholder={type === 'instruction' ? 'Prefer small, well-tested changes. Explain tradeoffs…' : 'Write or paste your content here…'}/></label>{type === 'memory' && <p className="field-help">Adding this memory explicitly approves it for reuse. It enters a conversation only when selected.</p>}</>}</>}{error && <div className="error-inline" role="alert">{error}</div>}</div></div><div className="modal-actions"><button className="secondary-button" onClick={onClose}>Cancel</button><button className="primary-button" disabled={busy || type === 'attachment'} onClick={submit}>{busy ? <Spinner label="Adding…"/> : <><Plus size={15}/>{type === 'folder' ? 'Authorize this folder' : type === 'memory' && !referenceId ? 'Approve & add memory' : 'Add to context'}</>}</button></div></Modal>;
+  return (
+    <Modal
+      title="Add to your context"
+      eyebrow="JUST THIS CONVERSATION"
+      onClose={onClose}
+      wide
+    >
+      <div className="source-dialog-layout">
+        <nav className="source-type-nav" aria-label="Source type">
+          {(Object.keys(sourceLabels) as Source["type"][]).map((t) => (
+            <button
+              key={t}
+              className={type === t ? "active" : ""}
+              onClick={() => {
+                setType(t);
+                setMode("browse");
+                setError("");
+                setSelected({});
+              }}
+            >
+              <SourceIcon type={t} />
+              {sourceLabels[t]}
+            </button>
+          ))}
+        </nav>
+        <div className="source-dialog-body">
+          {["file", "project"].includes(type) && (
+            <div className="segmented">
+              <button
+                className={mode === "browse" ? "active" : ""}
+                onClick={() => setMode("browse")}
+              >
+                Browse workspace
+              </button>
+              <button
+                className={mode === "text" ? "active" : ""}
+                onClick={() => setMode("text")}
+              >
+                {type === "file" ? "Paste snippet" : "Write instructions"}
+              </button>
+            </div>
+          )}
+          {type === "folder" ||
+          (["file", "project"].includes(type) && mode === "browse") ? (
+            <>
+              <div className="file-breadcrumb">
+                <button
+                  disabled={folder === "."}
+                  onClick={() =>
+                    browse(folder.split("/").slice(0, -1).join("/") || ".")
+                  }
+                  aria-label="Parent folder"
+                >
+                  ←
+                </button>
+                <Folder size={14} />
+                <span>
+                  {workspace.name}/{folder === "." ? "" : folder}
+                </span>
+              </div>
+              {type === "folder" && (
+                <p className="field-help">
+                  Authorize this folder for scoped retrieval and tools. Folder
+                  contents are included only as relevant excerpts.
+                </p>
+              )}
+              <div className="file-browser">
+                {listing ? (
+                  listing.map((entry) => (
+                    <div className="file-entry" key={entry.path}>
+                      {entry.directory ? (
+                        <button
+                          className="file-directory"
+                          onClick={() => browse(entry.path)}
+                        >
+                          <Folder size={16} />
+                          <span>{entry.name}</span>
+                          <ChevronRight size={14} />
+                        </button>
+                      ) : type !== "folder" ? (
+                        <label>
+                          <input
+                            type="checkbox"
+                            checked={!!selected[entry.path]}
+                            onChange={(e) =>
+                              setSelected((v) => ({
+                                ...v,
+                                [entry.path]: e.target.checked,
+                              }))
+                            }
+                          />
+                          <FileCode2 size={15} />
+                          <span>{entry.name}</span>
+                        </label>
+                      ) : (
+                        <span className="file-browser-muted">
+                          <File size={14} />
+                          {entry.name}
+                        </span>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <Spinner label="Reading workspace…" />
+                )}
+                {listing?.length === 0 && (
+                  <p className="muted">This folder is empty.</p>
+                )}
+              </div>
+            </>
+          ) : type === "chat" ? (
+            <>
+              <p className="field-help">
+                Explicitly import user-authored turns. Assistant replies are
+                excluded so revoked source data cannot re-enter through another
+                chat.
+              </p>
+              <label className="field">
+                Conversation
+                <select
+                  value={referenceId}
+                  onChange={(e) => setReferenceId(e.target.value)}
+                >
+                  <option value="">Select a conversation</option>
+                  {data.conversations
+                    .filter(
+                      (c) =>
+                        c.id !== conversationId &&
+                        c.workspaceId === workspace.id,
+                    )
+                    .map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.title}
+                      </option>
+                    ))}
+                </select>
+              </label>
+            </>
+          ) : type === "attachment" ? (
+            <>
+              <button
+                className="upload-zone"
+                onClick={() => upload.current?.click()}
+              >
+                <Upload size={26} />
+                <strong>Bring a little more context.</strong>
+                <span>Choose documents, images, or code files</span>
+                <small>
+                  Text, PDF, DOCX, PNG, JPEG, WebP · up to 4 MB each
+                </small>
+              </button>
+              <input
+                ref={upload}
+                type="file"
+                multiple
+                hidden
+                onChange={(e) => attach(e.target.files)}
+              />
+            </>
+          ) : type === "retrieved" ? (
+            <>
+              <p className="field-help">
+                Reference a file inside an enabled folder. Its current contents
+                are resolved for each request; an old cached excerpt is never
+                reused.
+              </p>
+              <label className="field">
+                Workspace file path
+                <input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="src/lib/context.ts"
+                />
+              </label>
+            </>
+          ) : (
+            <>
+              {type === "memory" && (
+                <label className="field">
+                  Saved memory
+                  <select
+                    value={referenceId}
+                    onChange={(e) => setReferenceId(e.target.value)}
+                  >
+                    <option value="">Approve a new memory…</option>
+                    {data.memories.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              {!(type === "memory" && referenceId) && (
+                <>
+                  <label className="field">
+                    {type === "file" ? "Snippet name" : "Name"}
+                    <input
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder={
+                        type === "instruction"
+                          ? "How I like to work"
+                          : "Give this source a name"
+                      }
+                    />
+                  </label>
+                  <label className="field">
+                    {type === "file"
+                      ? "Code snippet"
+                      : "Instructions / content"}
+                    <textarea
+                      rows={8}
+                      value={content}
+                      onChange={(e) => setContent(e.target.value)}
+                      placeholder={
+                        type === "instruction"
+                          ? "Prefer small, well-tested changes. Explain tradeoffs…"
+                          : "Write or paste your content here…"
+                      }
+                    />
+                  </label>
+                  {type === "memory" && (
+                    <p className="field-help">
+                      Adding this memory explicitly approves it for reuse. It
+                      enters a conversation only when selected.
+                    </p>
+                  )}
+                </>
+              )}
+            </>
+          )}
+          {error && (
+            <div className="error-inline" role="alert">
+              {error}
+            </div>
+          )}
+        </div>
+      </div>
+      <div className="modal-actions">
+        <button className="secondary-button" onClick={onClose}>
+          Cancel
+        </button>
+        <button
+          className="primary-button"
+          disabled={busy || type === "attachment"}
+          onClick={submit}
+        >
+          {busy ? (
+            <Spinner label="Adding…" />
+          ) : (
+            <>
+              <Plus size={15} />
+              {type === "folder"
+                ? "Authorize this folder"
+                : type === "memory" && !referenceId
+                  ? "Approve & add memory"
+                  : "Add to context"}
+            </>
+          )}
+        </button>
+      </div>
+    </Modal>
+  );
 }

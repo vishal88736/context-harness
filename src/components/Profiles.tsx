@@ -1,13 +1,322 @@
-import { useState } from 'react';
-import { ArrowLeft, ArrowRight, Bug, Check, Code2, Copy, FileSearch, FlaskConical, Layers3, Pencil, Plus, SlidersHorizontal, Trash2 } from 'lucide-react';
-import { api, type Bootstrap, type ContextConfig, type Profile, type Source, type Workspace } from '../api';
-import { Modal, Spinner } from './ui';
-import { AddSourceDialog, PermissionEditor, SourceList } from './ContextPanel';
+import { useState } from "react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Bug,
+  Check,
+  Code2,
+  Copy,
+  FileSearch,
+  FlaskConical,
+  Layers3,
+  Pencil,
+  Plus,
+  SlidersHorizontal,
+  Trash2,
+} from "lucide-react";
+import {
+  api,
+  type Bootstrap,
+  type ContextConfig,
+  type Profile,
+  type Source,
+  type Workspace,
+} from "../api";
+import { Modal, Spinner } from "./ui";
+import { AddSourceDialog, PermissionEditor, SourceList } from "./ContextPanel";
 
-export function ProfilesDialog({ data, workspace, config, onApply, onRefresh, onClose }: { data: Bootstrap; workspace: Workspace; config: ContextConfig; onApply: (id: string) => Promise<void>; onRefresh: () => Promise<void>; onClose: () => void }) {
-  const [editing, setEditing] = useState<Profile | null>(null); const [adding, setAdding] = useState(false); const [error, setError] = useState(''); const [busy, setBusy] = useState(false); const [tab, setTab] = useState('sources');
-  async function action(fn: () => Promise<void>) { setBusy(true); setError(''); try { await fn(); } catch (e) { setError((e as Error).message); } finally { setBusy(false); } }
-  async function save() { if (!editing) return; await api(editing.id ? `/profiles/${editing.id}` : '/profiles', editing.id ? 'PUT' : 'POST', { name: editing.name, description: editing.description, config: editing.config }); await onRefresh(); setEditing(null); }
-  const icons: Record<string, typeof Code2> = { Coding: Code2, Debugging: Bug, Research: FlaskConical, 'Code Review': FileSearch, Custom: SlidersHorizontal };
-  return <><Modal title={editing ? editing.id ? 'Make this profile yours.' : 'Create a context profile.' : 'A good starting point.'} eyebrow="REUSABLE CONTEXT PROFILES" onClose={onClose} wide>{editing ? <div className="profile-edit-body"><button className="text-button" onClick={() => setEditing(null)}><ArrowLeft size={14}/>All profiles</button><div className="form-grid"><label className="field">Profile name<input value={editing.name} onChange={e => setEditing({ ...editing, name: e.target.value })}/></label><label className="field">Description<input value={editing.description} onChange={e => setEditing({ ...editing, description: e.target.value })}/></label></div><div className="profile-edit-tabs"><button className={tab === 'sources' ? 'active' : ''} onClick={() => setTab('sources')}>Sources</button><button className={tab === 'permissions' ? 'active' : ''} onClick={() => setTab('permissions')}>Permissions</button><button className="text-button" onClick={() => setEditing({ ...editing, config: structuredClone(config) })}>Use current context</button></div>{tab === 'sources' ? <><SourceList sources={editing.config.sources} onChange={sources => setEditing({ ...editing, config: { ...editing.config, sources } })}/><button className="secondary-button" onClick={() => setAdding(true)}><Plus size={14}/>Add source to profile</button></> : <PermissionEditor permissions={editing.config.permissions} onChange={permissions => setEditing({ ...editing, config: { ...editing.config, permissions } })}/>}</div> : <><p className="profile-intro">A familiar setup, ready for the task ahead. Apply a profile and keep your conversation-specific sources.</p><div className="profile-grid">{data.profiles.map(p => { const Icon = icons[p.name] ?? Layers3; return <div className={`profile-card ${config.profileId === p.id ? 'current' : ''}`} key={p.id}><div className="profile-card-head"><span className="profile-card-icon"><Icon size={21}/></span>{config.profileId === p.id && <span className="current-profile"><Check size={11}/>Active</span>}<button className="icon-button" aria-label={`Edit ${p.name} profile`} onClick={() => setEditing(structuredClone(p))}><Pencil size={14}/></button></div><h3>{p.name}</h3><p>{p.description}</p><span className="profile-source-count">{p.config.sources.filter(s => s.enabled).length} enabled source{p.config.sources.filter(s => s.enabled).length === 1 ? '' : 's'}</span><div className="profile-card-actions"><button onClick={() => action(async () => { await onApply(p.id); onClose(); })} disabled={busy}>Apply profile<ArrowRight size={14}/></button><button className="icon-button" aria-label={`Duplicate ${p.name} profile`} onClick={() => action(async () => { await api('/profiles', 'POST', { name: `${p.name} copy`, description: p.description, config: p.config }); await onRefresh(); })}><Copy size={13}/></button></div></div>; })}<button className="profile-card create-profile" onClick={() => setEditing({ id: '', name: 'My profile', description: '', config: structuredClone(config), updatedAt: '' })}><Plus size={22}/><strong>Create a profile</strong><span>Start from your current context</span></button></div></>}{error && <div className="error-inline padded" role="alert">{error}</div>}<div className="modal-actions">{editing?.id && <button className="text-button danger-text push-right" onClick={() => action(async () => { await api(`/profiles/${editing.id}`, 'DELETE'); await onRefresh(); setEditing(null); })}><Trash2 size={13}/>Delete profile</button>}<button className="secondary-button" onClick={editing ? () => setEditing(null) : onClose}>{editing ? 'Cancel' : 'Done'}</button>{editing && <button className="primary-button" disabled={busy || !editing.name.trim()} onClick={() => action(save)}>{busy ? <Spinner label="Saving…"/> : 'Save profile'}</button>}</div></Modal>{adding && editing && <AddSourceDialog workspace={workspace} data={data} onClose={() => setAdding(false)} onAdd={async sources => setEditing({ ...editing, config: { ...editing.config, sources: [...editing.config.sources, ...sources] } })}/>}</>;
+export function ProfilesDialog({
+  data,
+  workspace,
+  config,
+  onApply,
+  onRefresh,
+  onClose,
+}: {
+  data: Bootstrap;
+  workspace: Workspace;
+  config: ContextConfig;
+  onApply: (id: string) => Promise<void>;
+  onRefresh: () => Promise<void>;
+  onClose: () => void;
+}) {
+  const [editing, setEditing] = useState<Profile | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [tab, setTab] = useState("sources");
+  async function action(fn: () => Promise<void>) {
+    setBusy(true);
+    setError("");
+    try {
+      await fn();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function save() {
+    if (!editing) return;
+    await api(
+      editing.id ? `/profiles/${editing.id}` : "/profiles",
+      editing.id ? "PUT" : "POST",
+      {
+        name: editing.name,
+        description: editing.description,
+        config: editing.config,
+      },
+    );
+    await onRefresh();
+    setEditing(null);
+  }
+  const icons: Record<string, typeof Code2> = {
+    Coding: Code2,
+    Debugging: Bug,
+    Research: FlaskConical,
+    "Code Review": FileSearch,
+    Custom: SlidersHorizontal,
+  };
+  return (
+    <>
+      <Modal
+        title={
+          editing
+            ? editing.id
+              ? "Make this profile yours."
+              : "Create a context profile."
+            : "A good starting point."
+        }
+        eyebrow="REUSABLE CONTEXT PROFILES"
+        onClose={onClose}
+        wide
+      >
+        {editing ? (
+          <div className="profile-edit-body">
+            <button className="text-button" onClick={() => setEditing(null)}>
+              <ArrowLeft size={14} />
+              All profiles
+            </button>
+            <div className="form-grid">
+              <label className="field">
+                Profile name
+                <input
+                  value={editing.name}
+                  onChange={(e) =>
+                    setEditing({ ...editing, name: e.target.value })
+                  }
+                />
+              </label>
+              <label className="field">
+                Description
+                <input
+                  value={editing.description}
+                  onChange={(e) =>
+                    setEditing({ ...editing, description: e.target.value })
+                  }
+                />
+              </label>
+            </div>
+            <div className="profile-edit-tabs">
+              <button
+                className={tab === "sources" ? "active" : ""}
+                onClick={() => setTab("sources")}
+              >
+                Sources
+              </button>
+              <button
+                className={tab === "permissions" ? "active" : ""}
+                onClick={() => setTab("permissions")}
+              >
+                Permissions
+              </button>
+              <button
+                className="text-button"
+                onClick={() =>
+                  setEditing({ ...editing, config: structuredClone(config) })
+                }
+              >
+                Use current context
+              </button>
+            </div>
+            {tab === "sources" ? (
+              <>
+                <SourceList
+                  sources={editing.config.sources}
+                  onChange={(sources) =>
+                    setEditing({
+                      ...editing,
+                      config: { ...editing.config, sources },
+                    })
+                  }
+                />
+                <button
+                  className="secondary-button"
+                  onClick={() => setAdding(true)}
+                >
+                  <Plus size={14} />
+                  Add source to profile
+                </button>
+              </>
+            ) : (
+              <PermissionEditor
+                permissions={editing.config.permissions}
+                onChange={(permissions) =>
+                  setEditing({
+                    ...editing,
+                    config: { ...editing.config, permissions },
+                  })
+                }
+              />
+            )}
+          </div>
+        ) : (
+          <>
+            <p className="profile-intro">
+              A familiar setup, ready for the task ahead. Apply a profile and
+              keep your conversation-specific sources.
+            </p>
+            <div className="profile-grid">
+              {data.profiles.map((p) => {
+                const Icon = icons[p.name] ?? Layers3;
+                return (
+                  <div
+                    className={`profile-card ${config.profileId === p.id ? "current" : ""}`}
+                    key={p.id}
+                  >
+                    <div className="profile-card-head">
+                      <span className="profile-card-icon">
+                        <Icon size={21} />
+                      </span>
+                      {config.profileId === p.id && (
+                        <span className="current-profile">
+                          <Check size={11} />
+                          Active
+                        </span>
+                      )}
+                      <button
+                        className="icon-button"
+                        aria-label={`Edit ${p.name} profile`}
+                        onClick={() => setEditing(structuredClone(p))}
+                      >
+                        <Pencil size={14} />
+                      </button>
+                    </div>
+                    <h3>{p.name}</h3>
+                    <p>{p.description}</p>
+                    <span className="profile-source-count">
+                      {p.config.sources.filter((s) => s.enabled).length} enabled
+                      source
+                      {p.config.sources.filter((s) => s.enabled).length === 1
+                        ? ""
+                        : "s"}
+                    </span>
+                    <div className="profile-card-actions">
+                      <button
+                        onClick={() =>
+                          action(async () => {
+                            await onApply(p.id);
+                            onClose();
+                          })
+                        }
+                        disabled={busy}
+                      >
+                        Apply profile
+                        <ArrowRight size={14} />
+                      </button>
+                      <button
+                        className="icon-button"
+                        aria-label={`Duplicate ${p.name} profile`}
+                        onClick={() =>
+                          action(async () => {
+                            await api("/profiles", "POST", {
+                              name: `${p.name} copy`,
+                              description: p.description,
+                              config: p.config,
+                            });
+                            await onRefresh();
+                          })
+                        }
+                      >
+                        <Copy size={13} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+              <button
+                className="profile-card create-profile"
+                onClick={() =>
+                  setEditing({
+                    id: "",
+                    name: "My profile",
+                    description: "",
+                    config: structuredClone(config),
+                    updatedAt: "",
+                  })
+                }
+              >
+                <Plus size={22} />
+                <strong>Create a profile</strong>
+                <span>Start from your current context</span>
+              </button>
+            </div>
+          </>
+        )}
+        {error && (
+          <div className="error-inline padded" role="alert">
+            {error}
+          </div>
+        )}
+        <div className="modal-actions">
+          {editing?.id && (
+            <button
+              className="text-button danger-text push-right"
+              onClick={() =>
+                action(async () => {
+                  await api(`/profiles/${editing.id}`, "DELETE");
+                  await onRefresh();
+                  setEditing(null);
+                })
+              }
+            >
+              <Trash2 size={13} />
+              Delete profile
+            </button>
+          )}
+          <button
+            className="secondary-button"
+            onClick={editing ? () => setEditing(null) : onClose}
+          >
+            {editing ? "Cancel" : "Done"}
+          </button>
+          {editing && (
+            <button
+              className="primary-button"
+              disabled={busy || !editing.name.trim()}
+              onClick={() => action(save)}
+            >
+              {busy ? <Spinner label="Saving…" /> : "Save profile"}
+            </button>
+          )}
+        </div>
+      </Modal>
+      {adding && editing && (
+        <AddSourceDialog
+          workspace={workspace}
+          data={data}
+          onClose={() => setAdding(false)}
+          onAdd={async (sources) =>
+            setEditing({
+              ...editing,
+              config: {
+                ...editing.config,
+                sources: [...editing.config.sources, ...sources],
+              },
+            })
+          }
+        />
+      )}
+    </>
+  );
 }
