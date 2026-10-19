@@ -6,7 +6,7 @@ Built independently from scratch with React, TypeScript, Vite, Express, and Node
 
 ## Run locally
 
-Requires **Node 22.13+** (Node 24 LTS recommended) and npm.
+Requires **Node 22.13+** and npm. Locally verified with Node 26.12.0.
 
 ```bash
 cd "/home/vishal/D DRIVE/HARNESS/context-harness"
