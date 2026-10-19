@@ -186,6 +186,7 @@ export class Agent {
           { cutoff, continuation, signal },
         );
         this.store.saveInvocation(snapshot);
+        this.store.setMessageInvocation(assistantId, snapshot.id);
         emit({ type: "snapshot", snapshot: publicSnapshot(snapshot) });
       }
     } catch (error) {

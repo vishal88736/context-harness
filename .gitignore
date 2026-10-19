@@ -46,3 +46,7 @@ tsconfig.tsbuildinfo
 auth.json
 credentials.json
 context-harness-data/
+dist-server/
+test-results/
+playwright-report/
+coverage/
