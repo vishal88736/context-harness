@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { BookOpen, Check, ChevronDown, ChevronRight, Code2, File, FileCode2, Folder, GripVertical, Layers3, Link2, ListFilter, MessageSquare, Plus, Search, ShieldCheck, SlidersHorizontal, Trash2, Upload, X, Brain, Eye, Terminal, PenLine, Info } from 'lucide-react';
 import { api, makeSource, shortNumber, type Bootstrap, type ContextConfig, type Conversation, type Permissions, type Snapshot, type Source, type Workspace } from '../api';
 import { Modal, Spinner, Toggle } from './ui';
@@ -49,8 +49,7 @@ export function AddSourceDialog({ workspace, data, conversationId, onAdd, onClos
   const upload = useRef<HTMLInputElement>(null);
   async function browse(next: string) { setFolder(next); setListing(null); setError(''); try { const r = await api<{ entries: NonNullable<typeof listing> }>(`/workspaces/${workspace.id}/files?path=${encodeURIComponent(next)}`); setListing(r.entries); } catch (e) { setError((e as Error).message); } }
   // Explicit loading is initiated when the dialog opens or when the selected type changes.
-  const [started, setStarted] = useState(false);
-  if (!started) { setStarted(true); void browse('.'); }
+  useEffect(() => { void browse('.'); }, [workspace.id]);
   async function submit() {
     setBusy(true); setError('');
     try {

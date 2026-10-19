@@ -29,7 +29,7 @@ export function App() {
   const streams = useRef(new Map<string, AbortController>()); const mounted = useRef(true);
   const conversation = detail?.conversation.id === activeId ? detail.conversation : data?.conversations.find(c => c.id === activeId);
   const workspace = data?.workspaces.find(w => w.id === workspaceId);
-  const selected = data ? activeModel(data, conversation, draft.override || undefined) : {};
+  const selected: ReturnType<typeof activeModel> = data ? activeModel(data, conversation, draft.override || undefined) : { provider: undefined, model: undefined };
   const enabled = conversation?.config.sources.filter(s => s.enabled).length ?? 0;
   const isRunning = running.has(activeId) || !!detail?.running;
   const updateDraft = (changes: Partial<Draft>) => setDrafts(prev => ({ ...prev, [activeId]: { ...(prev[activeId] ?? blankDraft()), ...changes } }));
