@@ -264,38 +264,109 @@ test("Mobile navigation, context, and composer remain accessible with no overflo
   });
 });
 
-test('Provider settings discover real HTTP models and persist the chosen default', async ({ page }) => {
-  const initial = await (await page.request.get('/api/bootstrap')).json();
-  await page.getByRole('button', { name: 'Models & providers', exact: true }).click();
-  const settings = page.getByRole('dialog', { name: 'A workspace that fits you.' });
-  await settings.getByRole('button', { name: 'Add provider', exact: true }).click();
-  await settings.getByLabel('Name', { exact: true }).fill('Browser verified connection');
-  await settings.getByLabel('Adapter', { exact: true }).selectOption('compatible');
-  await settings.getByLabel('API base URL', { exact: true }).fill(initial.providers[0].baseUrl);
-  await settings.getByLabel(/API key/).fill('browser-fixture-key-12345');
-  await settings.getByRole('button', { name: 'Save provider', exact: true }).click();
-  await settings.getByRole('button', { name: 'Discover models', exact: true }).click();
-  await expect(settings.getByText('Models discovered. Ready to chat.', { exact: true })).toBeVisible();
-  const updated = await (await page.request.get('/api/bootstrap')).json(); const provider = updated.providers.find((p: any) => p.name === 'Browser verified connection');
-  expect(provider.models).toHaveLength(2); expect(provider.keyConfigured).toBe(true); expect(JSON.stringify(updated)).not.toContain('browser-fixture-key-12345');
-  await settings.getByLabel('Default model', { exact: true }).selectOption(`${provider.id}::fixture-coder`);
-  await settings.getByRole('button', { name: 'Done', exact: true }).click(); await page.reload();
-  await expect(page.getByLabel('Model for next request')).toHaveValue(`${provider.id}::fixture-coder`);
+test("Provider settings discover real HTTP models and persist the chosen default", async ({
+  page,
+}) => {
+  const initial = await (await page.request.get("/api/bootstrap")).json();
+  await page
+    .getByRole("button", { name: "Models & providers", exact: true })
+    .click();
+  const settings = page.getByRole("dialog", {
+    name: "A workspace that fits you.",
+  });
+  await settings
+    .getByRole("button", { name: "Add provider", exact: true })
+    .click();
+  await settings
+    .getByLabel("Name", { exact: true })
+    .fill("Browser verified connection");
+  await settings
+    .getByLabel("Adapter", { exact: true })
+    .selectOption("compatible");
+  await settings
+    .getByLabel("API base URL", { exact: true })
+    .fill(initial.providers[0].baseUrl);
+  await settings.getByLabel(/API key/).fill("browser-fixture-key-12345");
+  await settings
+    .getByRole("button", { name: "Save provider", exact: true })
+    .click();
+  await settings
+    .getByRole("button", { name: "Discover models", exact: true })
+    .click();
+  await expect(
+    settings.getByText("Models discovered. Ready to chat.", { exact: true }),
+  ).toBeVisible();
+  const updated = await (await page.request.get("/api/bootstrap")).json();
+  const provider = updated.providers.find(
+    (p: any) => p.name === "Browser verified connection",
+  );
+  expect(provider.models).toHaveLength(2);
+  expect(provider.keyConfigured).toBe(true);
+  expect(JSON.stringify(updated)).not.toContain("browser-fixture-key-12345");
+  await settings
+    .getByLabel("Default model", { exact: true })
+    .selectOption(`${provider.id}::fixture-coder`);
+  await settings.getByRole("button", { name: "Done", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Start new conversation", exact: true })
+    .click();
+  await expect(
+    page.getByRole("textbox", { name: "Message Canopy" }),
+  ).toBeEnabled();
+  await page.reload();
+  await expect(page.getByLabel("Model for next request")).toHaveValue(
+    `${provider.id}::fixture-coder`,
+  );
 });
 
-test('Temporary composer instructions and uploads are sent once, with exact inspection', async ({ page }) => {
-  await page.getByRole('button', { name: 'Start new conversation', exact: true }).click();
-  await page.getByRole('button', { name: 'Instructions', exact: true }).click();
-  await page.getByRole('textbox', { name: 'Temporary instructions', exact: true }).fill('ONE_TURN_BROWSER_INSTRUCTION');
-  await page.locator('.composer input[type=file]').setInputFiles({ name: 'turn-notes.txt', mimeType: 'text/plain', buffer: Buffer.from('ONE_TURN_BROWSER_ATTACHMENT') });
-  await expect(page.locator('.attachment-chips')).toContainText('turn-notes.txt');
-  await send(page, 'Use this temporary material');
-  await page.getByRole('button', { name: 'View context', exact: true }).last().click();
-  let inspector = page.getByRole('dialog', { name: 'What the model received.' });
-  await inspector.getByRole('button', { name: 'Request payload', exact: true }).click();
-  await expect(inspector.locator('.payload-code')).toContainText('ONE_TURN_BROWSER_INSTRUCTION'); await expect(inspector.locator('.payload-code')).toContainText('ONE_TURN_BROWSER_ATTACHMENT');
-  await inspector.getByRole('button', { name: 'Close inspector' }).click();
-  await send(page, 'A fresh ordinary turn'); await page.getByRole('button', { name: 'View context', exact: true }).last().click();
-  inspector = page.getByRole('dialog', { name: 'What the model received.' }); await inspector.getByRole('button', { name: 'Request payload', exact: true }).click();
-  await expect(inspector.locator('.payload-code')).not.toContainText('ONE_TURN_BROWSER_');
+test("Temporary composer instructions and uploads are sent once, with exact inspection", async ({
+  page,
+}) => {
+  await page
+    .getByRole("button", { name: "Start new conversation", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Instructions", exact: true }).click();
+  await page
+    .getByRole("textbox", { name: "Temporary instructions", exact: true })
+    .fill("ONE_TURN_BROWSER_INSTRUCTION");
+  await page
+    .locator(".composer input[type=file]")
+    .setInputFiles({
+      name: "turn-notes.txt",
+      mimeType: "text/plain",
+      buffer: Buffer.from("ONE_TURN_BROWSER_ATTACHMENT"),
+    });
+  await expect(page.locator(".attachment-chips")).toContainText(
+    "turn-notes.txt",
+  );
+  await send(page, "Use this temporary material");
+  await page
+    .getByRole("button", { name: "View context", exact: true })
+    .last()
+    .click();
+  let inspector = page.getByRole("dialog", {
+    name: "What the model received.",
+  });
+  await inspector
+    .getByRole("button", { name: "Request payload", exact: true })
+    .click();
+  await expect(inspector.locator(".payload-code")).toContainText(
+    "ONE_TURN_BROWSER_INSTRUCTION",
+  );
+  await expect(inspector.locator(".payload-code")).toContainText(
+    "ONE_TURN_BROWSER_ATTACHMENT",
+  );
+  await inspector.getByRole("button", { name: "Close inspector" }).click();
+  await send(page, "A fresh ordinary turn");
+  await page
+    .getByRole("button", { name: "View context", exact: true })
+    .last()
+    .click();
+  inspector = page.getByRole("dialog", { name: "What the model received." });
+  await inspector
+    .getByRole("button", { name: "Request payload", exact: true })
+    .click();
+  await expect(inspector.locator(".payload-code")).not.toContainText(
+    "ONE_TURN_BROWSER_",
+  );
 });

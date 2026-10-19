@@ -36,7 +36,9 @@
     "zod": "^4.1.0"
   },
   "overrides": {
-    "mammoth": { "argparse": "2.0.1" }
+    "mammoth": {
+      "argparse": "2.0.1"
+    }
   },
   "devDependencies": {
     "@playwright/test": "^1.56.0",

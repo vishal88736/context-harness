@@ -625,7 +625,24 @@ export function App() {
             </button>
           </div>
         </header>
-        {snapshot && !isPreview && (snapshot.warnings.length > 0 || snapshot.history.some(h => !h.included)) && <button className="request-notice" onClick={() => setInspector({ snapshot, preview: false, sendable: false })}><CircleAlert size={14}/><span>Some context was excluded or adjusted for this request. Inspect details.</span><ArrowLeft size={12} style={{ transform: 'rotate(135deg)' }}/></button>}
+        {snapshot &&
+          !isPreview &&
+          (snapshot.warnings.length > 0 ||
+            snapshot.history.some((h) => !h.included)) && (
+            <button
+              className="request-notice"
+              onClick={() =>
+                setInspector({ snapshot, preview: false, sendable: false })
+              }
+            >
+              <CircleAlert size={14} />
+              <span>
+                Some context was excluded or adjusted for this request. Inspect
+                details.
+              </span>
+              <ArrowLeft size={12} style={{ transform: "rotate(135deg)" }} />
+            </button>
+          )}
         {error && (
           <div className="app-error" role="alert">
             <CircleAlert size={16} />

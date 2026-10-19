@@ -181,29 +181,26 @@ export class ToolRunner {
               ["file", "folder", "project"].includes(s.type),
           )
           .map((s) => s.path!);
-        const blocked = c.config.sources
-          .filter((s) => !s.enabled && s.path)
-          .map((s) => ({
-            path: path.resolve(workspace.root, s.path!),
-            folder: s.type === "folder",
-          }));
-        const hits = (
-          await searchRepository(
-            workspace,
-            roots,
-            String(args.query),
-            this.dataDir,
-            10,
-            signal,
-          )
-        ).filter(
-          (h) =>
-            !blocked.some((b) =>
-              b.folder
-                ? isWithin(b.path, path.resolve(workspace.root, h.path))
-                : b.path === path.resolve(workspace.root, h.path),
-            ),
+        const candidates = await searchRepository(
+          workspace,
+          roots,
+          String(args.query),
+          this.dataDir,
+          10,
+          signal,
         );
+        const hits = (
+          await Promise.all(
+            candidates.map(async (hit) => {
+              try {
+                await authorizedPath(workspace, c, hit.path, this.dataDir);
+                return hit;
+              } catch {
+                return null;
+              }
+            }),
+          )
+        ).filter((hit) => hit !== null);
         result = this.clean(JSON.stringify(hits)).slice(0, 12_000);
       } else if (tool === "propose_write") {
         const checked = await authorizedPath(

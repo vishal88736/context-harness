@@ -1,6 +1,22 @@
 /* Keep navigation and source metadata readable on high-density displays. */
-.request-notice{display:flex;align-items:center;gap:8px;text-align:left;padding:9px 24px;font-size:11px;color:var(--warning);background:#bdac7907;border-bottom:1px solid var(--border);line-height:1.7}
-.request-notice>span{flex:1}.request-notice:hover{background:#bdac7910}
+.request-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  padding: 9px 24px;
+  font-size: 11px;
+  color: var(--warning);
+  background: #bdac7907;
+  border-bottom: 1px solid var(--border);
+  line-height: 1.7;
+}
+.request-notice > span {
+  flex: 1;
+}
+.request-notice:hover {
+  background: #bdac7910;
+}
 .skip-link {
   top: 12px;
   left: 12px;

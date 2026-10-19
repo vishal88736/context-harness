@@ -88,7 +88,15 @@ export function MarkdownBody({ content }: { content: string }) {
             );
           },
           img({ src, alt }) {
-            return <a href={typeof src === 'string' ? src : undefined} target="_blank" rel="noopener noreferrer">View image{alt ? `: ${alt}` : ''}</a>;
+            return (
+              <a
+                href={typeof src === "string" ? src : undefined}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                View image{alt ? `: ${alt}` : ""}
+              </a>
+            );
           },
         }}
       >
@@ -489,7 +497,7 @@ export function Composer({
     }
   }, [value]);
   async function upload(files: FileList | File[] | null) {
-    if (!files?.length) return;
+    if (!files?.length || navigating) return;
     setUploading(true);
     setError("");
     try {
@@ -550,6 +558,7 @@ export function Composer({
             </span>
             <textarea
               aria-label="Temporary instructions"
+              disabled={navigating}
               value={instructions}
               onChange={(e) => onInstructions(e.target.value)}
               rows={2}
@@ -601,7 +610,7 @@ export function Composer({
               className="icon-button"
               aria-label="Attach files"
               title="Attach files for this request"
-              disabled={uploading}
+              disabled={uploading || navigating}
               onClick={() => fileInput.current?.click()}
             >
               {uploading ? (
@@ -620,6 +629,7 @@ export function Composer({
             <button
               className={`composer-tool ${temp || instructions ? "active" : ""}`}
               title="Instructions for this request only"
+              disabled={navigating}
               onClick={() => setTemp((v) => !v)}
             >
               <PenIcon />
@@ -640,6 +650,7 @@ export function Composer({
                 <span className="model-indicator" />
                 <select
                   aria-label="Model for next request"
+                  disabled={navigating}
                   value={modelValue}
                   onChange={(e) => onModel(e.target.value)}
                 >
@@ -673,7 +684,9 @@ export function Composer({
               <button
                 className="send-button"
                 aria-label="Send message"
-                disabled={!value.trim() || !connected || busy || uploading}
+                disabled={
+                  !value.trim() || !connected || busy || uploading || navigating
+                }
                 onClick={onSend}
               >
                 {busy ? (
