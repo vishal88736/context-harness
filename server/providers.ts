@@ -182,11 +182,40 @@ export class Providers {
   async discover(providerId: string): Promise<Model[]> {
     const p = this.store.providers().find((x) => x.id === providerId);
     if (!p) throw new HttpError(404, "Provider not found");
-    const response = await this.fetch(
-      p,
+    // Catalog requests can span several network awaits. Keep credentials bound
+    // to the connection that started discovery, and stop before another request
+    // if that connection or its encrypted credential changed in the meantime.
+    const credentialCipher = this.store.providerCipher(providerId);
+    const credential = this.vault.decrypt(credentialCipher);
+    const checkConnection = () => {
+      const current = this.store
+        .providers()
+        .find((value) => value.id === providerId);
+      if (
+        !current ||
+        JSON.stringify(current) !== JSON.stringify(p) ||
+        this.store.providerCipher(providerId) !== credentialCipher
+      )
+        throw new HttpError(
+          409,
+          "Provider settings changed during model discovery. Discover models again.",
+        );
+      return current;
+    };
+    const fetchCatalog = (endpoint: string, body: unknown, timeout: number) => {
+      checkConnection();
+      return this.fetch(
+        p,
+        endpoint,
+        body,
+        AbortSignal.timeout(timeout),
+        credential,
+      );
+    };
+    const response = await fetchCatalog(
       p.kind === "ollama" ? "/api/tags" : "/models",
       undefined,
-      AbortSignal.timeout(20_000),
+      20_000,
     );
     let data = object(await response.json());
     const listField =
@@ -215,12 +244,7 @@ export class Providers {
           : `after_id=${encodeURIComponent(cursor)}`;
       data = object(
         await (
-          await this.fetch(
-            p,
-            `/models?${query}`,
-            undefined,
-            AbortSignal.timeout(20_000),
-          )
+          await fetchCatalog(`/models?${query}`, undefined, 20_000)
         ).json(),
       );
       if (!Array.isArray(data[listField]))
@@ -248,15 +272,11 @@ export class Providers {
         try {
           info = object(
             await (
-              await this.fetch(
-                p,
-                "/api/show",
-                { model: identifier.data },
-                AbortSignal.timeout(5_000),
-              )
+              await fetchCatalog("/api/show", { model: identifier.data }, 5_000)
             ).json(),
           );
         } catch {
+          checkConnection();
           /* explicit fallback below */
         }
         const limit = Object.entries(object(info.model_info)).find(([k]) =>
@@ -340,14 +360,7 @@ export class Providers {
         );
       }
     }
-    const current = this.store
-      .providers()
-      .find((value) => value.id === providerId);
-    if (!current || JSON.stringify(current) !== JSON.stringify(p))
-      throw new HttpError(
-        409,
-        "Provider settings changed during model discovery. Discover models again.",
-      );
+    const current = checkConnection();
     this.store.saveProvider({ ...current, models });
     return models;
   }
@@ -356,8 +369,9 @@ export class Providers {
     endpoint: string,
     body?: unknown,
     signal?: AbortSignal,
+    credential?: string,
   ) {
-    const key = this.key(p.id);
+    const key = credential ?? this.key(p.id);
     let response: Response;
     try {
       response = await fetch(`${validateProviderUrl(p.baseUrl)}${endpoint}`, {

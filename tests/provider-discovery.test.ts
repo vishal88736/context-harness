@@ -222,3 +222,122 @@ for (const kind of ["compatible", "ollama"] as const) {
     assert.deepEqual(fixture.store.providers()[0].models, initial);
   });
 }
+
+for (const kind of ["anthropic", "gemini", "ollama"] as const) {
+  test(`${kind} discovery does not send rotated credentials to a stale connection`, async (t) => {
+    for (const change of ["endpoint", "credential"] as const) {
+      const directory = await mkdtemp(
+        path.join(tmpdir(), "canopy-discovery-race-"),
+      );
+      const store = new Store(":memory:", directory);
+      const vault = await Vault.create(path.join(directory, "data"));
+      const providers = new Providers(store, vault);
+      const requests: { path: string; key: string | undefined }[] = [];
+      let receiveFirst!: () => void;
+      const firstReceived = new Promise<void>((resolve) => {
+        receiveFirst = resolve;
+      });
+      let releaseFirst!: () => void;
+      const firstReleased = new Promise<void>((resolve) => {
+        releaseFirst = resolve;
+      });
+      const server = http.createServer(async (request, response) => {
+        const authorization = request.headers.authorization;
+        requests.push({
+          path: request.url!,
+          key:
+            kind === "anthropic"
+              ? (request.headers["x-api-key"] as string | undefined)
+              : kind === "gemini"
+                ? (request.headers["x-goog-api-key"] as string | undefined)
+                : authorization?.replace(/^Bearer /, ""),
+        });
+        if (requests.length === 1) {
+          receiveFirst();
+          await firstReleased;
+        }
+        response.setHeader("Content-Type", "application/json");
+        response.end(
+          JSON.stringify(
+            kind === "ollama"
+              ? request.url === "/api/tags"
+                ? { models: [{ name: "fixture-model" }] }
+                : {}
+              : kind === "anthropic"
+                ? request.url!.includes("after_id")
+                  ? { data: [], has_more: false }
+                  : {
+                      data: [{ id: "fixture-model" }],
+                      has_more: true,
+                      last_id: "fixture-model",
+                    }
+                : request.url!.includes("pageToken")
+                  ? { models: [] }
+                  : {
+                      models: [
+                        {
+                          name: "models/fixture-model",
+                          supportedGenerationMethods: ["generateContent"],
+                        },
+                      ],
+                      nextPageToken: "second",
+                    },
+          ),
+        );
+      });
+      await new Promise<void>((resolve) =>
+        server.listen(0, "127.0.0.1", resolve),
+      );
+      t.after(async () => {
+        releaseFirst();
+        server.closeAllConnections();
+        await new Promise<void>((resolve) => server.close(() => resolve()));
+        store.close();
+        await rm(directory, { recursive: true, force: true });
+      });
+      const originalKey = "fixture-original-connection-key";
+      const replacementKey = "fixture-replacement-connection-key";
+      const provider = store.saveProvider(
+        {
+          id: id(),
+          name: "Credential race protocol fixture (not AI)",
+          kind,
+          baseUrl: `http://127.0.0.1:${(server.address() as AddressInfo).port}${kind === "ollama" ? "" : "/v1"}`,
+          models: [],
+          keyConfigured: true,
+        },
+        vault.encrypt(originalKey),
+      );
+      const discovery = providers.discover(provider.id);
+      // Attach the rejection assertion before releasing the held HTTP response.
+      const rejected = assert.rejects(
+        discovery,
+        /Provider settings changed during model discovery/,
+      );
+      await firstReceived;
+      const changed = store.saveProvider(
+        {
+          ...provider,
+          baseUrl:
+            change === "endpoint"
+              ? `${provider.baseUrl}/replacement`
+              : provider.baseUrl,
+        },
+        vault.encrypt(replacementKey),
+      );
+      releaseFirst();
+      await rejected;
+      assert.equal(
+        requests.length,
+        1,
+        "stale discovery must stop before pagination or introspection",
+      );
+      assert.equal(requests[0].key, originalKey);
+      assert.ok(requests.every((request) => request.key !== replacementKey));
+      assert.deepEqual(
+        store.providers().find((value) => value.id === provider.id),
+        changed,
+      );
+    }
+  });
+}
