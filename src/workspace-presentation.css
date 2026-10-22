@@ -21,13 +21,13 @@
 .brand .logo-mark {
   width: 26px;
   height: 29px;
-  color: var(--accent);
+  color: var(--text);
 }
 .local-badge {
   border-color: var(--border);
   border-radius: 5px;
   color: var(--accent);
-  background: var(--selected);
+  background: var(--border);
   font-size: 8px;
   font-weight: 650;
 }
@@ -36,10 +36,10 @@
   border: 1px solid var(--accent);
   border-radius: 9px;
   color: var(--accent-ink);
-  background: var(--accent);
+  background: var(--primary-fill);
   font-size: 13px;
   font-weight: 600;
-  box-shadow: 0 3px 9px #683b2b1a;
+  box-shadow: 0 3px 9px #0c22361a;
 }
 .new-chat:hover {
   color: var(--accent-ink);
@@ -48,7 +48,7 @@
 }
 .new-chat svg,
 .new-chat kbd {
-  color: #faf6f2e6;
+  color: #fcfaf9e6;
 }
 .sidebar-search {
   margin-top: 15px;
@@ -81,8 +81,8 @@
 .workspace-icon {
   border-radius: 7px;
   border-color: var(--border);
-  background: var(--surface-2);
-  color: var(--accent);
+  background: var(--highlight-wash);
+  color: var(--text);
 }
 .workspace-button strong {
   font-size: 13px;
@@ -110,7 +110,7 @@
   background: var(--selected);
 }
 .chat-row.active .chat-link {
-  color: var(--accent);
+  color: var(--text);
   font-weight: 550;
 }
 .chat-link {
@@ -122,7 +122,7 @@
   color: var(--muted);
 }
 .chat-row.active .chat-link > svg {
-  color: var(--accent);
+  color: var(--text);
 }
 .sidebar-context > .eyebrow {
   font-size: 10px;
@@ -158,7 +158,7 @@
 }
 .status-dot,
 .provider-dot {
-  background: var(--success);
+  background: var(--highlight);
 }
 .avatar {
   background: var(--selected);
@@ -169,7 +169,7 @@
 }
 .sidebar-scrim,
 .context-mobile-scrim {
-  background: #683b2b33;
+  background: #0c223633;
   backdrop-filter: blur(2px);
 }
 .app-error,
@@ -237,7 +237,7 @@
 }
 .header-action.primary {
   border-color: var(--accent);
-  background: var(--accent);
+  background: var(--primary-fill);
   color: var(--accent-ink);
 }
 .header-action.primary:hover {
@@ -245,9 +245,12 @@
   border-color: var(--accent-hover);
 }
 .context-header-button.active {
-  background: var(--surface-2);
-  border-color: var(--border);
-  color: var(--accent);
+  background: var(--highlight-wash);
+  border-color: var(--border-warm);
+  color: var(--text);
+}
+.context-header-button.active > svg {
+  color: var(--warning);
 }
 .local-workspace-status {
   color: var(--muted);
@@ -276,8 +279,11 @@
 }
 .workspace-view-tabs button[aria-selected="true"],
 .workspace-view-tabs button.active {
-  border-bottom-color: var(--accent);
-  color: var(--accent);
+  border-bottom-color: var(--highlight);
+  color: var(--text);
+}
+.workspace-view-tabs button[aria-selected="true"] > svg {
+  color: var(--warning);
 }
 .welcome {
   align-items: stretch;
@@ -293,13 +299,13 @@
   margin: 0 0 22px;
 }
 .welcome-topline .eyebrow {
-  color: var(--accent);
+  color: var(--muted);
   font-size: 10px;
   font-weight: 650;
   letter-spacing: 1.1px;
 }
 .welcome-index {
-  color: var(--accent);
+  color: var(--muted);
   font:
     11px/1 ui-monospace,
     monospace;
@@ -325,7 +331,7 @@
   text-align: left;
 }
 .welcome h1 span {
-  color: var(--ochre);
+  color: var(--highlight);
   font-style: normal;
 }
 .welcome-description {
@@ -348,16 +354,16 @@
   gap: 8px;
   min-height: 36px;
   padding: 8px 12px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--accent);
   border-radius: 8px;
-  color: var(--accent);
-  background: var(--surface-2);
+  color: var(--accent-ink);
+  background: var(--primary-fill);
   font-size: 13px;
   font-weight: 550;
 }
 .welcome-add-source:hover {
-  border-color: var(--accent);
-  background: var(--selected);
+  border-color: var(--accent-hover);
+  background: var(--accent-hover);
 }
 .welcome-context-link {
   min-width: 0;
@@ -459,14 +465,14 @@
   flex-shrink: 0;
 }
 .context-summary-group > strong {
-  color: var(--accent);
+  color: var(--text);
   font-size: 20px;
   font-weight: 650;
   font-variant-numeric: tabular-nums;
 }
 .context-summary-group:nth-child(2) > strong,
 .context-summary-group:nth-child(2) .context-summary-label > svg {
-  color: var(--success);
+  color: var(--text);
 }
 .context-summary-detail {
   grid-column: 1 / -1;
@@ -537,7 +543,7 @@
 }
 .suggestion-card:nth-child(3) > svg:first-child {
   color: var(--warning);
-  background: var(--gold-wash);
+  background: var(--highlight-wash);
 }
 .suggestion-card strong {
   margin-bottom: 6px;
@@ -567,19 +573,19 @@
 .composer-wrap {
   max-width: 1020px;
   padding: 14px clamp(24px, 4cqi, 44px) 0;
-  background: linear-gradient(0deg, var(--bg) 78%, #faf6f200);
+  background: linear-gradient(0deg, var(--bg) 78%, #f8f7f500);
 }
 .composer {
   border: 1px solid var(--border);
   border-radius: 12px;
   background: var(--surface);
-  box-shadow: 0 5px 20px #683b2b0b;
+  box-shadow: 0 5px 20px #426d790b;
 }
 .composer:focus-within {
   border-color: var(--accent);
   box-shadow:
     0 0 0 3px var(--accent-wash),
-    0 5px 20px #683b2b08;
+    0 5px 20px #0c223608;
 }
 .prompt-input {
   min-height: 84px;
@@ -611,7 +617,7 @@
   font-size: 12px;
 }
 .model-indicator {
-  background: var(--success);
+  background: var(--highlight);
 }
 .send-button,
 .stop-button {
@@ -621,12 +627,12 @@
   box-shadow: none;
 }
 .send-button {
-  color: var(--accent-ink);
-  background: var(--accent);
+  color: var(--text);
+  background: var(--send);
 }
 .send-button:disabled {
-  color: var(--muted);
-  background: var(--surface-2);
+  color: var(--text);
+  background: var(--send);
   opacity: 0.8;
 }
 .composer-caption {
@@ -732,13 +738,13 @@ pre code.hljs {
 .hljs-selector-tag,
 .hljs-literal,
 .hljs-built_in {
-  color: #864e3b;
+  color: var(--syntax-keyword);
 }
 .hljs-string,
 .hljs-attr,
 .hljs-regexp,
 .hljs-meta .hljs-string {
-  color: #5d6537;
+  color: var(--syntax-string);
 }
 .hljs-title,
 .hljs-title.class_,
@@ -752,7 +758,7 @@ pre code.hljs {
 .hljs-selector-id,
 .hljs-number,
 .hljs-type {
-  color: #8a5e16;
+  color: var(--syntax-number);
 }
 .hljs-comment,
 .hljs-code,
@@ -768,7 +774,7 @@ pre code.hljs {
 .markdown .hljs-variable.constant_,
 .markdown .hljs-symbol,
 .markdown .hljs-bullet {
-  color: #8a5e16;
+  color: var(--syntax-number);
 }
 .hljs-name,
 .hljs-quote,
@@ -810,8 +816,8 @@ pre code.hljs {
   background: var(--surface);
 }
 .tool-card.pending {
-  border-color: var(--sand);
-  background: var(--gold-wash);
+  border-color: var(--border-warm);
+  background: var(--highlight-wash);
 }
 .tool-card-heading {
   font-size: 13px;
@@ -1159,9 +1165,9 @@ pre code.hljs {
   margin: 0;
   padding: 11px 16px;
   border: 0;
-  border-bottom: 1px solid var(--sand);
+  border-bottom: 1px solid var(--border-warm);
   border-radius: 0;
-  background: var(--gold-wash);
+  background: var(--highlight-wash);
   color: var(--warning);
   font-size: 12px;
   line-height: 1.65;
@@ -1276,7 +1282,7 @@ pre code.hljs {
 }
 .source-editor .cm-tooltip {
   font-family: "Inter Variable", Inter, sans-serif;
-  box-shadow: 0 6px 20px #683b2b12;
+  box-shadow: 0 6px 20px #0c223612;
 }
 .editor-status {
   display: flex;
@@ -1341,7 +1347,7 @@ pre code.hljs {
 }
 .editor-error {
   padding: 12px 16px;
-  border-bottom: 1px solid var(--terracotta);
+  border-bottom: 1px solid var(--rose);
   background: var(--danger-wash);
   color: var(--danger);
   font-size: 12px;
@@ -1414,7 +1420,7 @@ pre code.hljs {
   .sidebar {
     width: 278px;
     padding-top: 23px;
-    box-shadow: 12px 0 50px #683b2b1a;
+    box-shadow: 12px 0 50px #0c22361a;
   }
   .workspace-header {
     min-height: 60px;

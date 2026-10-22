@@ -755,8 +755,8 @@ export function SettingsDialog({
             <>
               <h3>A clear space to build.</h3>
               <p className="field-help">
-                Canopy uses a warm ivory workspace with sand navigation, brown
-                actions, terracotta highlights, and readable code. The interface
+                Canopy uses an off-white workspace with lavender navigation,
+                teal actions, apricot highlights, and navy text. The interface
                 stays light regardless of your operating system theme.
               </p>
               <div className="notice">

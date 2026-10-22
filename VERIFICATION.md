@@ -1,6 +1,6 @@
 # Local verification record
 
-Latest local regression: **2026-10-22**, using Node **26.12.1**, npm **11.20.0**, and installed system Chromium. After the warm-palette update, `npm run verify` passed end to end with **61 backend tests**, the checked production build, **one production restart test**, and **20 browser workflows**. The application is a local, single-user workspace. No public deployment or live neural-model performance is claimed.
+Latest local regression: **2026-10-23**, using Node **26.12.1**, npm **11.20.0**, and installed system Chromium. After applying the sampled screenshot palette, `npm run verify` passed end to end with **61 backend tests**, the checked production build, **one production restart test**, and **20 browser workflows**. The application is a local, single-user workspace. No public deployment or live neural-model performance is claimed.
 
 ## Completed checks
 
@@ -17,11 +17,11 @@ Latest local regression: **2026-10-22**, using Node **26.12.1**, npm **11.20.0**
 
 The browser suite runs against separate temporary project/data directories. It never configures a test provider in the normal application's database.
 
-## Presentation and documentation verified on 2026-10-22
+## Presentation and documentation verified on 2026-10-23
 
-- The workspace, conversation composer, context panel, source cards, profiles, settings, and inspector use a fixed warm light theme: ivory `#FAF6F2`, sand `#DED1BD`, terracotta `#D49E8D`, ochre `#B08401`, and brown `#683B2B`, with readable derived shades. The shared two-leaf Canopy mark and favicon match. Browser tests verify that legacy dark settings normalize to light and OS dark-mode changes do not alter the workspace. Dark/system appearance controls and the earlier character illustration are absent.
-- CodeMirror and rendered Markdown code blocks use coordinated warm syntax colors, selections, search highlights, gutters, and diff states. Vite prebundles the lazy editor's language/highlighting modules to prevent a first-open dependency refresh. The initial browser run exposed that refresh; after the configuration fix, the complete 20-workflow run passed, including opening and editing an external project on the first Code visit.
-- Contrast calculations for the core palette found body text at 12.47:1, secondary text at 6.04:1, muted text at 5.03:1, and primary button text at 8.68:1 against their intended surfaces. Ochre is used for the large heading at 3.18:1. These checks do not constitute a full accessibility audit.
+- The palette was sampled directly from the user's screenshot: off-white `#F8F7F5`, sidebar lavender `#DEE1ED`, context lavender `#DFE2EE`, teal `#426D79` / `#406B78`, apricot heading `#EAA96A`, send button `#ECB379`, selected peach `#EFD2B8`, navy `#0C2236`, card surface `#FCFAF9`, and separators `#D3D8E6`. The source image contains gradients and texture; these are representative sampled colors assigned to the corresponding interface roles. Desktop and mobile conversation/editor screenshots were inspected after the complete browser run. The two-leaf mark and favicon match the navy palette.
+- CodeMirror and rendered Markdown code blocks share the root palette variables for syntax, selections, search highlights, gutters, and diff states. The editor's `syntaxTheme` uses semantic CSS tokens instead of fixed theme colors. Vite continues to prebundle the lazy editor's modules; the complete run covers opening and editing an external project on the first Code visit.
+- Contrast calculations found body text at 15.11:1, secondary text at 6.31:1, sidebar labels at 5.18:1, primary button text at 5.46:1, and apricot send-button text at 8.70:1 against their intended surfaces. These checks do not constitute a full accessibility audit. The reference's apricot emphasis color is retained for the large heading and decorative highlights.
 - The linear welcome context brief derives category counts and names from the active conversation's configuration. Tests cover separate empty conversations, disabled sources, switching, reload persistence, and a missing configured file. The brief never asserts successful loading or model inclusion; explicit request preview reports actual excerpts and exclusions.
 - Keyboard activation opens the context panel without opening source selection or sending/composing a request. The separate add-context control opens source selection.
 - Browser checks cover 1440×960, 1024×768, 768×900, and 390×844. The desktop sidebar, mobile navigation/context access, compact context brief, reachable composer, and absence of document horizontal overflow are verified. Desktop quick actions remain fully visible. Screenshot capture disables transitions to record settled theme colors.

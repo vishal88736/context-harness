@@ -76,8 +76,8 @@ const lightTheme = EditorView.theme(
   {
     "&": {
       height: "100%",
-      color: "#3f2a22",
-      backgroundColor: "#fffcf9",
+      color: "var(--text)",
+      backgroundColor: "var(--surface)",
       fontSize: "14px",
     },
     "&.cm-focused": { outline: "none" },
@@ -86,66 +86,72 @@ const lightTheme = EditorView.theme(
       fontFamily: 'ui-monospace, "SFMono-Regular", Consolas, monospace',
       lineHeight: "22px",
     },
-    ".cm-content": { padding: "15px 0", caretColor: "#683b2b" },
+    ".cm-content": { padding: "15px 0", caretColor: "var(--accent)" },
     ".cm-line": { padding: "0 18px" },
     ".cm-gutters": {
-      color: "#7b6658",
-      backgroundColor: "#f6f0e8",
-      borderRight: "1px solid #e8ddd0",
+      color: "var(--muted)",
+      backgroundColor: "var(--bg)",
+      borderRight: "1px solid var(--border-soft)",
     },
     ".cm-gutterElement": { padding: "0 9px" },
-    ".cm-activeLine": { backgroundColor: "#683b2b05" },
-    ".cm-activeLineGutter": { color: "#683b2b", backgroundColor: "#ede3d6" },
-    ".cm-cursor, .cm-dropCursor": { borderLeftColor: "#683b2b" },
-    "&.cm-focused .cm-selectionBackground, .cm-selectionBackground": {
-      backgroundColor: "#e9cfc2",
+    ".cm-activeLine": { backgroundColor: "var(--surface-2)" },
+    ".cm-activeLineGutter": {
+      color: "var(--accent)",
+      backgroundColor: "var(--surface-2)",
     },
-    ".cm-selectionMatch": { backgroundColor: "#efe3bf" },
+    ".cm-cursor, .cm-dropCursor": { borderLeftColor: "var(--accent)" },
+    "&.cm-focused .cm-selectionBackground, .cm-selectionBackground": {
+      backgroundColor: "var(--selected)",
+    },
+    ".cm-selectionMatch": { backgroundColor: "var(--highlight-wash)" },
     ".cm-foldPlaceholder": {
-      color: "#683b2b",
-      backgroundColor: "#f6f0e8",
-      border: "1px solid #ded1bd",
+      color: "var(--accent)",
+      backgroundColor: "var(--bg)",
+      border: "1px solid var(--border)",
       borderRadius: "4px",
     },
-    ".cm-panels": { color: "#71594b", backgroundColor: "#f6f0e8" },
-    ".cm-searchMatch": {
-      backgroundColor: "#f4e6b4",
-      outline: "1px solid #b08401",
+    ".cm-panels": {
+      color: "var(--secondary)",
+      backgroundColor: "var(--bg)",
     },
-    ".cm-searchMatch-selected": { backgroundColor: "#ead48a" },
+    ".cm-searchMatch": {
+      backgroundColor: "var(--highlight-wash)",
+      outline: "1px solid var(--highlight)",
+    },
+    ".cm-searchMatch-selected": { backgroundColor: "var(--selected)" },
     ".cm-matchingBracket": {
-      backgroundColor: "#efe3bf",
-      outline: "1px solid #b08401",
+      backgroundColor: "var(--highlight-wash)",
+      outline: "1px solid var(--highlight)",
     },
     ".cm-tooltip": {
-      backgroundColor: "#fffcf9",
-      border: "1px solid #ded1bd",
+      backgroundColor: "var(--surface)",
+      border: "1px solid var(--border)",
       borderRadius: "6px",
     },
     ".cm-tooltip-autocomplete > ul > li[aria-selected]": {
-      color: "#683b2b",
-      backgroundColor: "#ede3d6",
+      color: "var(--accent)",
+      backgroundColor: "var(--selected)",
     },
   },
   { dark: false },
 );
 
-const warmSyntax = syntaxHighlighting(
+const syntaxTheme = syntaxHighlighting(
   HighlightStyle.define([
-    { tag: tags.keyword, color: "#864e3b" },
+    { tag: tags.keyword, color: "var(--syntax-keyword)" },
     {
       tag: [tags.name, tags.deleted, tags.character, tags.macroName],
-      color: "#683b2b",
+      color: "var(--text)",
     },
     {
       tag: [tags.function(tags.variableName), tags.labelName],
-      color: "#8b6500",
+      color: "var(--syntax-function)",
     },
     {
       tag: [tags.color, tags.constant(tags.name), tags.standard(tags.name)],
-      color: "#7b4c29",
+      color: "var(--syntax-number)",
     },
-    { tag: [tags.definition(tags.name), tags.separator], color: "#3f2a22" },
+    { tag: [tags.definition(tags.name), tags.separator], color: "var(--text)" },
     {
       tag: [
         tags.typeName,
@@ -157,7 +163,7 @@ const warmSyntax = syntaxHighlighting(
         tags.self,
         tags.namespace,
       ],
-      color: "#8a6217",
+      color: "var(--syntax-number)",
     },
     {
       tag: [
@@ -169,12 +175,16 @@ const warmSyntax = syntaxHighlighting(
         tags.link,
         tags.special(tags.string),
       ],
-      color: "#995b42",
+      color: "var(--syntax-operator)",
     },
-    { tag: [tags.meta, tags.comment], color: "#7b6658", fontStyle: "italic" },
-    { tag: [tags.string, tags.inserted], color: "#6b6535" },
-    { tag: tags.invalid, color: "#a73830" },
-    { tag: tags.heading, color: "#683b2b", fontWeight: "600" },
+    {
+      tag: [tags.meta, tags.comment],
+      color: "var(--syntax-comment)",
+      fontStyle: "italic",
+    },
+    { tag: [tags.string, tags.inserted], color: "var(--syntax-string)" },
+    { tag: tags.invalid, color: "var(--syntax-error)" },
+    { tag: tags.heading, color: "var(--accent)", fontWeight: "600" },
     { tag: tags.strong, fontWeight: "bold" },
     { tag: tags.emphasis, fontStyle: "italic" },
     { tag: tags.link, textDecoration: "underline" },
@@ -208,7 +218,7 @@ export function SourceEditor(props: SourceEditorProps) {
               configuration(latest.current.path, latest.current.readOnly),
             ),
             lightTheme,
-            warmSyntax,
+            syntaxTheme,
             Prec.highest(
               keymap.of([
                 {

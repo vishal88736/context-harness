@@ -1,4 +1,4 @@
-/* Light-only context controls: brown configuration, olive inclusion, ochre exclusions. */
+/* Light-only context controls: navy labels, teal actions, apricot selections. */
 .context-panel {
   background: var(--panel);
   border-color: var(--border);
@@ -25,7 +25,7 @@
   height: 21px;
   border-radius: 7px;
   color: var(--accent);
-  background: var(--accent-wash);
+  background: var(--border);
   font-size: 12px;
 }
 .context-intro .eyebrow,
@@ -54,8 +54,11 @@
   font-weight: 500;
 }
 .context-tabs button.selected {
-  color: var(--accent);
-  border-bottom-color: var(--accent);
+  color: var(--text);
+  border-bottom-color: var(--highlight);
+}
+.context-tabs button.selected > svg {
+  color: var(--warning);
 }
 .context-body {
   min-height: 0;
@@ -206,6 +209,9 @@
 :is(.context-panel, .modal) .budget-track > span {
   background: var(--accent);
 }
+:is(.context-panel, .modal) .budget-track > span {
+  background: var(--highlight);
+}
 .source-state.included {
   color: var(--success);
 }
@@ -347,7 +353,7 @@
   background: color-mix(in srgb, var(--warning) 5%, var(--panel));
 }
 .modal-backdrop {
-  background: #683b2b33;
+  background: #0c223633;
   backdrop-filter: blur(4px);
 }
 .modal {
@@ -373,7 +379,7 @@
   box-shadow: none;
 }
 .modal .primary-button {
-  background: var(--accent);
+  background: var(--primary-fill);
   color: var(--accent-ink);
   border-color: var(--accent);
 }
@@ -433,9 +439,9 @@
   background: var(--accent-wash);
 }
 .file-icon.folder {
-  color: var(--warning);
-  background: var(--gold-wash);
-  border-color: var(--sand);
+  color: var(--text);
+  background: var(--highlight-wash);
+  border-color: var(--border-warm);
 }
 .file-icon.instruction,
 .file-icon.project {
