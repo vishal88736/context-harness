@@ -224,7 +224,7 @@ test("Manual file changes show a real diff without writing and apply only after 
   const f = await fixture(t);
   const workspace = await f.connect();
   const filename = path.join(f.external, "same.ts");
-  await chmod(filename, 0o640);
+  await chmod(filename, 0o664);
   const opened = await (
     await f.call(`/workspaces/${workspace.id}/file?path=same.ts`)
   ).json();
@@ -272,11 +272,15 @@ test("Manual file changes show a real diff without writing and apply only after 
     ).status,
     403,
   );
-  const appliedResponse = await f.call(
-    `${endpoint}/${staged.id}/apply`,
-    "POST",
-    { approved: true },
-  );
+  const previousUmask = process.umask(0o022);
+  let appliedResponse: Response;
+  try {
+    appliedResponse = await f.call(`${endpoint}/${staged.id}/apply`, "POST", {
+      approved: true,
+    });
+  } finally {
+    process.umask(previousUmask);
+  }
   assert.equal(appliedResponse.status, 200);
   assert.deepEqual(await appliedResponse.json(), {
     path: "same.ts",
@@ -284,7 +288,7 @@ test("Manual file changes show a real diff without writing and apply only after 
     content,
   });
   assert.equal(await readFile(filename, "utf8"), content);
-  assert.equal((await stat(filename)).mode & 0o777, 0o640);
+  assert.equal((await stat(filename)).mode & 0o777, 0o664);
   assert.equal(
     (await f.call(`${endpoint}/${staged.id}/apply`, "POST", { approved: true }))
       .status,

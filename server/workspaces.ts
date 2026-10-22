@@ -330,6 +330,7 @@ export class WorkspaceFiles {
       const handle = await open(temporary, "wx", originalMode);
       try {
         await handle.writeFile(proposal.content);
+        await handle.chmod(originalMode);
         await handle.sync();
       } finally {
         await handle.close();

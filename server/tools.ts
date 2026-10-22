@@ -225,12 +225,16 @@ export class ToolRunner {
           path.dirname(checked),
           `.canopy-${id()}.tmp`,
         );
-        const mode = await stat(checked)
+        const existingMode = await stat(checked)
           .then((s) => s.mode & 0o777)
-          .catch(() => 0o644);
-        const handle = await open(temporary, "wx", mode);
+          .catch((error: NodeJS.ErrnoException) => {
+            if (error.code !== "ENOENT") throw error;
+            return null;
+          });
+        const handle = await open(temporary, "wx", existingMode ?? 0o644);
         try {
           await handle.writeFile(String(args.content));
+          if (existingMode !== null) await handle.chmod(existingMode);
           await handle.sync();
         } finally {
           await handle.close();
