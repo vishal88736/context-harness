@@ -9,15 +9,17 @@ Built with React, TypeScript, Vite, Express, and SQLite. OpenCode is a reference
 - **Independent conversation context:** files, folders, instructions, previous chats, approved memories, attachments, and tool permissions.
 - **Transparent requests:** previews, actual source excerpts, explicit exclusions, token estimates, and persistent invocation snapshots.
 - **Persistent workspace:** project selector, searchable/pinnable chat history, saved profiles, and SQLite persistence.
-- **Real model adapters:** discovered Ollama and Chat Completions compatible models, defaults, per-chat assignments, and per-request overrides.
+- **Four provider protocols:** native Ollama, Anthropic, Gemini, and Chat Completions compatible endpoints, with model discovery and per-request selection.
 - **Coding tools with approvals:** authorized reads/search, proposed file diffs, command decisions, execution records, cancellation, and retries.
-- **Polished presentation:** persistent desktop sidebar, resizable context panel, responsive navigation, Markdown/code copying, and dark/light/system themes.
+- **Code workbench:** local folder explorer, CodeMirror syntax editing, multiple file tabs, per-workspace edit drafts, and explicit diff approval before saving.
+- **Bright workspace:** a light-only interface, persistent desktop sidebar, resizable context panel, responsive navigation, and Markdown/code copying.
 
 ## Contents
 
 - [Requirements](#requirements)
 - [Quick start](#quick-start)
 - [First coding workflow](#first-coding-workflow)
+- [Open projects and edit code](#open-projects-and-edit-code)
 - [Context and profiles](#context-and-profiles)
 - [Request inspector and isolation](#request-inspector-and-isolation)
 - [Providers and model selection](#providers-and-model-selection)
@@ -63,15 +65,38 @@ Run the commands from the application directory: production assets are resolved 
 
 ## First coding workflow
 
-Connect a model using [Providers and model selection](#providers-and-model-selection), then:
+1. Click **Open folder** in the top bar, or **Settings → Workspaces → Browse project folders**. Choose an existing project anywhere your OS account can access; it does not need to be inside Canopy's own repository.
+2. Connect a real model using [Providers and model selection](#providers-and-model-selection). Connection templates fill endpoint details; discovery supplies actual model IDs.
+3. Create a conversation for that workspace. Switch to **Code** to browse files or open multiple editor tabs. Select **Add file to context** when the active conversation should receive a file's saved contents.
+4. Open **Context**, review enabled sources, and optionally apply **Coding**, **Debugging**, **Research**, **Code Review**, or your own profile. Opening a project or a file does not automatically authorize it for the AI.
+5. Write a request in **Conversation**. Add temporary instructions/attachments for this turn only, and choose a model for this request or use **Use model for this chat**.
+6. Select **Preview request**. Review actual excerpts, history, exclusions, token estimates, and the assembled provider payload, then send. A changed preview requires another review.
+7. Review proposed agent diffs or commands and approve/deny each action. For your own editor changes, choose **Review & save**, inspect the diff, and select **Apply file change**. Neither edit path silently overwrites a file changed since review.
+8. Use **Stop** to cancel generation and pending agent approvals. Start another conversation to work with an independent context configuration; return to any saved chat later.
 
-1. Select your project in the sidebar, or add its existing folder in **Settings → Workspaces**.
-2. Create a conversation. Open **Context**, add relevant files or authorize a folder, and optionally apply **Coding**, **Debugging**, **Research**, **Code Review**, or your own profile.
-3. Check **Permissions**. Read and search are allowed by default, writes require approval, and terminal commands are blocked by default. Model tool support must also be enabled for a tool-capable model.
-4. Write a request. Add temporary instructions or attachments in the composer when they should apply to this turn only. Choose a model for this request, or persist it with **Use model for this chat**.
-5. Select **Preview request**. Review actual excerpts, history, exclusions, token estimates, and the provider payload, then send. A stale preview is rejected if effective context changes.
-6. Review proposed diffs or commands and approve/deny each action. **Stop** cancels generation and pending approvals. Completed tool results remain with the conversation.
-7. Start another conversation and select its context independently. Reopen the first chat to continue with its own saved configuration.
+## Open projects and edit code
+
+### Open an existing folder
+
+**Open folder** uses a real local folder browser, with home/root shortcuts, parent navigation, and a location field accepting absolute paths or `~/...`. After entering a location, use **Go** to resolve it before opening that folder. It lists directories without uploading or copying the project. You can also connect folders through Settings. Canonical paths, including paths with spaces and directory aliases, are reused instead of creating duplicate workspaces.
+
+Choose a project subfolder rather than the entire home directory or filesystem root. Credentials and application runtime folders remain protected. The selected folder must be accessible to the account running Canopy.
+
+### Browse and add context
+
+The **Code** tab contains the project explorer and a multi-tab **CodeMirror 6** editor with line numbers, syntax highlighting, folding, bracket matching/closing, search/replace, completion, and undo/redo. Language modes cover JavaScript/TypeScript, JSX/TSX, JSON, Python, Markdown, HTML, and CSS; other extensions open as plain text. Completion is supplied by the editor/language modes, not a language server or AI autocomplete service.
+
+**Conversation** keeps the current chat available, and the context panel remains independent of both views. Browsing or opening a file is a human action; use **Add file to context** or the context manager to grant it to the active conversation. The code workbench loads on first use and remains mounted while you switch views, so chat streaming and file drafts stay available.
+
+**Add file to context references the saved file on disk.** Unsaved editor drafts are not silently sent to the model. Save an approved edit first, or provide an explicit snippet/temporary attachment when that is the intended input.
+
+### Review and save
+
+Editor drafts and open tabs are maintained per workspace while the page stays open. You can switch conversations, projects, or views without merging those drafts. Closing a dirty tab asks before discarding it, and the page registers a browser-unload warning while unsaved edits exist. Drafts are not durable across a browser restart.
+
+Choose **Review & save** (or Ctrl/Cmd+S inside the editor) to stage a real diff. Staging does not write the file. **Apply file change** is a separate approval, guarded by the original file hash, current workspace/path checks, and a ten-minute one-use proposal. A changed file requires a fresh review. Approved writes use an atomic rename after fresh conflict checks and preserve an existing file's POSIX read/write/execute permission bits.
+
+The editor currently modifies existing text files only, with a 250 KB UTF-8 edit limit. Credential paths, binary/oversized files, and redacted previews cannot be edited here. Manual editor changes use the connected workspace and explicit human approval; model tools still require their own conversation grants and permissions. A persistent audit records change hashes, decisions, and timestamps without storing editor file contents or diffs.
 
 ## Context and profiles
 
@@ -121,28 +146,45 @@ Historical messages and effective context are separate. Old messages remain read
 
 ### Token budgeting
 
-Budgeting uses a deliberately conservative UTF-8 byte estimate, framing allowance, output reserve, and safety margin. Images reserve 4,096 tokens each. Exact tokenizers differ; estimates are labeled, and actual provider usage is recorded when returned. Source excerpts are explicitly truncated or excluded, and recent compatible history is selected within the remaining budget. A prompt whose mandatory material cannot fit is rejected. Long tool continuations can require a shorter new request or larger model; the harness reports this rather than sending an oversized prompt.
+Budgeting uses a deliberately conservative UTF-8 byte estimate, framing allowance, output reserve, and safety margin. Provider-reported maximum output tokens also constrain the reserve. Images reserve 4,096 tokens each. Exact tokenizers differ; estimates are labeled, and actual provider usage is recorded when returned. Source excerpts are explicitly truncated or excluded, and recent compatible history is selected within the remaining budget. A prompt whose mandatory material cannot fit is rejected. Long tool continuations can require a shorter new request or larger model; the harness reports this rather than sending an oversized prompt.
 
 ## Providers and model selection
 
-The application contains **no simulated AI or seeded model IDs**. It opens in a useful empty state until you connect a provider.
+Canopy supports **four documented API protocols**, with templates for OpenAI, Anthropic, Google Gemini, OpenRouter, Groq, Ollama, LM Studio, and a custom endpoint. Templates contain endpoint/adapter settings, not credentials or seeded model IDs.
 
-1. Open **Models & providers** in the sidebar.
-2. Add an **Ollama (native)** or **OpenAI-compatible** connection.
-3. For Ollama, enter the server origin, normally `http://127.0.0.1:11434`, without `/api` or `/v1`. Install/start Ollama and pull a model separately.
-4. For a compatible endpoint, enter the complete API base URL, including its prefix (often `/v1`). Hosted providers require HTTPS; loopback endpoints can use HTTP. Enter a key when required.
-5. Save, then **Discover models**. Discovery uses Ollama's `/api/tags` and `/api/show`, or a compatible `/models` endpoint. The first discovery can set a default model; change it in Settings.
-6. When a provider omits metadata or returns an invalid context limit, the interface explicitly labels its conservative **8,192-token fallback**. Edit the connection to enter a verified context limit and enable tools/images only if the selected model supports them. Rediscovery preserves saved capability choices and user-entered limits; edit tools/images manually if the provider's capabilities change. You can enter an exact provider model ID manually when discovery is unavailable.
+| Adapter                     | Common connections                                             | API base URL                                                                                                  |
+| --------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Chat Completions compatible | OpenAI, OpenRouter, Groq, LM Studio, custom compatible servers | The complete API prefix, usually ending in `/v1`; use the selected template or the provider's documented URL. |
+| Ollama native               | Local Ollama                                                   | Normally `http://127.0.0.1:11434`, without `/api` or `/v1`.                                                   |
+| Anthropic native            | Anthropic Messages API                                         | Normally `https://api.anthropic.com/v1`.                                                                      |
+| Gemini native               | Google Gemini API                                              | Normally `https://generativelanguage.googleapis.com/v1beta`.                                                  |
 
-The composer selects a model **for the next request**. **Use model for this chat** persists that selection on the conversation. Switching models preserves messages and context. There is no implicit fallback to another provider when a request fails.
+1. Open **Connect provider** / **Providers** in the top bar, or **Models & providers** in the sidebar.
+2. Choose a template or select the matching adapter, enter its base URL and any required API key, then save. Local model servers must be installed, running, and have a model available separately.
+3. Select **Discover models**. Discovery calls the provider's actual model interface; choose the default in Settings. If discovery is unavailable, enter an exact model ID verified with that provider. Gemini uses the full `models/name` resource returned by discovery.
+4. Review the model's context limit and capabilities. Missing/invalid context limits use a clearly labeled conservative **8,192-token fallback**. Enable tools/images only when supported. Rediscovery preserves saved capability choices and user-entered limits.
 
-Compatible endpoints must implement streaming Chat Completions, including function tool calls for agent actions. The adapter sends `max_completion_tokens`; an endpoint that requires different request parameters needs another adapter. Provider calls run from the local backend, so browser CORS configuration is not required on the model server. No request is sent until a real provider and model are selected.
+### Selection and output limits
+
+The composer selects a model **for the next request**. **Use model for this chat** persists that selection on the conversation. Switching models preserves messages and context. A failed request never silently selects another provider.
+
+You can switch providers within the same conversation: for example, implement with one provider and ask another to review. Enabled sources, instructions, permissions, and eligible conversation history stay attached to the conversation. Each adapter rebuilds the request in its provider's format; the new model's context limit and capabilities may change what fits. Preview the request to inspect any exclusions. Provider-specific internal reasoning state is not transferred.
+
+For compatible endpoints, the per-model **Output limit field** selects `max_completion_tokens` or `max_tokens`. Choose the parameter that endpoint documents; several templates initialize the common compatible setting during discovery. Native adapters use their own output field. Provider-reported output limits, when available, bound the reserved output budget.
+
+### Connection boundaries
+
+Provider keys are encrypted locally and are not returned in request inspection. Calls run from the backend, so the model server does not need browser CORS configuration. Hosted endpoints require HTTPS; HTTP is permitted only on loopback. Connection, authentication, unsupported-capability, malformed-stream, cancellation, and provider-limit errors are surfaced in the interface.
+
+Renaming a connection or editing its model metadata preserves its saved key. Changing the adapter or API base URL clears an omitted old key and stops active generations; enter the appropriate key for the new connection. A credential is not silently forwarded to a different endpoint.
+
+Bring any provider that implements one of these protocols. Other APIs/authentication schemes need an adapter or compatible gateway; this is not universal compatibility. Native OpenAI Responses, OAuth subscriptions, Bedrock/Vertex/Azure-specific authentication, and custom authentication headers are not implemented. Real inference requires your provider access or installed local model.
 
 ## Appearance and navigation
 
-Choose **Dark**, **Light**, or **System** under **Settings → Appearance**. Dark is the default, using graphite surfaces and ice-blue accents; Light uses cool neutral surfaces, and System follows the OS preference. Canopy's original visual design pairs an editorial welcome heading with clear, technical controls across the sidebar, chat, context manager, profiles, settings, and inspector. A shared two-leaf Canopy mark appears in the sidebar, welcome screen, assistant replies, and favicon.
+Canopy is **light-only**: white surfaces, soft periwinkle navigation, royal-blue actions, teal context indicators, and a shared two-leaf mark. **Settings → Appearance** describes the fixed theme; the interface stays light regardless of the operating system theme. Existing appearance settings migrate to light while saved projects, providers, and conversations remain intact.
 
-The desktop sidebar keeps projects and conversation history in view. Context opens independently; compact layouts expose navigation and context as drawers. The welcome context brief reflects configured selections and opens the context panel, while **Add your context** opens source selection. Its linear summary adapts to the available width.
+The top bar exposes **Open folder**, provider connection, and context access. The **Conversation** and **Code** tabs share the active workspace and conversation. The desktop sidebar keeps projects and chat history visible; smaller layouts retain navigation, file/context controls, and responsive panels.
 
 ## Coding tools and security
 
@@ -150,7 +192,7 @@ The desktop sidebar keeps projects and conversation history in view. Context ope
 
 The agent can read files, search authorized paths, propose an entire file's new contents as a diff, and request shell commands. It supports up to eight model steps and six tool calls per step. Stop generation cancels the provider request, pending approvals, and the process group of a running command.
 
-File tools are limited to this conversation's enabled file/folder grants. Explicitly disabled paths take precedence over overlapping folder grants. Traversal, symlink escapes, binary files, credentials, Git internals, build output, and application state are excluded. Text reads are bounded. File writes use a temporary file and atomic rename; approval rechecks the context revision and original file hash, preserving existing file permissions. Parent folders must already exist.
+File tools are limited to this conversation's enabled file/folder grants. Explicitly disabled paths take precedence over overlapping folder grants. Traversal, symlink escapes, binary files, credentials, Git internals, build output, and application state are excluded. Text reads are bounded. File writes use a temporary file and atomic rename; approval rechecks the context revision and original file hash. Parent folders must already exist.
 
 Every write presents a diff, and every terminal command presents the exact command and reason. Neither can execute without the separate browser approval. Terminal is blocked by default. **An approved shell command runs as your OS user; it is not an OS sandbox and can access files beyond the context grants.** Commands receive a reduced environment without provider keys, have a 60-second timeout and bounded output, and have persistent execution/approval records. Review destructive commands before approving. The application never provides an approval tool to a model.
 
@@ -186,7 +228,7 @@ The app does not automatically load `.env` files. Export these variables in the 
 
 ### Persistent data
 
-SQLite runs in WAL mode with foreign keys, busy timeout, indexes, and a versioned migration. Workspaces, conversations, messages, profiles, source configurations, model settings, memories, invocation snapshots, tool executions, and decisions persist across restarts. Interrupted generations/approvals are marked stopped/denied on startup; they never resume invisibly.
+SQLite runs in WAL mode with foreign keys, busy timeout, indexes, and versioned migrations. Schema version 2 adds hash-only manual file-change audit records and migrates old appearance preferences to light. Workspaces, conversations, messages, profiles, source configurations, model settings, memories, invocation snapshots, tool executions, and decisions persist across restarts. Interrupted generations/approvals are marked stopped/denied on startup; they never resume invisibly. Pending manual editor proposals expire after a restart; they are not reapplied from disk.
 
 ### Backup and restore
 
@@ -198,36 +240,41 @@ Restore a stopped backup to a private directory and launch with `CANOPY_DATA_DIR
 
 ```text
 src/
-├── App.tsx                     Workspace state, navigation, chat streams
+├── App.tsx                     Workspace, conversation/code views, stream state
 ├── api.ts                      Typed JSON/SSE client
-├── components/                 Sidebar, chat, context, profiles, settings, inspector
-│   └── ContextOverview.tsx     Per-chat selection brief
-├── styles.css                  Base layout and dark/light theme tokens
+├── provider-presets.ts         Connection templates without keys or model IDs
+├── components/
+│   ├── CodeWorkbench.tsx       Explorer, file tabs, drafts, diff approval
+│   ├── SourceEditor.tsx        CodeMirror language modes, editing, undo/scroll state
+│   ├── FolderPicker.tsx        Local OS directory browser
+│   ├── ContextOverview.tsx     Per-chat selection brief
+│   └── ...                     Sidebar, chat, context, profiles, settings, inspector
+├── styles.css                  Light-only theme tokens and base layout
 ├── readability.css             Readability overrides
-├── workspace-presentation.css  Workspace, welcome brief, chat presentation
-└── context-presentation.css    Context, profiles, settings, inspector presentation
+├── workspace-presentation.css  Workspace, code editor, chat presentation
+└── context-presentation.css    Context and dialog presentation
 server/
-├── index.ts                    Startup, loopback listener, shutdown
-├── app.ts                      Authenticated API and production web serving
-├── schema.ts                   Shared types and Zod validation
-├── store.ts                    SQLite migrations, records, transactions
-├── context.ts                  Composition, isolation, provenance, budgets
-├── retrieval.ts                Bounded fresh lexical search
-├── providers.ts                Discovery, adapters, streaming parsers
-├── agent.ts                    Session lifecycle and model/tool loop
-├── turns.ts                    Retry validation and answer selection
-├── tool-catalog.ts             Model-facing tool definitions
-├── tools.ts                    Enforced permissions, approvals, execution
-└── security.ts                 Path boundaries, credential vault, redaction
-tests/                         Backend/integration tests and HTTP fixtures
-e2e/                           Isolated browser and presentation workflows
+├── app.ts / index.ts           Local API, startup, static web serving
+├── schema.ts / store.ts        Validated types, SQLite migrations and records
+├── workspaces.ts              OS folder access, safe human file-change approvals
+├── context.ts / retrieval.ts   Composition, isolation, budgets, fresh lexical search
+├── providers.ts               Discovery, transport, compatible/Ollama adapters
+├── provider-adapters/
+│   ├── native.ts              Anthropic/Gemini payloads, tools, streaming
+│   └── stream.ts              Bounded SSE/NDJSON decoding and cancellation
+├── agent.ts / turns.ts         Session/tool loop, retries, answer provenance
+└── tools.ts / security.ts      Agent permissions, approvals, vault, path boundaries
+tests/                         Backend integration and HTTP protocol fixtures
+e2e/                           Isolated browser and coding workflows
 ```
 
 Retrieval is a fresh, bounded lexical scan (up to 2,000 candidate files; per-directory traversal limits also apply). It is suitable for local projects and prioritizes permission correctness. Embedding indexes, automatic summaries, git worktrees, language servers, and multi-agent/model review orchestration are future extensions, not claimed features.
 
+Manual file changes follow `SourceEditor → CodeWorkbench → file-changes API → WorkspaceFiles → hash/path checks → atomic write`, with hashes recorded in SQLite. `SourceEditor` handles editing; it cannot write files or add AI context directly. This path is separate from model tool execution.
+
 The main request path is `App → api/streamChat → app routes → Agent → ContextEngine → Providers`; tool calls return through `ToolRunner`, which validates permissions and records results in `Store`. Frontend types come from `server/schema.ts` through type-only imports; database, vault, and provider keys stay in the backend.
 
-`src/main.tsx` loads the base styles, readability overrides, then the workspace and context presentation layers. Theme tokens remain in `src/styles.css`; the context brief derives its counts from the active conversation's actual source configuration and does not compose or send a model request.
+`src/main.tsx` loads the base styles, readability overrides, then the workspace and context presentation layers. Light-only theme tokens remain in `src/styles.css`; the context brief derives its counts from the active conversation's actual source configuration and does not compose or send a model request.
 
 `LOCAL_CODEBASE_GUIDE.md` is a detailed local file-by-file and connection guide. It is intentionally excluded by the exact `/LOCAL_CODEBASE_GUIDE.md` rule in `.gitignore` and by context file access/retrieval. It is available in this working copy and will not be included in a fresh clone unless separately supplied. Git ignore rules alone are not general model-access rules.
 
@@ -271,32 +318,34 @@ Verification results and their dates are maintained in [VERIFICATION.md](VERIFIC
 
 ## Troubleshooting
 
-| Symptom                                                | Resolution                                                                                                                                                                                           |
-| ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `node:sqlite` missing or an unsupported engine warning | Use Node 22.13+ with built-in SQLite support, then run `npm ci` again. An experimental SQLite warning on some Node versions is separate from a startup error.                                        |
-| Port 5173 or 4317 is occupied                          | Stop the other process or change the backend port and Vite proxy together. Avoid opening two instances on one data directory.                                                                        |
-| Interface loads but cannot connect to the API          | Start `npm run dev` from the application directory and check the API terminal. For production, build and use port 4317 with `npm start`.                                                             |
-| Session expired / invalid request token after restart  | Reload the page to establish a new local session and CSRF token.                                                                                                                                     |
-| Discovery fails or returns no models                   | Check the provider server and base URL. Ollama uses its origin; compatible providers usually need an API prefix such as `/v1`. Configure an exact provider ID manually only when you know it exists. |
-| Provider rejects a request or tool/image parameter     | Check that model metadata and the adapter protocol match the endpoint. Disable unsupported capabilities or add an adapter; Canopy does not silently switch providers.                                |
-| A file is excluded or a tool path is denied            | Inspect the reason, then add an enabled file/folder grant. Disabled paths override broader grants; credentials, runtime data, and escaping symlinks remain blocked.                                  |
-| Context save failed                                    | Retry/recover the save or reload saved state before sending. Check API availability; do not assume an unsaved toggle changed the model request.                                                      |
-| Context budget is full                                 | Read exclusions in the inspector, reduce source/attachment/history size, shorten the prompt, or select a verified larger context limit.                                                              |
-| A write says the file/context changed                  | Request a fresh diff and approval; old approval must not overwrite new content. New files need an existing authorized parent folder.                                                                 |
-| Terminal action does not appear                        | Set terminal permission to **Ask** and enable tools only for a model that supports tool calls. Every command still needs a separate approval.                                                        |
-| PDF contains no usable text                            | Supply a text excerpt or perform OCR externally; scanned PDFs are not automatically recognized.                                                                                                      |
-| Browser test executable missing                        | Run `npx playwright install chromium` or set `PLAYWRIGHT_CHROMIUM_PATH`; install system browser dependencies if needed.                                                                              |
-| Vault cannot decrypt configured keys                   | Restore the matching `vault.key` from backup. Do not generate a replacement key over an existing database.                                                                                           |
+| Symptom                                                | Resolution                                                                                                                                                                                                               |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `node:sqlite` missing or an unsupported engine warning | Use Node 22.13+ with built-in SQLite support, then run `npm ci` again. An experimental SQLite warning on some Node versions is separate from a startup error.                                                            |
+| Port 5173 or 4317 is occupied                          | Stop the other process or change the backend port and Vite proxy together. Avoid opening two instances on one data directory.                                                                                            |
+| Interface loads but cannot connect to the API          | Start `npm run dev` from the application directory and check the API terminal. For production, build and use port 4317 with `npm start`.                                                                                 |
+| Session expired / invalid request token after restart  | Reload the page to establish a new local session and CSRF token.                                                                                                                                                         |
+| Folder picker cannot open a project                    | Check the absolute/`~/...` path and OS account permissions. Choose a project subfolder; home/root, credentials, and runtime folders are protected.                                                                       |
+| Editor save is rejected                                | Keep your draft, reopen the current saved file, and request a fresh diff. Changed hashes, expired proposals, protected content, or workspace changes invalidate old approvals.                                           |
+| Discovery fails or returns no models                   | Check the provider server and base URL. Ollama uses its origin; native Anthropic/Gemini and compatible providers need their documented API prefix. Configure an exact provider ID manually only when you know it exists. |
+| Provider rejects a request or tool/image parameter     | Check the adapter, model capabilities, and compatible output-limit field against that endpoint. Disable unsupported capabilities or add an adapter; Canopy does not silently switch providers.                           |
+| A file is excluded or a tool path is denied            | Inspect the reason, then add an enabled file/folder grant. Disabled paths override broader grants; credentials, runtime data, and escaping symlinks remain blocked.                                                      |
+| Context save failed                                    | Retry/recover the save or reload saved state before sending. Check API availability; do not assume an unsaved toggle changed the model request.                                                                          |
+| Context budget is full                                 | Read exclusions in the inspector, reduce source/attachment/history size, shorten the prompt, or select a verified larger context limit.                                                                                  |
+| A write says the file/context changed                  | Request a fresh diff and approval; old approval must not overwrite new content. New files need an existing authorized parent folder.                                                                                     |
+| Terminal action does not appear                        | Set terminal permission to **Ask** and enable tools only for a model that supports tool calls. Every command still needs a separate approval.                                                                            |
+| PDF contains no usable text                            | Supply a text excerpt or perform OCR externally; scanned PDFs are not automatically recognized.                                                                                                                          |
+| Browser test executable missing                        | Run `npx playwright install chromium` or set `PLAYWRIGHT_CHROMIUM_PATH`; install system browser dependencies if needed.                                                                                                  |
+| Vault cannot decrypt configured keys                   | Restore the matching `vault.key` from backup. Do not generate a replacement key over an existing database.                                                                                                               |
 
 ## Current limits
 
-- Live hosted/local neural inference still requires your provider and credentials/model installation. Protocol tests alone do not verify reasoning quality.
-- Only native Ollama and streaming Chat Completions compatible providers are implemented. Native Anthropic/Gemini, OAuth subscriptions, OpenCode SDK integration, and advanced model orchestration are not implemented.
-- Retrieval scans bounded text files; it is not a persistent semantic/vector index. No automatic summarization, OCR, language server, or background repository indexing is claimed.
-- The app is local and single-user. Approval-controlled Bash runs with your OS account's access, not in a container or OS sandbox. Native Windows terminal execution is unsupported.
-- Token usage is estimated until a provider returns usage. Imported chats include user-authored messages only; context changes conservatively exclude older dependent assistant replies.
-- Drafts survive switching chats in the current page session, not a browser restart. Uploaded draft attachments become durable only when sent in an invocation or saved as context.
-- Browser coverage targets Chromium desktop/mobile workflows, not exhaustive browser, accessibility, or adversarial security certification. Remote CI completion must be verified separately.
+- Live hosted/local inference still requires provider access or an installed local model. Protocol fixtures do not prove neural reasoning quality.
+- Only the four documented protocols and supported API-key authentication are implemented. Other provider-specific APIs, custom auth, OAuth subscriptions, and advanced model orchestration require further integration.
+- The integrated editor handles existing bounded text files. It does not claim language-server completion, debugging, a terminal emulator, or automatic draft recovery after a browser restart.
+- Retrieval is bounded lexical scanning, not a semantic/vector index. There is no automatic summarization, OCR, language server, or background repository index.
+- Approved Bash commands run with the local OS account's access, outside any OS sandbox. Native Windows terminal execution is unsupported.
+- Token counts are estimated until provider usage is returned. Context changes conservatively omit older dependent assistant replies; selected previous chats include user-authored turns only.
+- Browser coverage targets Chromium desktop/mobile workflows, not exhaustive cross-browser, accessibility, or adversarial security certification. Verify remote CI separately.
 
 ## Keyboard shortcuts
 
@@ -306,6 +355,10 @@ Verification results and their dates are maintained in [VERIFICATION.md](VERIFIC
 | Search conversations          | Ctrl/Cmd+K          |
 | Toggle context                | Ctrl/Cmd+Shift+C    |
 | Send / new line               | Enter / Shift+Enter |
+| Review editor changes         | Ctrl/Cmd+S          |
+| Find / replace in the editor  | Ctrl/Cmd+F          |
+| Indent inside the editor      | Tab                 |
+| Leave the editor by keyboard  | Escape, then Tab    |
 | Close dialog                  | Escape              |
 | Navigate focused chat history | Up / Down           |
 
@@ -316,3 +369,5 @@ Some browser-reserved shortcuts may take precedence. All actions have visible co
 The user-supplied [OpenCode v2.0.32](https://github.com/anomalyco/opencode/tree/v2.0.32) was inspected as a design reference, especially its [permission layer](https://github.com/anomalyco/opencode/blob/v2.0.32/packages/core/src/permission.ts), [model-request preparation](https://github.com/anomalyco/opencode/blob/v2.0.32/packages/core/src/session/model-request.ts), and [Ollama provider discovery](https://github.com/anomalyco/opencode/blob/v2.0.32/packages/core/src/plugin/provider/ollama.ts). No unsupported OpenCode 2.0 API is assumed or required.
 
 Adapter protocols: [Ollama Chat API](https://docs.ollama.com/api/chat) and [Chat Completions reference](https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create).
+
+Native protocols: [Anthropic model discovery](https://platform.claude.com/docs/en/api/models/list), [Messages API](https://platform.claude.com/docs/en/api/messages/create), [Anthropic streaming](https://platform.claude.com/docs/en/build-with-claude/streaming), [Gemini models](https://ai.google.dev/api/models), [Gemini generation](https://ai.google.dev/api/generate-content), and [Gemini tool-turn signatures](https://ai.google.dev/gemini-api/docs/generate-content/thought-signatures).
