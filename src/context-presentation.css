@@ -1,4 +1,4 @@
-/* Light-only context controls: blue configuration, teal inclusion, amber exclusions. */
+/* Light-only context controls: brown configuration, olive inclusion, ochre exclusions. */
 .context-panel {
   background: var(--panel);
   border-color: var(--border);
@@ -210,7 +210,7 @@
   color: var(--success);
 }
 .source-state.included i {
-  background: #00a899;
+  background: var(--success);
 }
 .source-state.in-preview i {
   background: transparent;
@@ -347,7 +347,7 @@
   background: color-mix(in srgb, var(--warning) 5%, var(--panel));
 }
 .modal-backdrop {
-  background: #263e6a40;
+  background: #683b2b33;
   backdrop-filter: blur(4px);
 }
 .modal {
@@ -374,7 +374,7 @@
 }
 .modal .primary-button {
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-ink);
   border-color: var(--accent);
 }
 .modal .secondary-button {
@@ -433,15 +433,15 @@
   background: var(--accent-wash);
 }
 .file-icon.folder {
-  color: #ad7615;
-  background: #fff7e5;
-  border-color: #f6e8c8;
+  color: var(--warning);
+  background: var(--gold-wash);
+  border-color: var(--sand);
 }
 .file-icon.instruction,
 .file-icon.project {
   color: var(--accent);
-  background: #edf2ff;
-  border-color: #dce5ff;
+  background: var(--surface-2);
+  border-color: var(--border);
 }
 .segmented,
 .file-breadcrumb,
@@ -492,8 +492,8 @@
 }
 .profile-card.current,
 .provider-list-row.active {
-  border-color: #afc2ff;
-  background: #f0f4ff;
+  border-color: var(--selected-border);
+  background: var(--panel);
 }
 .profile-card h3 {
   font-size: 17px;
@@ -583,7 +583,7 @@
   padding: 14px;
   border: 1px solid var(--border);
   border-radius: 9px;
-  background: #fff;
+  background: var(--surface);
 }
 .budget-summary strong {
   color: var(--text);
@@ -592,7 +592,7 @@
   letter-spacing: -0.7px;
 }
 .permission-chips > span {
-  background: #f7f9ff;
+  background: var(--panel);
 }
 .inspector-tabs > button {
   font-weight: 550;
@@ -616,7 +616,7 @@
   padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: #fff;
+  background: var(--surface);
   color: var(--text);
   font:
     13px/1.5 ui-monospace,
@@ -625,7 +625,7 @@
     monospace;
 }
 .folder-location > input:focus {
-  outline: 3px solid #315bff0a;
+  outline: 3px solid var(--accent-wash);
   outline-offset: 0;
   border-color: var(--accent);
 }
@@ -633,7 +633,7 @@
   width: 36px;
   height: 40px;
   border: 1px solid var(--border);
-  background: #f8faff;
+  background: var(--bg);
   color: var(--secondary);
 }
 .folder-shortcuts {
@@ -646,14 +646,14 @@
 .folder-shortcuts > .text-button {
   min-height: 31px;
   padding: 6px 9px;
-  border: 1px solid #e0e7f7;
+  border: 1px solid var(--border);
   border-radius: 6px;
-  background: #f5f8ff;
+  background: var(--panel);
   color: var(--secondary);
   font-size: 12px;
 }
 .folder-shortcuts > .text-button:hover {
-  background: #eaf0ff;
+  background: var(--selected);
   color: var(--accent);
 }
 .folder-list {
@@ -666,7 +666,7 @@
   overflow: auto;
   border: 1px solid var(--border);
   border-radius: 9px;
-  background: #fff;
+  background: var(--surface);
 }
 .folder-list > .spinner,
 .folder-list > .field-help {
@@ -690,19 +690,19 @@
   text-align: left;
 }
 .folder-entry:hover {
-  background: #edf3ff;
+  background: var(--panel);
 }
 .folder-entry:focus-visible {
   outline-offset: -2px;
 }
 .folder-entry > svg:first-child {
   flex-shrink: 0;
-  color: #bb8b2f;
+  color: var(--warning);
 }
 .folder-entry > svg:last-child {
   flex-shrink: 0;
   margin-left: auto;
-  color: #93a2bd;
+  color: var(--muted);
 }
 .folder-entry > span {
   min-width: 0;
@@ -729,7 +729,7 @@
   padding: 13px;
   border: 1px solid var(--border);
   border-radius: 9px;
-  background: #fff;
+  background: var(--surface);
   text-align: left;
   box-shadow: var(--control-shadow);
 }
@@ -746,8 +746,8 @@
 .provider-preset-card:hover,
 .provider-preset-card[aria-pressed="true"],
 .provider-preset-card.selected {
-  border-color: #9eb8ff;
-  background: #f0f5ff;
+  border-color: var(--selected-border);
+  background: var(--bg);
 }
 @media (max-width: 768px) {
   .context-intro {

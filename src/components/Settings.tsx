@@ -755,9 +755,9 @@ export function SettingsDialog({
             <>
               <h3>A clear space to build.</h3>
               <p className="field-help">
-                Canopy uses a light workspace with bright blue actions, teal
-                context indicators, and readable code. The interface stays light
-                regardless of your operating system theme.
+                Canopy uses a warm ivory workspace with sand navigation, brown
+                actions, terracotta highlights, and readable code. The interface
+                stays light regardless of your operating system theme.
               </p>
               <div className="notice">
                 <Sun size={18} />

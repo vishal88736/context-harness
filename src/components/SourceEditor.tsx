@@ -10,6 +10,8 @@ import {
 } from "@codemirror/state";
 import { EditorView, keymap } from "@codemirror/view";
 import { indentWithTab } from "@codemirror/commands";
+import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
+import { tags } from "@lezer/highlight";
 import { javascript } from "@codemirror/lang-javascript";
 import { json } from "@codemirror/lang-json";
 import { python } from "@codemirror/lang-python";
@@ -74,8 +76,8 @@ const lightTheme = EditorView.theme(
   {
     "&": {
       height: "100%",
-      color: "#24344f",
-      backgroundColor: "#fff",
+      color: "#3f2a22",
+      backgroundColor: "#fffcf9",
       fontSize: "14px",
     },
     "&.cm-focused": { outline: "none" },
@@ -84,48 +86,100 @@ const lightTheme = EditorView.theme(
       fontFamily: 'ui-monospace, "SFMono-Regular", Consolas, monospace',
       lineHeight: "22px",
     },
-    ".cm-content": { padding: "15px 0", caretColor: "#315bff" },
+    ".cm-content": { padding: "15px 0", caretColor: "#683b2b" },
     ".cm-line": { padding: "0 18px" },
     ".cm-gutters": {
-      color: "#8798b3",
-      backgroundColor: "#f8faff",
-      borderRight: "1px solid #eef2fa",
+      color: "#7b6658",
+      backgroundColor: "#f6f0e8",
+      borderRight: "1px solid #e8ddd0",
     },
     ".cm-gutterElement": { padding: "0 9px" },
-    ".cm-activeLine": { backgroundColor: "#315bff05" },
-    ".cm-activeLineGutter": { color: "#315bff", backgroundColor: "#e8efff" },
-    ".cm-cursor, .cm-dropCursor": { borderLeftColor: "#315bff" },
+    ".cm-activeLine": { backgroundColor: "#683b2b05" },
+    ".cm-activeLineGutter": { color: "#683b2b", backgroundColor: "#ede3d6" },
+    ".cm-cursor, .cm-dropCursor": { borderLeftColor: "#683b2b" },
     "&.cm-focused .cm-selectionBackground, .cm-selectionBackground": {
-      backgroundColor: "#dce7ff",
+      backgroundColor: "#e9cfc2",
     },
-    ".cm-selectionMatch": { backgroundColor: "#dff5ed" },
+    ".cm-selectionMatch": { backgroundColor: "#efe3bf" },
     ".cm-foldPlaceholder": {
-      color: "#315bff",
-      backgroundColor: "#edf2ff",
-      border: "1px solid #d8e2f7",
+      color: "#683b2b",
+      backgroundColor: "#f6f0e8",
+      border: "1px solid #ded1bd",
       borderRadius: "4px",
     },
-    ".cm-panels": { color: "#52627c", backgroundColor: "#f5f8ff" },
+    ".cm-panels": { color: "#71594b", backgroundColor: "#f6f0e8" },
     ".cm-searchMatch": {
-      backgroundColor: "#ffe9b5",
-      outline: "1px solid #f1c96d",
+      backgroundColor: "#f4e6b4",
+      outline: "1px solid #b08401",
     },
-    ".cm-searchMatch-selected": { backgroundColor: "#ffda85" },
+    ".cm-searchMatch-selected": { backgroundColor: "#ead48a" },
     ".cm-matchingBracket": {
-      backgroundColor: "#dce7ff",
-      outline: "1px solid #a8bfff",
+      backgroundColor: "#efe3bf",
+      outline: "1px solid #b08401",
     },
     ".cm-tooltip": {
-      backgroundColor: "#fff",
-      border: "1px solid #d9e2f1",
+      backgroundColor: "#fffcf9",
+      border: "1px solid #ded1bd",
       borderRadius: "6px",
     },
     ".cm-tooltip-autocomplete > ul > li[aria-selected]": {
-      color: "#244bd4",
-      backgroundColor: "#e8efff",
+      color: "#683b2b",
+      backgroundColor: "#ede3d6",
     },
   },
   { dark: false },
+);
+
+const warmSyntax = syntaxHighlighting(
+  HighlightStyle.define([
+    { tag: tags.keyword, color: "#864e3b" },
+    {
+      tag: [tags.name, tags.deleted, tags.character, tags.macroName],
+      color: "#683b2b",
+    },
+    {
+      tag: [tags.function(tags.variableName), tags.labelName],
+      color: "#8b6500",
+    },
+    {
+      tag: [tags.color, tags.constant(tags.name), tags.standard(tags.name)],
+      color: "#7b4c29",
+    },
+    { tag: [tags.definition(tags.name), tags.separator], color: "#3f2a22" },
+    {
+      tag: [
+        tags.typeName,
+        tags.className,
+        tags.number,
+        tags.changed,
+        tags.annotation,
+        tags.modifier,
+        tags.self,
+        tags.namespace,
+      ],
+      color: "#8a6217",
+    },
+    {
+      tag: [
+        tags.operator,
+        tags.operatorKeyword,
+        tags.url,
+        tags.escape,
+        tags.regexp,
+        tags.link,
+        tags.special(tags.string),
+      ],
+      color: "#995b42",
+    },
+    { tag: [tags.meta, tags.comment], color: "#7b6658", fontStyle: "italic" },
+    { tag: [tags.string, tags.inserted], color: "#6b6535" },
+    { tag: tags.invalid, color: "#a73830" },
+    { tag: tags.heading, color: "#683b2b", fontWeight: "600" },
+    { tag: tags.strong, fontWeight: "bold" },
+    { tag: tags.emphasis, fontStyle: "italic" },
+    { tag: tags.link, textDecoration: "underline" },
+    { tag: tags.strikethrough, textDecoration: "line-through" },
+  ]),
 );
 
 /** One view per active document; ordinary controlled updates keep its selection and history. */
@@ -154,6 +208,7 @@ export function SourceEditor(props: SourceEditorProps) {
               configuration(latest.current.path, latest.current.readOnly),
             ),
             lightTheme,
+            warmSyntax,
             Prec.highest(
               keymap.of([
                 {

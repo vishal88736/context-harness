@@ -182,7 +182,7 @@ Bring any provider that implements one of these protocols. Other APIs/authentica
 
 ## Appearance and navigation
 
-Canopy is **light-only**: white surfaces, soft periwinkle navigation, royal-blue actions, teal context indicators, and a shared two-leaf mark. **Settings → Appearance** describes the fixed theme; the interface stays light regardless of the operating system theme. Existing appearance settings migrate to light while saved projects, providers, and conversations remain intact.
+Canopy is **light-only**: warm ivory surfaces, sand navigation, rich brown actions, terracotta highlights, ochre accents, and a shared two-leaf mark. The palette uses ivory `#FAF6F2`, sand `#DED1BD`, dusty rose `#D49E8D`, ochre `#B08401`, and brown `#683B2B`. **Settings → Appearance** describes the fixed theme; the interface stays light regardless of the operating system theme. Existing appearance settings migrate to light while saved projects, providers, and conversations remain intact.
 
 The top bar exposes **Open folder**, provider connection, and context access. The **Conversation** and **Code** tabs share the active workspace and conversation. The desktop sidebar keeps projects and chat history visible; smaller layouts retain navigation, file/context controls, and responsive panels.
 
