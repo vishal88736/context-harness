@@ -132,11 +132,13 @@ export class Agent {
           throw new Error(
             "Model requested too many tools in one step (maximum 6).",
           );
-        continuation.push({
-          role: "assistant",
-          content: result.content || null,
-          tool_calls: result.calls,
-        });
+        continuation.push(
+          result.continuation ?? {
+            role: "assistant",
+            content: result.content || null,
+            tool_calls: result.calls,
+          },
+        );
         for (const call of result.calls) {
           signal.throwIfAborted();
           const output = await this.tools.execute(
@@ -204,6 +206,20 @@ export class Agent {
 export function publicSnapshot(snapshot: Snapshot): Snapshot {
   return JSON.parse(
     JSON.stringify(snapshot, (key, value) => {
+      if (
+        value &&
+        typeof value === "object" &&
+        typeof value.data === "string" &&
+        ((value.type === "base64" &&
+          typeof value.media_type === "string" &&
+          value.media_type.startsWith("image/")) ||
+          (typeof value.mimeType === "string" &&
+            value.mimeType.startsWith("image/")))
+      )
+        return {
+          ...value,
+          data: `[Image data omitted from inspector; ${value.data.length} encoded characters]`,
+        };
       if (typeof value === "string" && value.startsWith("data:image/"))
         return `[Image data omitted from inspector; ${value.length} encoded characters]`;
       if (key === "images" && Array.isArray(value))

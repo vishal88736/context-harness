@@ -20,6 +20,17 @@ export const now = () => new Date().toISOString();
 const json = (v: unknown) => JSON.stringify(v);
 const decode = <T>(s: unknown): T => JSON.parse(String(s));
 
+export interface FileChangeAudit {
+  id: string;
+  workspaceId: string;
+  path: string;
+  beforeHash: string;
+  afterHash: string;
+  decision: "pending" | "applied" | "expired" | "invalidated";
+  createdAt: string;
+  appliedAt: string | null;
+}
+
 export class Store {
   db: DatabaseSync;
   constructor(
@@ -35,6 +46,8 @@ export class Store {
       "PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;",
     );
     this.migrate();
+    // Appearance is intentionally light-only; migrate older preferences without touching user data.
+    this.setSetting("theme", "light");
     if (!this.workspaces().length)
       this.createWorkspace({
         name: path.basename(root),
@@ -95,7 +108,7 @@ export class Store {
     }
     // An interrupted process never silently resumes model or tool execution.
     this.db.exec(
-      "UPDATE messages SET status='stopped', error='Application restarted during generation.' WHERE status='streaming'; UPDATE executions SET status='denied', result='Application restarted; request a new approval.' WHERE status IN ('pending','running'); UPDATE invocations SET status='stopped' WHERE status='running';",
+      "UPDATE messages SET status='stopped', error='Application restarted during generation.' WHERE status='streaming'; UPDATE executions SET status='denied', result='Application restarted; request a new approval.' WHERE status IN ('pending','running'); UPDATE invocations SET status='stopped' WHERE status='running'; UPDATE file_changes SET decision='expired' WHERE decision='pending';",
     );
   }
   migrate() {
@@ -103,10 +116,11 @@ export class Store {
       (this.db.prepare("PRAGMA user_version").get() as Record<string, unknown>)
         .user_version,
     );
-    if (version > 1)
+    if (version > 2)
       throw new Error("Database schema is newer than this application.");
-    if (version === 1) return;
-    this.db.exec(`BEGIN;
+    if (version === 2) return;
+    if (version === 0)
+      this.db.exec(`BEGIN;
       CREATE TABLE workspaces(id TEXT PRIMARY KEY, name TEXT NOT NULL, root TEXT NOT NULL, instructions TEXT NOT NULL, created_at TEXT NOT NULL);
       CREATE TABLE conversations(id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL REFERENCES workspaces(id), title TEXT NOT NULL, pinned INTEGER NOT NULL DEFAULT 0, config TEXT NOT NULL, provider_id TEXT, model_id TEXT, revision INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
       CREATE TABLE messages(id TEXT PRIMARY KEY, conversation_id TEXT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE, role TEXT NOT NULL CHECK(role IN ('user','assistant')), content TEXT NOT NULL, status TEXT NOT NULL, invocation_id TEXT, error TEXT, created_at TEXT NOT NULL);
@@ -120,6 +134,10 @@ export class Store {
       CREATE TABLE executions(id TEXT PRIMARY KEY, conversation_id TEXT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE, invocation_id TEXT NOT NULL REFERENCES invocations(id) ON DELETE CASCADE, name TEXT NOT NULL, args TEXT NOT NULL, status TEXT NOT NULL, result TEXT, diff TEXT, created_at TEXT NOT NULL, decided_at TEXT, revision INTEGER NOT NULL, file_hash TEXT);
       CREATE TABLE approvals(id TEXT PRIMARY KEY, execution_id TEXT NOT NULL REFERENCES executions(id) ON DELETE CASCADE, decision TEXT NOT NULL, created_at TEXT NOT NULL);
       PRAGMA user_version=1; COMMIT;`);
+    this.db.exec(`BEGIN;
+      CREATE TABLE file_changes(id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL REFERENCES workspaces(id), path TEXT NOT NULL, before_hash TEXT NOT NULL, after_hash TEXT NOT NULL, decision TEXT NOT NULL, created_at TEXT NOT NULL, applied_at TEXT);
+      CREATE INDEX file_changes_workspace ON file_changes(workspace_id, created_at);
+      PRAGMA user_version=2; COMMIT;`);
   }
   transaction<T>(fn: () => T): T {
     this.db.exec("BEGIN IMMEDIATE");
@@ -145,11 +163,18 @@ export class Store {
     return w;
   }
   createWorkspace(input: { name: string; root: string; instructions: string }) {
+    const existing = this.workspaceByRoot(input.root);
+    if (existing) return existing;
     const w = { id: id(), ...input, createdAt: now() };
     this.db
       .prepare("INSERT INTO workspaces VALUES(?,?,?,?,?)")
       .run(w.id, w.name, w.root, w.instructions, w.createdAt);
     return w;
+  }
+  workspaceByRoot(root: string) {
+    return this.workspaces().find(
+      (workspace) => path.resolve(workspace.root) === path.resolve(root),
+    );
   }
   updateWorkspace(w: Workspace) {
     this.db
@@ -396,7 +421,33 @@ export class Store {
       .prepare(
         "INSERT INTO settings VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
       )
-      .run(key, json(value));
+      .run(key, json(key === "theme" ? "light" : value));
+  }
+  recordFileChange(change: FileChangeAudit) {
+    this.db
+      .prepare("INSERT INTO file_changes VALUES(?,?,?,?,?,?,?,?)")
+      .run(
+        change.id,
+        change.workspaceId,
+        change.path,
+        change.beforeHash,
+        change.afterHash,
+        change.decision,
+        change.createdAt,
+        change.appliedAt,
+      );
+  }
+  finishFileChange(changeId: string, decision: FileChangeAudit["decision"]) {
+    this.db
+      .prepare("UPDATE file_changes SET decision=?,applied_at=? WHERE id=?")
+      .run(decision, decision === "applied" ? now() : null, changeId);
+  }
+  fileChanges(workspaceId: string): FileChangeAudit[] {
+    return this.db
+      .prepare(
+        "SELECT id, workspace_id AS workspaceId, path, before_hash AS beforeHash, after_hash AS afterHash, decision, created_at AS createdAt, applied_at AS appliedAt FROM file_changes WHERE workspace_id=? ORDER BY rowid",
+      )
+      .all(workspaceId) as unknown as FileChangeAudit[];
   }
   memories() {
     return this.db
