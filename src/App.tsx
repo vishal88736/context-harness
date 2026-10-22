@@ -19,7 +19,6 @@ import {
   Menu,
   MessageSquare,
   PanelRightOpen,
-  ShieldCheck,
   X,
 } from "lucide-react";
 import {
@@ -45,6 +44,7 @@ import { SettingsDialog } from "./components/Settings";
 import { ProfilesDialog } from "./components/Profiles";
 import { Logo, Modal, Spinner } from "./components/ui";
 import { FolderPicker } from "./components/FolderPicker";
+import { WebContextDialog } from "./components/WebContextDialog";
 
 const CodeWorkbench = lazy(() =>
   import("./components/CodeWorkbench").then((module) => ({
@@ -85,10 +85,20 @@ export function App() {
   const [panelWidth, setPanelWidth] = useState(
     () => Number(localStorage.getItem("canopy.contextWidth")) || 344,
   );
+  const [contextTab, setContextTab] = useState<"sources" | "permissions">(
+    "sources",
+  );
+  const [sourceType, setSourceType] = useState<Source["type"]>("file");
   const [dialog, setDialog] = useState<
-    "settings" | "profiles" | "add" | "folder" | null
+    "settings" | "profiles" | "add" | "folder" | "web" | null
   >(null);
   const [settingsTab, setSettingsTab] = useState("providers");
+  function openSource(type: Source["type"] = "file") {
+    setSourceType(type);
+    setContextTab("sources");
+    setContextOpen(true);
+    setDialog("add");
+  }
   const [action, setAction] = useState<{
     conversation: Conversation;
     kind: string;
@@ -845,16 +855,20 @@ export function App() {
               />
             ) : (
               <EmptyWorkspace
-                workspaceName={workspace.name}
                 sources={detail.conversation.config.sources}
-                onContext={() => setContextOpen(true)}
-                onAddSource={() => {
+                onContext={() => {
+                  setContextTab("sources");
                   setContextOpen(true);
-                  setDialog("add");
                 }}
-                onSuggestion={(prompt) => {
-                  updateDraft({ prompt });
-                  document.getElementById("message-composer")?.focus();
+                onAddSource={openSource}
+                onTools={() => {
+                  setContextTab("permissions");
+                  setContextOpen(true);
+                }}
+                onWebContext={() => setDialog("web")}
+                onProviders={() => {
+                  setSettingsTab("providers");
+                  setDialog("settings");
                 }}
               />
             )}
@@ -920,10 +934,6 @@ export function App() {
                   Use model for this chat
                 </button>
               )}
-              <span>
-                <ShieldCheck size={11} />
-                Context stays in this conversation
-              </span>
             </div>
           )}
         </div>
@@ -983,7 +993,7 @@ export function App() {
             workspace={workspace}
             data={data}
             onChange={(c) => void updateConfig(c).catch(() => {})}
-            onAdd={() => setDialog("add")}
+            onAdd={() => openSource()}
             onProfiles={() => setDialog("profiles")}
             onInspect={() => void preview()}
             onClose={() => setContextOpen(false)}
@@ -991,6 +1001,8 @@ export function App() {
             preview={isPreview}
             width={panelWidth}
             onResize={setPanelWidth}
+            tab={contextTab}
+            onTabChange={setContextTab}
           />
         </>
       )}
@@ -1018,6 +1030,7 @@ export function App() {
           workspace={workspace}
           data={data}
           conversationId={activeId}
+          initialType={sourceType}
           onClose={() => setDialog(null)}
           onAdd={async (sources) => {
             await updateConfig({
@@ -1028,6 +1041,20 @@ export function App() {
           }}
         />
       )}{" "}
+      {dialog === "web" && conversation && (
+        <WebContextDialog
+          onClose={() => setDialog(null)}
+          onAdd={async (sources) => {
+            await updateConfig({
+              ...conversation.config,
+              sources: [...conversation.config.sources, ...sources],
+            });
+            await refresh();
+            setContextTab("sources");
+            setContextOpen(true);
+          }}
+        />
+      )}
       {dialog === "profiles" && conversation && (
         <ProfilesDialog
           data={data}

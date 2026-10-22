@@ -18,7 +18,10 @@ import {
   Code2,
   Eye,
   FileCode2,
+  FileText,
+  Folder,
   GitPullRequest,
+  Globe,
   Layers3,
   LoaderCircle,
   Paperclip,
@@ -28,6 +31,7 @@ import {
   ShieldCheck,
   Square,
   Terminal,
+  Wrench,
   X,
 } from "lucide-react";
 import {
@@ -40,6 +44,7 @@ import {
 } from "../api";
 import { CopyButton, Logo, Spinner } from "./ui";
 import { ContextOverview } from "./ContextOverview";
+import { WelcomeIllustration } from "./WelcomeIllustration";
 
 function plain(node: ReactNode): string {
   return Children.toArray(node)
@@ -232,29 +237,22 @@ export function ToolCard({
   );
 }
 export function EmptyWorkspace({
-  onSuggestion,
   onContext,
   onAddSource,
-  workspaceName,
+  onTools,
+  onWebContext,
+  onProviders,
   sources,
 }: {
-  onSuggestion: (s: string) => void;
   onContext: () => void;
-  onAddSource: () => void;
-  workspaceName: string;
+  onAddSource: (type?: Source["type"]) => void;
+  onTools: () => void;
+  onWebContext: () => void;
+  onProviders: () => void;
   sources: Source[];
 }) {
   return (
     <div className="welcome">
-      <div className="welcome-topline">
-        <span className="welcome-index">01 /</span>
-        <span className="eyebrow">NEW CONVERSATION</span>
-        <button className="welcome-context-link" onClick={onContext}>
-          <span className="status-dot" />
-          <strong>{workspaceName}</strong>
-          <ArrowRight size={13} />
-        </button>
-      </div>
       <div className="welcome-hero">
         <div className="welcome-copy">
           <h1>
@@ -262,67 +260,38 @@ export function EmptyWorkspace({
             <br />
             <span>In clear context.</span>
           </h1>
-          <p className="welcome-description">
-            Bring the right files into focus.
-            <br />
-            Keep your conversation. Shape what your model sees.
-          </p>
-          <div className="welcome-actions">
-            <button className="welcome-add-source" onClick={onAddSource}>
-              <Plus size={15} /> Add your context <ArrowRight size={14} />
-            </button>
-          </div>
         </div>
-        <div className="welcome-leaf" aria-hidden="true">
-          <Logo />
-          <span>canopy</span>
-        </div>
+        <WelcomeIllustration />
+      </div>
+      <nav className="welcome-capabilities" aria-label="Context shortcuts">
+        <button
+          className="welcome-capability files"
+          onClick={() => onAddSource("file")}
+        >
+          <Folder size={15} /> Files &amp; folders
+        </button>
+        <button
+          className="welcome-capability instructions"
+          onClick={() => onAddSource("instruction")}
+        >
+          <FileText size={15} /> Instructions
+        </button>
+        <button className="welcome-capability tools" onClick={onTools}>
+          <Wrench size={15} /> Tools
+        </button>
+        <button className="welcome-capability web" onClick={onWebContext}>
+          <Globe size={15} /> Web context
+        </button>
+        <button className="welcome-capability providers" onClick={onProviders}>
+          <Layers3 size={15} /> Multiple providers
+        </button>
+      </nav>
+      <div className="welcome-actions">
+        <button className="welcome-add-source" onClick={() => onAddSource()}>
+          <Plus size={15} /> Add your context <ArrowRight size={14} />
+        </button>
       </div>
       <ContextOverview sources={sources} onOpen={onContext} />
-      <div className="suggestions-heading">
-        <span>A starting point</span>
-        <span>OR WRITE YOUR OWN BELOW</span>
-      </div>
-      <div className="suggestion-grid">
-        {[
-          [
-            Code2,
-            "Build something",
-            "Turn an idea into working code",
-            "Help me build a new feature. First inspect the authorized project files and suggest a focused implementation plan.",
-          ],
-          [
-            Search,
-            "Find the root cause",
-            "Follow the clues in your code",
-            "Help me investigate a bug. Ask what is failing, then use the authorized sources to identify the cause before proposing a fix.",
-          ],
-          [
-            GitPullRequest,
-            "Get a fresh perspective",
-            "A thoughtful review of your work",
-            "Review the authorized code for correctness, edge cases, and security. Prioritize concrete findings with file references.",
-          ],
-        ].map(([Icon, title, desc, prompt]) => {
-          const I = Icon as typeof Code2;
-          return (
-            <button
-              key={String(title)}
-              className="suggestion-card"
-              onClick={() => onSuggestion(String(prompt))}
-            >
-              <I size={19} />
-              <strong>{String(title)}</strong>
-              <span>{String(desc)}</span>
-              <ArrowUp size={13} />
-            </button>
-          );
-        })}
-      </div>
-      <div className="welcome-footnote">
-        <Layers3 size={13} />
-        <span>Every conversation has a context of its own.</span>
-      </div>
     </div>
   );
 }
@@ -731,7 +700,6 @@ export function Composer({
         )}
       </div>
       <div className="composer-caption">
-        <span>Switch providers, keep your context.</span>
         <button disabled={busy || running} onClick={onPreview}>
           <Eye size={12} />
           Preview request

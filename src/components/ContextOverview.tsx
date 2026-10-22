@@ -28,7 +28,7 @@ export function ContextOverview({
     },
     {
       key: "instructions",
-      label: "Selected instructions",
+      label: "Instructions",
       Icon: BookOpen,
       sources: enabled.filter((s) =>
         ["instruction", "project"].includes(s.type),
@@ -70,14 +70,14 @@ export function ContextOverview({
               <span>{label}</span>
             </span>
             <strong>{selected.length.toString().padStart(2, "0")}</strong>
-            <span className="context-summary-detail">
-              {selected.length
-                ? selected
-                    .slice(0, 2)
-                    .map((s) => s.name)
-                    .join(", ")
-                : "Nothing selected"}
-            </span>
+            {selected.length > 0 && (
+              <span className="context-summary-detail">
+                {selected
+                  .slice(0, 2)
+                  .map((s) => s.name)
+                  .join(", ")}
+              </span>
+            )}
           </span>
         ))}
       </span>

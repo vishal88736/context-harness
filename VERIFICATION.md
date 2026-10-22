@@ -1,6 +1,6 @@
 # Local verification record
 
-Latest local regression: **2026-10-23**, using Node **26.12.1**, npm **11.20.0**, and installed system Chromium. After applying the sampled screenshot palette, `npm run verify` passed end to end with **61 backend tests**, the checked production build, **one production restart test**, and **20 browser workflows**. The application is a local, single-user workspace. No public deployment or live neural-model performance is claimed.
+Latest local regression: **2026-10-23**, using Node **26.12.1**, npm **11.20.0**, and installed system Chromium. Verification after the welcome illustration, functional shortcuts, and text cleanup passed **61 backend tests**, the checked production build, **one production restart test**, and **21 browser workflows**. Checks were run through `npm test`, `npm run build`, `npm run test:production`, and `npm run test:e2e`. The application is a local, single-user workspace. No public deployment or live neural-model performance is claimed.
 
 ## Completed checks
 
@@ -8,23 +8,25 @@ Latest local regression: **2026-10-23**, using Node **26.12.1**, npm **11.20.0**
 | -------------------------- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | TypeScript validation      | Passed                                             | `npm run check`, also required by the production build                                                                                 |
 | Backend/integration suite  | **61/61 passed**                                   | `npm test` → context/tools, discovery, native protocols, cross-provider handoff, redaction, and external workspaces                    |
-| Browser workflows          | **20/20 passed**                                   | `npm run test:e2e` → workspace, presentation, coding, and native provider workflows                                                    |
+| Browser workflows          | **21/21 passed**                                   | `npm run test:e2e` → workspace, presentation, coding, native providers, and welcome shortcut/excerpt workflows                         |
 | Production build           | Passed                                             | `npm run build`; built frontend and Node ESM bundle                                                                                    |
 | Full process restart       | **1/1 passed**                                     | `npm run test:production` → `tests/production.smoke.ts`                                                                                |
 | Dependency audit           | **0 known vulnerabilities reported on 2026-10-22** | `npm audit --json` covers the installed production and development dependency graph                                                    |
 | Whitespace/conflict checks | Passed                                             | `git diff --check`                                                                                                                     |
 | Visual review              | Light desktop and mobile screenshots inspected     | Ignored `artifacts/canopy-light-workspace.png`, `canopy-light-mobile.png`, `canopy-light-code.png`, and `canopy-light-code-mobile.png` |
 
-The browser suite runs against separate temporary project/data directories. It never configures a test provider in the normal application's database.
+The browser suite runs against separate temporary project/data directories. It never configures a test provider in the normal application's database. The updated desktop welcome is captured in ignored `artifacts/canopy-welcome-elements.png`.
 
 ## Presentation and documentation verified on 2026-10-23
 
 - The palette was sampled directly from the user's screenshot: off-white `#F8F7F5`, sidebar lavender `#DEE1ED`, context lavender `#DFE2EE`, teal `#426D79` / `#406B78`, apricot heading `#EAA96A`, send button `#ECB379`, selected peach `#EFD2B8`, navy `#0C2236`, card surface `#FCFAF9`, and separators `#D3D8E6`. The source image contains gradients and texture; these are representative sampled colors assigned to the corresponding interface roles. Desktop and mobile conversation/editor screenshots were inspected after the complete browser run. The two-leaf mark and favicon match the navy palette.
+- The welcome now uses the reference's modular SVG illustration and five pastel shortcuts connected to file selection, custom instructions, permissions, explicit web excerpts, and provider settings. Repeated eyebrows, introductory/helper copy, starter tiles, illustration text, and footer slogans were removed. Empty context groups show counts without repeated placeholder sentences; actual selected source names and inclusion/exclusion status remain available.
+- The new browser workflow checks all five shortcut destinations and mobile access without page overflow. It saves a pasted web excerpt with its reference URL, verifies both in the actual assembled preview payload, disables the source, and confirms both are absent from the next payload. Web context is user-pasted reference data, not automatic URL retrieval or browser search.
 - CodeMirror and rendered Markdown code blocks share the root palette variables for syntax, selections, search highlights, gutters, and diff states. The editor's `syntaxTheme` uses semantic CSS tokens instead of fixed theme colors. Vite continues to prebundle the lazy editor's modules; the complete run covers opening and editing an external project on the first Code visit.
 - Contrast calculations found body text at 15.11:1, secondary text at 6.31:1, sidebar labels at 5.18:1, primary button text at 5.46:1, and apricot send-button text at 8.70:1 against their intended surfaces. These checks do not constitute a full accessibility audit. The reference's apricot emphasis color is retained for the large heading and decorative highlights.
 - The linear welcome context brief derives category counts and names from the active conversation's configuration. Tests cover separate empty conversations, disabled sources, switching, reload persistence, and a missing configured file. The brief never asserts successful loading or model inclusion; explicit request preview reports actual excerpts and exclusions.
 - Keyboard activation opens the context panel without opening source selection or sending/composing a request. The separate add-context control opens source selection.
-- Browser checks cover 1440×960, 1024×768, 768×900, and 390×844. The desktop sidebar, mobile navigation/context access, compact context brief, reachable composer, and absence of document horizontal overflow are verified. Desktop quick actions remain fully visible. Screenshot capture disables transitions to record settled theme colors.
+- Browser checks cover 1440×960, 1024×768, 768×900, and 390×844. The desktop sidebar, mobile navigation/context access, compact context brief, reachable composer, and absence of document horizontal overflow are verified. Welcome shortcuts remain reachable. Presentation screenshot capture disables transitions to record settled theme colors.
 - README navigation, setup, workflows, provider settings, appearance, architecture, backup, troubleshooting, and verification boundaries are structured and linked. The ignored local guide documents the new presentation files and their connections.
 
 ## Workspace, editor, and provider verification on 2026-10-22
@@ -46,7 +48,7 @@ The browser suite runs against separate temporary project/data directories. It n
 - `LOCAL_CODEBASE_GUIDE.md` exists locally, has an exact anchored `.gitignore` rule, is untracked, and is excluded from file access/retrieval. The guide inventories the actual files, imports, request flows, tools, APIs, database, tests, and inactive retained tooling.
 - `npm run verify` now includes backend tests, the checked production build, the production restart test, and the complete browser suite.
 
-The original 2026-10-20 run covered 25 backend tests and eight browser workflows. The current regression extends that baseline to 61 backend tests and 20 browser workflows without changing the live-inference verification boundary.
+The original 2026-10-20 run covered 25 backend tests and eight browser workflows. The current regression extends that baseline to 61 backend tests and 21 browser workflows without changing the live-inference verification boundary.
 
 ## Required acceptance scenarios
 

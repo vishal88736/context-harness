@@ -102,11 +102,14 @@ The editor currently modifies existing text files only, with a 250 KB UTF-8 edit
 
 The desktop sidebar remains visible. The independent context panel can be closed or resized; use its divider or arrow keys while the divider is focused. On compact screens it opens as a drawer.
 
-On a new conversation's welcome screen, the **Conversation context** brief groups its enabled selections into files/folders, selected instructions, chats/memories, and attachments, with a separate disabled count. These are configuration counts: they do not prove that files exist, content was included, or tokens were used. Open the brief or workspace pill to edit the context panel; **Add your context** opens source selection directly. The brief adapts to compact layouts, and context controls remain available on smaller screens. Use **Preview request** to verify actual inclusion.
+On a new conversation's welcome screen, the **Conversation context** brief groups its enabled selections into files/folders, instructions, chats/memories, and attachments, with a separate disabled count. These are configuration counts: they do not prove that files exist, content was included, or tokens were used. Open the brief to edit the context panel; **Add your context** opens source selection directly. The brief adapts to compact layouts, and context controls remain available on smaller screens. Use **Preview request** to verify actual inclusion.
+
+The welcome shortcuts open the corresponding working controls: **Files & folders** opens file selection, **Instructions** starts a custom instruction source, **Tools** opens conversation permissions, and **Multiple providers** opens provider settings. **Web context** lets you name a page, record its URL, and paste the exact excerpt you want to share. It saves an untrusted reference snippet in the current conversation, with the URL preserved alongside the excerpt. The page is not fetched automatically; this is not browser search. Preview, disable, or remove it like any other selected source.
 
 ### Sources
 
 - **Files & snippets:** choose workspace files or paste named code snippets. Files resolve from disk for every request.
+- **Web excerpts:** use the welcome **Web context** shortcut to paste selected page text and its reference URL. Only the pasted text and URL are supplied; there is no automatic page retrieval.
 - **Folders:** explicitly authorize a folder. Only relevant retrieved excerpts enter the prompt, rather than an assertion that the whole repository was sent.
 - **Project instructions:** select a repository rules file or write project guidance. Repository rules are never silently discovered and executed.
 - **Custom instructions:** editable guidance for this conversation.
@@ -186,6 +189,8 @@ Canopy is **light-only**: off-white surfaces, soft lavender navigation, teal act
 
 The top bar exposes **Open folder**, provider connection, and context access. The **Conversation** and **Code** tabs share the active workspace and conversation. The desktop sidebar keeps projects and chat history visible; smaller layouts retain navigation, file/context controls, and responsive panels.
 
+The compact new-conversation view pairs its headline with a decorative geometric illustration, five pastel shortcut buttons, an add-context action, and the context selection brief. The shortcuts open real context, permission, or provider controls and wrap on smaller screens; the composer remains directly available below.
+
 ## Coding tools and security
 
 ### File tools and execution
@@ -248,6 +253,8 @@ src/
 │   ├── SourceEditor.tsx        CodeMirror language modes, editing, undo/scroll state
 │   ├── FolderPicker.tsx        Local OS directory browser
 │   ├── ContextOverview.tsx     Per-chat selection brief
+│   ├── WelcomeIllustration.tsx Decorative modular-context SVG
+│   ├── WebContextDialog.tsx    Explicit page URL and pasted excerpt
 │   └── ...                     Sidebar, chat, context, profiles, settings, inspector
 ├── styles.css                  Light-only theme tokens and base layout
 ├── readability.css             Readability overrides
