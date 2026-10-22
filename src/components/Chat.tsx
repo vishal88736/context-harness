@@ -675,6 +675,7 @@ export function Composer({
                 <span className="model-indicator" />
                 <select
                   aria-label="Model for next request"
+                  title="Switch provider or model for the next request. Your conversation and selected context stay together; each model’s input limits still apply."
                   disabled={navigating}
                   value={modelValue}
                   onChange={(e) => onModel(e.target.value)}
@@ -684,7 +685,7 @@ export function Composer({
                     <optgroup label={p.name} key={p.id}>
                       {p.models.map((m) => (
                         <option value={`${p.id}::${m.id}`} key={m.id}>
-                          {m.name}
+                          {p.name} · {m.name}
                         </option>
                       ))}
                     </optgroup>
@@ -730,7 +731,7 @@ export function Composer({
         )}
       </div>
       <div className="composer-caption">
-        <span>Context is yours to control. Outputs are yours to verify.</span>
+        <span>Switch providers, keep your context.</span>
         <button disabled={busy || running} onClick={onPreview}>
           <Eye size={12} />
           Preview request
