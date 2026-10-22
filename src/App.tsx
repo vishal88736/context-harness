@@ -1,10 +1,19 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import {
   ArrowLeft,
   Check,
+  Code2,
   ChevronDown,
   CircleAlert,
   Folder,
+  FolderOpen,
   GitBranch,
   Layers3,
   Menu,
@@ -16,6 +25,7 @@ import {
 import {
   activeModel,
   api,
+  makeSource,
   setToken,
   streamChat,
   type Bootstrap,
@@ -34,6 +44,13 @@ import { Inspector } from "./components/Inspector";
 import { SettingsDialog } from "./components/Settings";
 import { ProfilesDialog } from "./components/Profiles";
 import { Logo, Modal, Spinner } from "./components/ui";
+import { FolderPicker } from "./components/FolderPicker";
+
+const CodeWorkbench = lazy(() =>
+  import("./components/CodeWorkbench").then((module) => ({
+    default: module.CodeWorkbench,
+  })),
+);
 
 type Draft = {
   prompt: string;
@@ -54,6 +71,8 @@ export function App() {
   const activeRef = useRef(activeId);
   activeRef.current = activeId;
   const [workspaceId, setWorkspaceId] = useState("");
+  const [view, setView] = useState<"chat" | "code">("chat");
+  const [codeOpened, setCodeOpened] = useState(false);
   const [error, setError] = useState("");
   const [toast, setToast] = useState("");
   const [search, setSearch] = useState("");
@@ -66,9 +85,9 @@ export function App() {
   const [panelWidth, setPanelWidth] = useState(
     () => Number(localStorage.getItem("canopy.contextWidth")) || 344,
   );
-  const [dialog, setDialog] = useState<"settings" | "profiles" | "add" | null>(
-    null,
-  );
+  const [dialog, setDialog] = useState<
+    "settings" | "profiles" | "add" | "folder" | null
+  >(null);
   const [settingsTab, setSettingsTab] = useState("providers");
   const [action, setAction] = useState<{
     conversation: Conversation;
@@ -215,15 +234,8 @@ export function App() {
     };
   }, []);
   useEffect(() => {
-    const theme = data?.settings.theme ?? "dark";
-    const media = window.matchMedia("(prefers-color-scheme: dark)");
-    const apply = () =>
-      (document.documentElement.dataset.theme =
-        theme === "system" ? (media.matches ? "dark" : "light") : theme);
-    apply();
-    media.addEventListener("change", apply);
-    return () => media.removeEventListener("change", apply);
-  }, [data?.settings.theme]);
+    document.documentElement.dataset.theme = "light";
+  }, []);
   useEffect(() => {
     localStorage.setItem("canopy.contextOpen", String(contextOpen));
   }, [contextOpen]);
@@ -686,6 +698,27 @@ export function App() {
             <strong>{conversation?.title ?? "New conversation"}</strong>
           </div>
           <div className="workspace-header-actions">
+            <button
+              className="header-action"
+              aria-label="Open folder"
+              onClick={() => setDialog("folder")}
+            >
+              <FolderOpen size={15} />
+              <span>Open folder</span>
+            </button>
+            <button
+              className="header-action primary"
+              aria-label="Connect provider"
+              onClick={() => {
+                setSettingsTab("providers");
+                setDialog("settings");
+              }}
+            >
+              <Layers3 size={15} />
+              <span>
+                {data.providers.length ? "Providers" : "Connect provider"}
+              </span>
+            </button>
             <span className="local-workspace-status">
               <span className="status-dot" />
               {saving ? "Saving context…" : "Local workspace"}
@@ -701,6 +734,36 @@ export function App() {
             </button>
           </div>
         </header>
+        <div
+          className="workspace-view-tabs"
+          role="tablist"
+          aria-label="Workspace views"
+        >
+          <button
+            role="tab"
+            aria-selected={view === "chat"}
+            aria-controls="conversation-view"
+            onClick={() => setView("chat")}
+          >
+            <MessageSquare size={15} />
+            Conversation{isRunning && <span className="status-dot pulse" />}
+          </button>
+          <button
+            role="tab"
+            aria-selected={view === "code"}
+            aria-controls="code-view"
+            onClick={() => {
+              setCodeOpened(true);
+              setView("code");
+            }}
+          >
+            <Code2 size={15} />
+            Code
+          </button>
+          <span className="workspace-root-label" title={workspace.root}>
+            {workspace.root}
+          </span>
+        </div>
         {snapshot &&
           !isPreview &&
           (snapshot.warnings.length > 0 ||
@@ -751,107 +814,162 @@ export function App() {
             </button>
           </div>
         )}
-        <div className="conversation-stage">
-          {detail?.conversation.id !== activeId ? (
-            <div className="loading-conversation">
-              <Spinner label="Opening conversation…" />
-            </div>
-          ) : detail.messages.length ? (
-            <MessageList
-              messages={detail.messages}
-              executions={detail.executions}
-              running={isRunning}
-              progress={progress}
-              onInspect={(id) => void inspectInvocation(id)}
-              onRetry={(m) => void send(undefined, m)}
-              onDecision={async (id, approve) => {
-                await api(`/executions/${id}/decision`, "POST", { approve });
-                notify(approve ? "Action approved" : "Action denied");
-              }}
-            />
-          ) : (
-            <EmptyWorkspace
-              workspaceName={workspace.name}
-              sources={detail.conversation.config.sources}
-              onContext={() => setContextOpen(true)}
-              onAddSource={() => {
-                setContextOpen(true);
-                setDialog("add");
-              }}
-              onSuggestion={(prompt) => {
-                updateDraft({ prompt });
-                document.getElementById("message-composer")?.focus();
-              }}
-            />
-          )}
-        </div>
-        <Composer
-          navigating={navigating}
-          data={data}
-          value={draft.prompt}
-          onChange={(prompt) => updateDraft({ prompt })}
-          instructions={draft.instructions}
-          onInstructions={(instructions) => updateDraft({ instructions })}
-          attachments={draft.attachments}
-          onAttachments={(attachments) => updateDraft({ attachments })}
-          modelValue={
-            draft.override ||
-            (selected.provider && selected.model
-              ? `${selected.provider.id}::${selected.model.id}`
-              : "")
-          }
-          onModel={(override) => updateDraft({ override })}
-          onSend={() => void send()}
-          onStop={() => void stop()}
-          onPreview={() => void preview()}
-          onContext={() => setContextOpen((v) => !v)}
-          onSettings={() => {
-            setSettingsTab("providers");
-            setDialog("settings");
+        <div
+          className="chat-workspace"
+          id="conversation-view"
+          role="tabpanel"
+          style={{
+            display: view === "chat" ? "flex" : "none",
+            flex: 1,
+            minHeight: 0,
+            flexDirection: "column",
           }}
-          running={isRunning}
-          busy={busy || saving > 0 || !!contextFailures[activeId]}
-          connected={!!selected.model}
-          sourceCount={enabled}
-        />
-        {conversation && (
-          <div className="conversation-model-bar">
-            <button
-              onClick={() => {
-                setSettingsTab("providers");
-                setDialog("settings");
-              }}
-            >
-              <span className="model-indicator" />
-              {selected.model?.name ?? "No model connected"}
-              <ChevronDown size={11} />
-            </button>
-            {selected.model && (
+        >
+          <div className="conversation-stage">
+            {detail?.conversation.id !== activeId ? (
+              <div className="loading-conversation">
+                <Spinner label="Opening conversation…" />
+              </div>
+            ) : detail.messages.length ? (
+              <MessageList
+                messages={detail.messages}
+                executions={detail.executions}
+                running={isRunning}
+                progress={progress}
+                onInspect={(id) => void inspectInvocation(id)}
+                onRetry={(m) => void send(undefined, m)}
+                onDecision={async (id, approve) => {
+                  await api(`/executions/${id}/decision`, "POST", { approve });
+                  notify(approve ? "Action approved" : "Action denied");
+                }}
+              />
+            ) : (
+              <EmptyWorkspace
+                workspaceName={workspace.name}
+                sources={detail.conversation.config.sources}
+                onContext={() => setContextOpen(true)}
+                onAddSource={() => {
+                  setContextOpen(true);
+                  setDialog("add");
+                }}
+                onSuggestion={(prompt) => {
+                  updateDraft({ prompt });
+                  document.getElementById("message-composer")?.focus();
+                }}
+              />
+            )}
+          </div>
+          <Composer
+            navigating={navigating}
+            data={data}
+            value={draft.prompt}
+            onChange={(prompt) => updateDraft({ prompt })}
+            instructions={draft.instructions}
+            onInstructions={(instructions) => updateDraft({ instructions })}
+            attachments={draft.attachments}
+            onAttachments={(attachments) => updateDraft({ attachments })}
+            modelValue={
+              draft.override ||
+              (selected.provider && selected.model
+                ? `${selected.provider.id}::${selected.model.id}`
+                : "")
+            }
+            onModel={(override) => updateDraft({ override })}
+            onSend={() => void send()}
+            onStop={() => void stop()}
+            onPreview={() => void preview()}
+            onContext={() => setContextOpen((v) => !v)}
+            onSettings={() => {
+              setSettingsTab("providers");
+              setDialog("settings");
+            }}
+            running={isRunning}
+            busy={busy || saving > 0 || !!contextFailures[activeId]}
+            connected={!!selected.model}
+            sourceCount={enabled}
+          />
+          {conversation && (
+            <div className="conversation-model-bar">
               <button
-                onClick={async () => {
-                  try {
-                    await api(`/conversations/${activeId}`, "PATCH", {
-                      providerId: selected.provider!.id,
-                      modelId: selected.model!.id,
-                    });
-                    updateDraft({ override: "" });
-                    await load(activeId);
-                    await refresh();
-                    notify("Model assigned to this conversation");
-                  } catch (e) {
-                    setError((e as Error).message);
-                  }
+                onClick={() => {
+                  setSettingsTab("providers");
+                  setDialog("settings");
                 }}
               >
-                Use model for this chat
+                <span className="model-indicator" />
+                {selected.model?.name ?? "No model connected"}
+                <ChevronDown size={11} />
               </button>
-            )}
-            <span>
-              <ShieldCheck size={11} />
-              Context stays in this conversation
-            </span>
-          </div>
-        )}
+              {selected.model && (
+                <button
+                  onClick={async () => {
+                    try {
+                      await api(`/conversations/${activeId}`, "PATCH", {
+                        providerId: selected.provider!.id,
+                        modelId: selected.model!.id,
+                      });
+                      updateDraft({ override: "" });
+                      await load(activeId);
+                      await refresh();
+                      notify("Model assigned to this conversation");
+                    } catch (e) {
+                      setError((e as Error).message);
+                    }
+                  }}
+                >
+                  Use model for this chat
+                </button>
+              )}
+              <span>
+                <ShieldCheck size={11} />
+                Context stays in this conversation
+              </span>
+            </div>
+          )}
+        </div>
+        <div
+          className="code-view"
+          id="code-view"
+          role="tabpanel"
+          style={{
+            display: view === "code" ? "flex" : "none",
+            flex: 1,
+            minHeight: 0,
+          }}
+        >
+          {codeOpened && (
+            <Suspense fallback={<Spinner label="Opening code workspace…" />}>
+              <CodeWorkbench
+                workspace={workspace}
+                sources={conversation?.config.sources ?? []}
+                onOpenFolder={() => setDialog("folder")}
+                onAddSource={async (path) => {
+                  if (!conversation || navigating)
+                    throw new Error(
+                      "Wait for the conversation to open before adding context.",
+                    );
+                  const exists = conversation.config.sources.some(
+                    (source) => source.type === "file" && source.path === path,
+                  );
+                  const sources = exists
+                    ? conversation.config.sources.map((source) =>
+                        source.type === "file" && source.path === path
+                          ? { ...source, enabled: true }
+                          : source,
+                      )
+                    : [
+                        ...conversation.config.sources,
+                        makeSource("file", path.split("/").pop() || path, {
+                          path,
+                        }),
+                      ];
+                  await updateConfig({ ...conversation.config, sources });
+                  notify("File added to this conversation's context");
+                }}
+              />
+            </Suspense>
+          )}
+        </div>
       </main>
       {contextOpen && (
         <>
@@ -886,6 +1004,15 @@ export function App() {
           onWorkspace={(id) => void chooseWorkspace(id)}
         />
       )}{" "}
+      {dialog === "folder" && (
+        <FolderPicker
+          onClose={() => setDialog(null)}
+          onOpen={async (next) => {
+            await refresh();
+            await chooseWorkspace(next.id);
+          }}
+        />
+      )}
       {dialog === "add" && conversation && (
         <AddSourceDialog
           workspace={workspace}

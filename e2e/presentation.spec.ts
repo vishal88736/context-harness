@@ -210,133 +210,78 @@ test("Keyboard context overview navigation opens the panel without composing or 
   expect(requests).toEqual([]);
 });
 
-test("Workspace themes persist, follow system appearance, and retain mobile context access without overflow", async ({
+test("Light-only workspace keeps its appearance and context access across desktop and mobile", async ({
   page,
 }) => {
   const session = await bootstrap(page);
-  const chat = await conversation(
-    page,
-    session,
-    "Responsive themed workspace",
-    [],
-  );
+  const chat = await conversation(page, session, "Light coding workspace", []);
   await openEmptyConversation(page, chat.id);
   const root = page.locator("html");
-  async function appearance() {
-    await page.getByRole("button", { name: "Settings", exact: true }).click();
-    const settings = page.getByRole("dialog", {
-      name: "A workspace that fits you.",
-    });
-    await settings
-      .getByRole("button", { name: "Appearance", exact: true })
-      .click();
-    return settings;
-  }
-  try {
-    await mkdir("artifacts", { recursive: true });
-    let settings = await appearance();
-    await settings.getByRole("button", { name: "Dark", exact: true }).click();
-    await expect(root).toHaveAttribute("data-theme", "dark");
-    await expect(
-      settings.getByRole("button", { name: "Dark", exact: true }),
-    ).toHaveClass(/active/);
-    const darkBackground = await root.evaluate((element) =>
-      getComputedStyle(element).getPropertyValue("--bg"),
-    );
-    await settings.getByRole("button", { name: "Done", exact: true }).click();
+  await api(page, session, "PUT", "/settings", { theme: "dark" });
+  await page.emulateMedia({ colorScheme: "dark" });
+  await page.reload();
+  await expect(root).toHaveAttribute("data-theme", "light");
+  expect((await bootstrap(page)).settings.theme).toBe("light");
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  const settings = page.getByRole("dialog", {
+    name: "A workspace that fits you.",
+  });
+  await settings
+    .getByRole("button", { name: "Appearance", exact: true })
+    .click();
+  await expect(settings).toContainText("Light theme is always enabled");
+  await expect(
+    settings.getByRole("button", { name: "Dark", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    settings.getByRole("button", { name: "System", exact: true }),
+  ).toHaveCount(0);
+  await settings.getByRole("button", { name: "Done", exact: true }).click();
+  await mkdir("artifacts", { recursive: true });
+  for (const viewport of [
+    { width: 1440, height: 960 },
+    { width: 1024, height: 768 },
+    { width: 768, height: 900 },
+    { width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize(viewport);
     await page.reload();
-    await expect(root).toHaveAttribute("data-theme", "dark");
+    await expect(root).toHaveAttribute("data-theme", "light");
+    await expect(page.getByLabel("Message Canopy")).toBeInViewport();
+    await expect(
+      page.getByRole("button", { name: "Open folder", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("tab", { name: "Code", exact: true }),
+    ).toBeVisible();
     await expect(overview(page)).toBeVisible();
-    await expect(page.locator(".suggestion-card").last()).toBeInViewport({
-      ratio: 1,
-    });
-    await page.screenshot({
-      path: "artifacts/canopy-original-dark.png",
-      fullPage: true,
-      animations: "disabled",
-    });
-
-    settings = await appearance();
-    await settings.getByRole("button", { name: "Light", exact: true }).click();
-    await expect(root).toHaveAttribute("data-theme", "light");
-    await expect(
-      settings.getByRole("button", { name: "Light", exact: true }),
-    ).toHaveClass(/active/);
-    const lightBackground = await root.evaluate((element) =>
-      getComputedStyle(element).getPropertyValue("--bg"),
-    );
-    expect(lightBackground.trim()).not.toBe("");
-    expect(lightBackground).not.toBe(darkBackground);
-    await settings.getByRole("button", { name: "Done", exact: true }).click();
-    await page.reload();
-    await expect(root).toHaveAttribute("data-theme", "light");
-    await expect(overview(page)).toBeVisible();
-    await page.screenshot({
-      path: "artifacts/canopy-original-light.png",
-      fullPage: true,
-      animations: "disabled",
-    });
-
-    settings = await appearance();
-    await page.emulateMedia({ colorScheme: "dark" });
-    await settings.getByRole("button", { name: "System", exact: true }).click();
-    await expect(
-      settings.getByRole("button", { name: "System", exact: true }),
-    ).toHaveClass(/active/);
-    await expect(root).toHaveAttribute("data-theme", "dark");
-    await settings.getByRole("button", { name: "Done", exact: true }).click();
-    await page.emulateMedia({ colorScheme: "light" });
-    await expect(root).toHaveAttribute("data-theme", "light");
-    await page.reload();
-    await expect(root).toHaveAttribute("data-theme", "light");
-    expect((await bootstrap(page)).settings.theme).toBe("system");
-    await page.emulateMedia({ colorScheme: "dark" });
-    await expect(root).toHaveAttribute("data-theme", "dark");
-
-    for (const viewport of [
-      { width: 1440, height: 960 },
-      { width: 1024, height: 768 },
-      { width: 768, height: 900 },
-      { width: 390, height: 844 },
-    ]) {
-      await page.setViewportSize(viewport);
-      await page.reload();
-      await expect(page.getByLabel("Message Canopy")).toBeInViewport();
+    if (viewport.width > 768) {
       await expect(
-        page.getByRole("button", { name: "Add your context" }),
-      ).toBeVisible();
-      await expect(overview(page)).toBeVisible();
-      if (viewport.width > 768) {
-        await expect(
-          page.getByRole("complementary", { name: "Conversation sidebar" }),
-        ).toBeInViewport();
-      } else {
-        await page
-          .getByRole("button", { name: "Open conversation sidebar" })
-          .click();
-        await expect(
-          page.getByRole("complementary", { name: "Conversation sidebar" }),
-        ).toBeInViewport();
-        await page.getByRole("button", { name: "Close sidebar" }).click();
-        await overview(page).click();
-        await expect(
-          page.getByRole("complementary", { name: "Conversation context" }),
-        ).toBeInViewport();
-        await page.getByRole("button", { name: "Close context panel" }).click();
-      }
-      expect(
-        await page.evaluate(() => document.documentElement.scrollWidth),
-      ).toBeLessThanOrEqual(viewport.width);
-      if (viewport.width === 390)
-        await page.screenshot({
-          path: "artifacts/canopy-original-mobile.png",
-          fullPage: true,
-          animations: "disabled",
-        });
+        page.getByRole("complementary", { name: "Conversation sidebar" }),
+      ).toBeInViewport();
+    } else {
+      await page
+        .getByRole("button", { name: "Open conversation sidebar" })
+        .click();
+      await expect(
+        page.getByRole("complementary", { name: "Conversation sidebar" }),
+      ).toBeInViewport();
+      await page.getByRole("button", { name: "Close sidebar" }).click();
+      await overview(page).click();
+      await expect(
+        page.getByRole("complementary", { name: "Conversation context" }),
+      ).toBeInViewport();
+      await page.getByRole("button", { name: "Close context panel" }).click();
     }
-  } finally {
-    await api(page, session, "PUT", "/settings", {
-      theme: session.settings.theme,
-    });
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth),
+    ).toBeLessThanOrEqual(viewport.width);
+    if (viewport.width === 1440 || viewport.width === 390) {
+      await page.screenshot({
+        path: `artifacts/canopy-light-${viewport.width === 1440 ? "workspace" : "mobile"}.png`,
+        fullPage: true,
+        animations: "disabled",
+      });
+    }
   }
 });

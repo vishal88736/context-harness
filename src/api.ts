@@ -31,7 +31,7 @@ export interface Bootstrap {
   memories: { id: string; name: string; content: string; createdAt: string }[];
   settings: {
     defaultModel: { providerId: string; modelId: string } | null;
-    theme: "dark" | "light" | "system";
+    theme: "light";
   };
 }
 export interface Detail {

@@ -1,7 +1,7 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import "@fontsource-variable/inter";
-import "highlight.js/styles/github-dark.css";
+import "highlight.js/styles/github.css";
 import "./styles.css";
 import "./readability.css";
 import "./workspace-presentation.css";
