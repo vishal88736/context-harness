@@ -824,3 +824,141 @@ test("PDF and DOCX uploads extract real document content; image capability exclu
     ),
   );
 });
+
+test("Split provider credentials never enter streamed or persisted assistant responses", async () => {
+  const key = "fixture-stream-private-key-987654";
+  const p = await call("/providers", "POST", {
+    name: "Private stream fixture",
+    kind: "compatible",
+    baseUrl: provider.baseUrl,
+    apiKey: key,
+  });
+  await call(`/providers/${p.id}/discover`, "POST");
+  const c = await conversation();
+  await call(`/conversations/${c.id}`, "PATCH", {
+    providerId: p.id,
+    modelId: "fixture-coder",
+  });
+  const events = await consume(await send(c, "LEAK_STREAM_SECRET"));
+  assert.ok(events.some((e) => e.type === "done"));
+  assert.doesNotMatch(JSON.stringify(events), new RegExp(key));
+  assert.equal(
+    service.store.messages(c.id).at(-1)!.content,
+    "A private value: [REDACTED] was removed.",
+  );
+});
+
+test("Tool arguments and source metadata containing credentials are sanitized in every recorded request", async () => {
+  const key = "fixture-tool-private-key-123456";
+  const p = await call("/providers", "POST", {
+    name: "Private tool fixture",
+    kind: "compatible",
+    baseUrl: provider.baseUrl,
+    apiKey: key,
+  });
+  await call(`/providers/${p.id}/discover`, "POST");
+  const c = await conversation([{ ...file("alpha"), name: `Source ${key}` }]);
+  await call(`/conversations/${c.id}`, "PATCH", {
+    providerId: p.id,
+    modelId: "fixture-coder",
+  });
+  const start = provider.requests.length;
+  const events = await consume(await send(c, "LEAK_TOOL_SECRET"));
+  assert.ok(events.some((e) => e.type === "done"));
+  assert.doesNotMatch(JSON.stringify(events), new RegExp(key));
+  const requests = provider.requests.slice(start);
+  assert.equal(requests.length, 2);
+  assert.doesNotMatch(JSON.stringify(requests), new RegExp(key));
+  assert.match(JSON.stringify(requests[1]), /REDACTED/);
+  for (const record of service.store.invocations(c.id))
+    assert.doesNotMatch(
+      JSON.stringify(service.store.invocation(record.id).snapshot),
+      new RegExp(key),
+    );
+});
+
+test("Latest-turn retries can repeat and an inspected retry sends the identical preview payload", async () => {
+  const c = await conversation();
+  await consume(await send(c, "Repeatable request"));
+  const first = service.store.messages(c.id).at(-1)!;
+  const retry = { prompt: "Repeatable request", retryMessageId: first.id };
+  const inspected = await call<Snapshot>(
+    `/conversations/${c.id}/preview`,
+    "POST",
+    retry,
+  );
+  const sendRetry = async (body: unknown) =>
+    consume(
+      await fetch(`${origin}/api/conversations/${c.id}/send`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Canopy-CSRF": csrf,
+          Cookie: cookie,
+        },
+        body: JSON.stringify(body),
+      }),
+    );
+  let events = await sendRetry({
+    ...retry,
+    previewHash: inspected.previewHash,
+  });
+  assert.ok(events.some((e) => e.type === "done"));
+  assert.deepEqual(provider.requests.at(-1), inspected.payload);
+  const second = service.store.messages(c.id).at(-1)!;
+  events = await sendRetry({
+    prompt: "Repeatable request",
+    retryMessageId: second.id,
+  });
+  assert.ok(events.some((e) => e.type === "done"));
+  const messages = service.store.messages(c.id);
+  assert.equal(messages.filter((m) => m.role === "user").length, 1);
+  assert.equal(messages.filter((m) => m.role === "assistant").length, 3);
+  const next = await preview(c, "Continue after retries");
+  assert.equal(next.messages.filter((m) => m.role === "assistant").length, 1);
+  assert.equal(
+    next.history.filter((h) => h.reason?.includes("Superseded")).length,
+    2,
+  );
+  await consume(await send(c, "A later user turn"));
+  await assert.rejects(
+    service.engine.compose(c.id, requestSchema.parse(retry)),
+    /Only the latest user turn/,
+  );
+});
+
+test("The ignored local codebase guide cannot be selected or retrieved as model context", async () => {
+  await writeFile(
+    path.join(root, "LOCAL_CODEBASE_GUIDE.md"),
+    "PRIVATE_LOCAL_GUIDE_SENTINEL",
+  );
+  const w = service.store.workspace(workspaceId);
+  await assert.rejects(
+    checkedPath(w, "LOCAL_CODEBASE_GUIDE.md", {
+      dataDir: path.join(temp, "data"),
+    }),
+    /protected/,
+  );
+  const c = await conversation([
+    {
+      id: id(),
+      type: "folder",
+      name: "Project folder",
+      path: ".",
+      enabled: true,
+      createdAt: now(),
+    },
+  ]);
+  const s = await preview(c, "Find PRIVATE_LOCAL_GUIDE_SENTINEL");
+  assert.ok(
+    !s.sources.some(
+      (source) =>
+        source.type === "retrieved" &&
+        source.path === "LOCAL_CODEBASE_GUIDE.md",
+    ),
+  );
+  assert.doesNotMatch(
+    JSON.stringify(s.payload).replace("Find PRIVATE_LOCAL_GUIDE_SENTINEL", ""),
+    /PRIVATE_LOCAL_GUIDE_SENTINEL/,
+  );
+});

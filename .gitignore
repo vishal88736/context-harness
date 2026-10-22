@@ -50,3 +50,6 @@ dist-server/
 test-results/
 playwright-report/
 coverage/
+
+# Detailed working-copy documentation requested for local use only.
+/LOCAL_CODEBASE_GUIDE.md

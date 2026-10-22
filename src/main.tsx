@@ -4,6 +4,8 @@ import "@fontsource-variable/inter";
 import "highlight.js/styles/github-dark.css";
 import "./styles.css";
 import "./readability.css";
+import "./workspace-presentation.css";
+import "./context-presentation.css";
 import { App } from "./App";
 
 class Boundary extends React.Component<

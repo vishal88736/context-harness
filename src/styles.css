@@ -1,49 +1,55 @@
 :root {
   font-family: "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif;
-  color: #e4e6e1;
-  background: #141615;
+  color: var(--text);
+  background: var(--bg);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   color-scheme: dark;
-  --bg: #141615;
-  --sidebar: #101211;
-  --panel: #171918;
-  --surface: #1c1f1d;
-  --surface-2: #232623;
-  --surface-hover: #262a26;
-  --border: #2a2e2a;
-  --border-soft: #222623;
-  --text: #e4e6e1;
-  --secondary: #a0a79e;
-  --muted: #717a70;
-  --accent: #b6e6ad;
-  --accent-ink: #1b3521;
-  --accent-wash: #b6e6ad0d;
+  --bg: #111417;
+  --sidebar: #0c0f12;
+  --panel: #15191d;
+  --surface: #1a2026;
+  --surface-2: #212932;
+  --surface-hover: #27313a;
+  --border: #303d47;
+  --border-soft: #232d35;
+  --text: #e5edf1;
+  --secondary: #a2b1bc;
+  --muted: #80909c;
+  --accent: #8ac7e8;
+  --accent-ink: #102634;
+  --accent-wash: #8ac7e80c;
   --danger: #e5a8a0;
   --warning: #d8c59a;
   --radius: 10px;
   --shadow: 0 24px 90px #0006;
+  --highlight: #ffffff09;
+  --control-shadow: none;
+  --card-shadow: none;
 }
 :root[data-theme="light"] {
   color-scheme: light;
-  --bg: #fafbf8;
-  --sidebar: #f0f2ec;
-  --panel: #f5f7f1;
+  --bg: #f5f7fa;
+  --sidebar: #eaf0f5;
+  --panel: #f0f4f8;
   --surface: #fff;
-  --surface-2: #e9ede4;
-  --surface-hover: #e0e7da;
-  --border: #d5dbcf;
-  --border-soft: #e5e9e0;
-  --text: #262e24;
-  --secondary: #5c6857;
-  --muted: #73816e;
-  --accent: #417c3c;
+  --surface-2: #e7edf3;
+  --surface-hover: #dfe8ef;
+  --border: #cad6df;
+  --border-soft: #dce4eb;
+  --text: #1d2b35;
+  --secondary: #506574;
+  --muted: #627988;
+  --accent: #25658a;
   --accent-ink: #fff;
-  --accent-wash: #417c3c0a;
+  --accent-wash: #25658a0b;
   --danger: #a83d35;
   --warning: #896427;
-  --shadow: 0 24px 90px #2231191f;
+  --shadow: 0 24px 90px #132b4026;
+  --highlight: #fff;
+  --control-shadow: none;
+  --card-shadow: none;
 }
 * {
   box-sizing: border-box;
@@ -93,7 +99,7 @@ select:focus {
   border-color: var(--accent);
 }
 ::selection {
-  background: #b6e6ad30;
+  background: color-mix(in srgb, var(--accent) 25%, transparent);
 }
 button {
   transition:
@@ -374,9 +380,9 @@ small {
   gap: 9px;
   padding: 11px 12px;
   width: 100%;
-  border: 1px solid #3b4439;
+  border: 1px solid var(--border);
   border-radius: 7px;
-  background: linear-gradient(110deg, #b6e6ad0e, #b6e6ad02);
+  background: var(--accent-wash);
   font-size: 11px;
   font-weight: 500;
   color: var(--text);
@@ -683,9 +689,9 @@ small {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #2a3028;
-  border: 1px solid #3e4639;
-  color: #d4ddcd;
+  background: var(--accent-wash);
+  border: 1px solid var(--border);
+  color: var(--accent);
   border-radius: 7px;
   font-family: Georgia, serif;
   font-size: 14px;
@@ -724,7 +730,8 @@ small {
   flex-direction: column;
   position: relative;
   background:
-    radial-gradient(ellipse at 50% 28%, #b6e6ad02, transparent 60%), var(--bg);
+    radial-gradient(ellipse at 76% 22%, var(--accent-wash), transparent 56%),
+    var(--bg);
 }
 .workspace-header {
   height: 66px;
@@ -984,7 +991,7 @@ small {
   background: linear-gradient(0deg, var(--bg) 80%, transparent);
 }
 .composer {
-  border: 1px solid #3a4138;
+  border: 1px solid var(--border);
   border-radius: 12px;
   background: var(--surface);
   box-shadow:
@@ -996,9 +1003,9 @@ small {
     box-shadow 0.2s;
 }
 .composer:focus-within {
-  border-color: #65775d;
+  border-color: var(--accent);
   box-shadow:
-    0 0 0 3px #b6e6ad04,
+    0 0 0 3px var(--accent-wash),
     0 8px 35px #0002;
 }
 .prompt-input {
@@ -1016,7 +1023,7 @@ small {
   resize: none;
 }
 .prompt-input::placeholder {
-  color: #8c9588;
+  color: var(--muted);
   font-weight: 350;
 }
 .composer-toolbar {
@@ -1193,7 +1200,7 @@ select optgroup {
   position: relative;
   flex-direction: column;
   background: var(--accent-wash);
-  border: 1px solid #b6e6ad20;
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, var(--border));
   border-radius: 6px;
   padding: 9px 10px;
 }
@@ -1369,7 +1376,7 @@ select optgroup {
   border: 0;
   background: transparent;
   padding: 0;
-  color: #c9d1d9;
+  color: var(--text);
   font-size: 10px;
   line-height: 1.8;
   display: block;
@@ -1379,15 +1386,15 @@ select optgroup {
   border-radius: 8px;
   overflow: hidden;
   margin: 14px 0 18px;
-  background: #111513;
+  background: var(--bg);
 }
 .code-block-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid #2a2e2a;
-  background: #1b201c;
-  color: #97a292;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--secondary);
   padding: 7px 11px;
   font-size: 9px;
 }
@@ -1701,7 +1708,7 @@ select optgroup {
 .context-intro .eyebrow {
   font-size: 7px;
   letter-spacing: 1.6px;
-  color: #81917a;
+  color: var(--accent);
 }
 .context-intro p {
   font-size: 13px;
@@ -1906,11 +1913,11 @@ select optgroup {
   transition: transform 0.15s;
 }
 .toggle[aria-checked="true"] {
-  background: #507748;
-  border-color: #618c57;
+  background: var(--accent);
+  border-color: var(--accent);
 }
 .toggle[aria-checked="true"] > span {
-  background: #e2f6da;
+  background: var(--accent-ink);
   transform: translateX(10px);
 }
 .source-card-bottom {
@@ -2111,7 +2118,7 @@ select optgroup {
   border-radius: 7px;
   border: 1px solid #46543f;
   color: var(--accent);
-  background: #b6e6ad04;
+  background: var(--accent-wash);
   font-size: 9px;
 }
 .inspect-button > span:last-child {
@@ -2522,7 +2529,7 @@ input[type="checkbox"] {
   line-height: 1.8;
 }
 .upload-zone:hover {
-  background: #b6e6ad10;
+  background: var(--accent-wash);
 }
 .profile-intro {
   font-size: 11px;
@@ -2550,7 +2557,7 @@ input[type="checkbox"] {
   transition: border-color 0.2s;
 }
 .profile-card.current {
-  border-color: #b6e6ad55;
+  border-color: var(--accent);
   background: var(--accent-wash);
 }
 .profile-card-head {
@@ -2713,7 +2720,7 @@ input[type="checkbox"] {
   justify-content: center;
   width: 39px;
   height: 40px;
-  border: 1px solid #b6e6ad28;
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, var(--border));
   border-radius: 9px;
   background: var(--accent-wash);
   color: var(--accent);
@@ -3455,7 +3462,7 @@ input[type="checkbox"] {
   align-items: center;
   gap: 8px;
   padding: 12px 17px;
-  border: 1px solid #759567;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
   background: var(--surface);
   border-radius: 9px;
   box-shadow: 0 8px 25px #0004;

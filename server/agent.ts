@@ -2,7 +2,8 @@ import { Store } from "./store";
 import { ContextEngine } from "./context";
 import { Providers } from "./providers";
 import { ToolRunner } from "./tools";
-import { HttpError, redact } from "./security";
+import { HttpError, redact, StreamingRedactor } from "./security";
+import { retryCutoff } from "./turns";
 import type { SendInput, Snapshot, WireMessage } from "./schema";
 
 export type AgentEvent = { type: string; [key: string]: unknown };
@@ -42,20 +43,7 @@ export class Agent {
     const timeout = setTimeout(() => controller.abort(), 15 * 60_000);
     try {
       const original = this.store.messages(conversationId);
-      let cutoff = original.length;
-      if (input.retryMessageId) {
-        const index = original.findIndex(
-          (m) => m.id === input.retryMessageId && m.role === "assistant",
-        );
-        if (index < 1 || original[index - 1].role !== "user")
-          throw new HttpError(400, "Cannot retry this message.");
-        if (original[index - 1].content !== input.prompt)
-          throw new HttpError(
-            400,
-            "Retry prompt does not match the original user message.",
-          );
-        cutoff = index - 1;
-      }
+      const cutoff = retryCutoff(original, input) ?? original.length;
       snapshot = await this.engine.compose(conversationId, input, {
         cutoff,
         signal,
@@ -71,7 +59,7 @@ export class Agent {
         const user = this.store.addMessage(
           conversationId,
           "user",
-          input.prompt,
+          redact(input.prompt, this.providers.secrets()),
         );
         emit({ type: "message", message: user });
       }
@@ -87,7 +75,7 @@ export class Agent {
       emit({ type: "snapshot", snapshot: publicSnapshot(snapshot) });
       const c = this.store.conversation(conversationId);
       if (c.title === "New conversation") {
-        const title = input.prompt
+        const title = redact(input.prompt, this.providers.secrets())
           .replace(/[`#*\n]/g, " ")
           .replace(/\s+/g, " ")
           .trim()
@@ -107,22 +95,24 @@ export class Agent {
             : "Model is responding",
         });
         let lastSave = Date.now();
+        const redactor = new StreamingRedactor(this.providers.secrets());
+        const publish = (delta: string) => {
+          if (!delta) return;
+          content += delta;
+          emit({ type: "delta", id: assistantId, delta });
+          if (Date.now() - lastSave > 350) {
+            this.store.updateMessage(assistantId!, content, "streaming");
+            lastSave = Date.now();
+          }
+        };
         const result = await this.providers.stream(
           snapshot,
           signal,
           (delta) => {
-            content += redact(delta, this.providers.secrets());
-            emit({
-              type: "delta",
-              id: assistantId,
-              delta: redact(delta, this.providers.secrets()),
-            });
-            if (Date.now() - lastSave > 350) {
-              this.store.updateMessage(assistantId!, content, "streaming");
-              lastSave = Date.now();
-            }
+            publish(redactor.push(delta));
           },
         );
+        publish(redactor.finish());
         this.store.finishInvocation(snapshot.id, "complete", result.usage);
         emit({ type: "usage", usage: result.usage });
         if (!result.calls.length) {

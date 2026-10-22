@@ -37,7 +37,7 @@ test("9. Desktop sidebar remains visible through context navigation; polished em
     page.getByRole("complementary", { name: "Conversation sidebar" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: /Your workspace/ }),
+    page.getByRole("heading", { name: /Your next build/ }),
   ).toBeVisible();
   await expect(
     page.getByRole("complementary", { name: "Conversation context" }),
@@ -177,6 +177,276 @@ test("Profile application, model override, renaming, pinning, searching, reload 
   await expect(
     page.getByRole("heading", { name: "Pinned", exact: true }),
   ).toBeVisible();
+});
+
+test("Failed context saves block requests and retain disabled sources until retry succeeds", async ({
+  page,
+}) => {
+  await page
+    .getByRole("button", { name: "Start new conversation", exact: true })
+    .click();
+  await addFile(page, "alpha.ts");
+  let failSave = true;
+  await page.route("**/api/conversations/*", async (route) => {
+    if (
+      route.request().method() === "PATCH" &&
+      route.request().postDataJSON()?.config &&
+      failSave
+    ) {
+      await route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({ error: "Storage temporarily unavailable" }),
+      });
+    } else await route.continue();
+  });
+  const requests: string[] = [];
+  page.on("request", (request) => {
+    if (request.method() === "POST" && /\/(send|preview)$/.test(request.url()))
+      requests.push(request.url());
+  });
+  const source = page.getByRole("switch", { name: "Enable alpha.ts" });
+  await source.click();
+  await expect(page.getByText(/Context changes are not saved/)).toBeVisible();
+  await expect(source).not.toBeChecked();
+  await page
+    .getByLabel("Message Canopy")
+    .fill("Request after disabled source save failed");
+  await expect(
+    page.getByRole("button", { name: "Send message", exact: true }),
+  ).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: "Preview request", exact: true }),
+  ).toBeDisabled();
+  await page.getByLabel("Message Canopy").press("Enter");
+  await page
+    .getByRole("button", { name: "Inspect effective context", exact: true })
+    .click();
+  await expect(
+    page.getByText(
+      "Save your context changes before previewing or sending a request.",
+    ),
+  ).toBeVisible();
+  expect(requests).toEqual([]);
+  failSave = false;
+  await page
+    .getByRole("button", { name: "Retry saving context", exact: true })
+    .click();
+  await expect(
+    page.getByText(/Context changes are not saved/),
+  ).not.toBeVisible();
+  await expect(source).not.toBeChecked();
+  await page
+    .getByRole("button", { name: "Preview request", exact: true })
+    .click();
+  const preview = page.getByRole("dialog", {
+    name: "Your next request, unpacked.",
+  });
+  await preview.getByRole("button", { name: "Request payload" }).click();
+  await expect(preview.locator(".payload-code")).not.toContainText(
+    "BROWSER_ALPHA_SENTINEL",
+  );
+});
+
+test("Typing the next draft while a request is being accepted preserves those edits", async ({
+  page,
+}) => {
+  await page
+    .getByRole("button", { name: "Start new conversation", exact: true })
+    .click();
+  let release!: () => void;
+  const waiting = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/api/conversations/*/send", async (route) => {
+    await waiting;
+    await route.continue();
+  });
+  const composer = page.getByLabel("Message Canopy");
+  await page.locator(".composer input[type=file]").setInputFiles({
+    name: "sent-once.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("Attachment for the first request"),
+  });
+  await expect(page.locator(".attachment-chips")).toContainText(
+    "sent-once.txt",
+  );
+  await composer.fill("First request with delayed acceptance");
+  await page.getByRole("button", { name: "Send message", exact: true }).click();
+  try {
+    await expect(
+      page.getByRole("button", { name: "Stop generation" }),
+    ).toBeVisible();
+    await composer.fill("Keep this next request draft");
+    await page.locator(".composer input[type=file]").setInputFiles({
+      name: "next-request.txt",
+      mimeType: "text/plain",
+      buffer: Buffer.from("Attachment for the next request"),
+    });
+    await expect(page.locator(".attachment-chips")).toContainText(
+      "next-request.txt",
+    );
+  } finally {
+    release();
+  }
+  await expect(page.locator(".message.assistant .markdown")).toContainText(
+    "Protocol fixture response from",
+  );
+  await expect(
+    page.getByRole("button", { name: "Stop generation" }),
+  ).not.toBeVisible();
+  await expect(composer).toHaveValue("Keep this next request draft");
+  await expect(page.locator(".attachment-chips")).toContainText(
+    "next-request.txt",
+  );
+  await expect(page.locator(".attachment-chips")).not.toContainText(
+    "sent-once.txt",
+  );
+});
+
+test("A delayed context preview never opens over a different conversation", async ({
+  page,
+}) => {
+  await page
+    .getByRole("button", { name: "Start new conversation", exact: true })
+    .click();
+  await addFile(page, "alpha.ts");
+  await send(page, "Delayed preview conversation Alpha");
+  await page
+    .getByRole("button", { name: "Start new conversation", exact: true })
+    .click();
+  await send(page, "Delayed preview conversation Beta");
+  await page.getByLabel("Message Canopy").fill("Beta draft stays in Beta");
+  await page
+    .getByRole("button", {
+      name: "Delayed preview conversation Alpha",
+      exact: true,
+    })
+    .click();
+  await expect(
+    page.getByRole("switch", { name: "Enable alpha.ts" }),
+  ).toBeVisible();
+  let release!: () => void;
+  const waiting = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/api/conversations/*/preview", async (route) => {
+    await waiting;
+    await route.continue();
+  });
+  const started = page.waitForRequest(
+    (request) =>
+      request.method() === "POST" && request.url().endsWith("/preview"),
+  );
+  const response = page.waitForResponse(
+    (result) =>
+      result.request().method() === "POST" && result.url().endsWith("/preview"),
+  );
+  await page
+    .getByRole("button", { name: "Preview request", exact: true })
+    .click();
+  try {
+    await started;
+    await page
+      .getByRole("button", {
+        name: "Delayed preview conversation Beta",
+        exact: true,
+      })
+      .click();
+    await expect(page.locator(".messages")).toContainText(
+      "Delayed preview conversation Beta",
+    );
+  } finally {
+    release();
+  }
+  const snapshot = await (await response).json();
+  expect(JSON.stringify(snapshot)).toContain("BROWSER_ALPHA_SENTINEL");
+  await expect(
+    page.getByRole("button", { name: "Preview request", exact: true }),
+  ).toBeEnabled();
+  await expect(
+    page.getByRole("dialog", { name: "Your next request, unpacked." }),
+  ).not.toBeVisible();
+  await expect(page.locator(".context-budget")).toContainText(
+    "Not composed yet",
+  );
+  await expect(page.getByLabel("Message Canopy")).toHaveValue(
+    "Beta draft stays in Beta",
+  );
+  await expect(
+    page.getByRole("switch", { name: "Enable alpha.ts" }),
+  ).not.toBeVisible();
+});
+
+test("Keyboard renaming retains input focus across every character", async ({
+  page,
+}) => {
+  await page
+    .getByRole("button", { name: "Start new conversation", exact: true })
+    .click();
+  await send(page, "Keyboard rename original");
+  await page
+    .getByRole("button", { name: "Actions for Keyboard rename original" })
+    .click();
+  await page.getByRole("button", { name: "Rename", exact: true }).click();
+  const title = page.getByLabel("Conversation title");
+  await title.fill("");
+  await title.focus();
+  await page.keyboard.type("Keyboard rename preserved");
+  await expect(title).toBeFocused();
+  await expect(title).toHaveValue("Keyboard rename preserved");
+  await page.getByRole("button", { name: "Save name", exact: true }).click();
+  await expect(
+    page.getByRole("button", {
+      name: "Keyboard rename preserved",
+      exact: true,
+    }),
+  ).toBeVisible();
+});
+
+test("Repeated retries regenerate only the latest user turn without duplicate user messages", async ({
+  page,
+}) => {
+  await page
+    .getByRole("button", { name: "Start new conversation", exact: true })
+    .click();
+  await send(page, "Repeat this latest user turn");
+  for (const count of [2, 3]) {
+    await expect(
+      page.getByRole("button", { name: "Retry", exact: true }),
+    ).toHaveCount(1);
+    await page.getByRole("button", { name: "Retry", exact: true }).click();
+    await expect(page.locator(".message.assistant")).toHaveCount(count);
+    await expect(
+      page.getByRole("button", { name: "Stop generation" }),
+    ).not.toBeVisible();
+    await expect(
+      page.locator(".message.assistant").last().locator(".markdown"),
+    ).toContainText("Protocol fixture response from");
+    await expect(page.locator(".message.user")).toHaveCount(1);
+  }
+  await page
+    .getByRole("button", { name: "View context", exact: true })
+    .last()
+    .click();
+  const inspector = page.getByRole("dialog", {
+    name: "What the model received.",
+  });
+  await inspector.getByRole("button", { name: "Request payload" }).click();
+  const payload = JSON.parse(
+    (await inspector.locator(".payload-code").textContent())!,
+  );
+  expect(
+    payload.messages.filter((m: { role: string }) => m.role === "assistant"),
+  ).toEqual([]);
+  expect(
+    payload.messages.filter((m: { role: string }) => m.role === "user"),
+  ).toHaveLength(1);
+  await inspector.getByRole("button", { name: "Close inspector" }).click();
+  await send(page, "Next user turn after retries");
+  await expect(
+    page.getByRole("button", { name: "Retry", exact: true }),
+  ).toHaveCount(1);
 });
 test("Agent tool approval displays real diff and resumes streaming after approval", async ({
   page,
@@ -329,13 +599,11 @@ test("Temporary composer instructions and uploads are sent once, with exact insp
   await page
     .getByRole("textbox", { name: "Temporary instructions", exact: true })
     .fill("ONE_TURN_BROWSER_INSTRUCTION");
-  await page
-    .locator(".composer input[type=file]")
-    .setInputFiles({
-      name: "turn-notes.txt",
-      mimeType: "text/plain",
-      buffer: Buffer.from("ONE_TURN_BROWSER_ATTACHMENT"),
-    });
+  await page.locator(".composer input[type=file]").setInputFiles({
+    name: "turn-notes.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("ONE_TURN_BROWSER_ATTACHMENT"),
+  });
   await expect(page.locator(".attachment-chips")).toContainText(
     "turn-notes.txt",
   );

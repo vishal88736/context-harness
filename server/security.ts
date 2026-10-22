@@ -91,6 +91,108 @@ export function redact(text: string, keys: string[] = []) {
       "[REDACTED PRIVATE KEY]",
     );
 }
+
+/** Redact structured metadata as well as message bodies, without serializing credentials first. */
+export function redactValue<T>(
+  value: T,
+  keys: string[] = [],
+  preserveImageData = false,
+): T {
+  if (typeof value === "string")
+    return (
+      preserveImageData && value.startsWith("data:image/")
+        ? value
+        : redact(value, keys)
+    ) as T;
+  if (Array.isArray(value))
+    return value.map((item) => redactValue(item, keys, preserveImageData)) as T;
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [
+        redact(key, keys),
+        preserveImageData && key === "images" && Array.isArray(item)
+          ? item
+          : redactValue(item, keys, preserveImageData),
+      ]),
+    ) as T;
+  }
+  return value;
+}
+
+/** Keep unfinished credentials private until their boundary is known, across provider chunks. */
+export class StreamingRedactor {
+  private pending = "";
+  private readonly keys: string[];
+  private readonly markers: string[];
+  constructor(keys: string[]) {
+    this.keys = [...new Set(keys.filter((key) => key.length >= 4))];
+    this.markers = [
+      ...this.keys,
+      "sk-",
+      "sk_",
+      "ghp_",
+      "gho_",
+      "github_pat_",
+      "api_key",
+      "api-key",
+      "apikey",
+      "access_token",
+      "access-token",
+      "secret",
+      "password",
+      "authorization",
+      "-----BEGIN ",
+    ];
+  }
+  push(chunk: string): string {
+    this.pending += chunk;
+    let end = this.pending.length;
+    for (const marker of this.markers) {
+      const max = Math.min(marker.length - 1, this.pending.length);
+      for (let length = max; length > 0; length--) {
+        if (this.pending.endsWith(marker.slice(0, length))) {
+          end = Math.min(end, this.pending.length - length);
+          break;
+        }
+      }
+    }
+    const unfinished =
+      /\b(?:(?:sk|ghp|gho|github_pat)[-_][A-Za-z0-9_-]*|(?:api[_-]?key|access[_-]?token|secret|password|authorization)\s*[=:]\s*["']?[^\s"'`,;]*)$/i.exec(
+        this.pending,
+      );
+    if (unfinished) end = Math.min(end, unfinished.index);
+    const pem = this.pending.lastIndexOf("-----BEGIN ");
+    if (
+      pem >= 0 &&
+      !/-----END [\w ]*PRIVATE KEY-----/.test(this.pending.slice(pem))
+    )
+      end = Math.min(end, pem);
+    // A full key can overlap a suffix that is also the beginning of another key.
+    let previous: number;
+    do {
+      previous = end;
+      for (const key of this.keys) {
+        let start = this.pending.indexOf(key);
+        while (start >= 0 && start < end) {
+          if (start + key.length > end) end = start;
+          start = this.pending.indexOf(key, start + 1);
+        }
+      }
+    } while (end !== previous);
+    const safe = redact(this.pending.slice(0, end), this.keys);
+    this.pending = this.pending.slice(end);
+    if (this.pending.length > 64_000)
+      throw new Error(
+        "Provider response contained an oversized possible credential.",
+      );
+    return safe;
+  }
+  finish(): string {
+    const safe = redact(this.pending, this.keys);
+    this.pending = "";
+    return safe;
+  }
+}
 export function safeEqual(a: string, b: string) {
   const x = Buffer.from(a);
   const y = Buffer.from(b);
@@ -119,6 +221,7 @@ export function isSensitive(filename: string) {
     .some(
       (segment) =>
         ignoredDirs.has(segment) ||
+        segment === "LOCAL_CODEBASE_GUIDE.md" ||
         /^(?:\.env(?:\..*)?|\.ssh|\.aws|\.gnupg|\.npmrc|\.netrc|auth\.json|credentials(?:\.json)?|vault\.key|.*\.(?:pem|key|sqlite|sqlite3|db)(?:-wal|-shm)?)$/i.test(
           segment,
         ),

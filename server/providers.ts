@@ -1,5 +1,6 @@
 import { HttpError, redact, Vault } from "./security";
 import type { Store } from "./store";
+import { modelSchema } from "./schema";
 import type {
   Model,
   Provider,
@@ -17,6 +18,55 @@ export interface ModelResult {
   content: string;
   calls: ToolCall[];
   usage?: Usage;
+}
+const object = (value: unknown): Record<string, unknown> =>
+  value !== null && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+const capability = (value: unknown, name: string): boolean =>
+  Array.isArray(value) && value.includes(name);
+
+function discoveredModel(
+  input: {
+    id: unknown;
+    name: unknown;
+    contextWindow: unknown;
+    tools: boolean;
+    vision: boolean;
+  },
+  previous?: Model,
+): Model | null {
+  const identifier = modelSchema.shape.id.safeParse(input.id);
+  if (!identifier.success || !identifier.data.trim()) return null;
+  const name = modelSchema.shape.name.safeParse(input.name);
+  const reportedLimit = modelSchema.shape.contextWindow.safeParse(
+    input.contextWindow,
+  );
+  const savedLimit = modelSchema.shape.contextWindow.safeParse(
+    previous?.contextWindow,
+  );
+  const useSavedLimit =
+    previous?.contextSource === "user" && savedLimit.success;
+  // The schema does not track capability provenance. Existing boolean settings
+  // are treated as deliberate choices, so discovery cannot silently enable
+  // tools or undo an edit. New models take validated provider capabilities.
+  return modelSchema.parse({
+    id: identifier.data,
+    name: name.success && name.data.trim() ? name.data : identifier.data,
+    contextWindow: useSavedLimit
+      ? savedLimit.data
+      : input.contextWindow !== undefined && reportedLimit.success
+        ? reportedLimit.data
+        : 8192,
+    contextSource: useSavedLimit
+      ? "user"
+      : input.contextWindow !== undefined && reportedLimit.success
+        ? "provider"
+        : "fallback",
+    tools: typeof previous?.tools === "boolean" ? previous.tools : input.tools,
+    vision:
+      typeof previous?.vision === "boolean" ? previous.vision : input.vision,
+  });
 }
 export function validateProviderUrl(input: string) {
   const url = new URL(input);
@@ -110,81 +160,80 @@ export class Providers {
       undefined,
       AbortSignal.timeout(20_000),
     );
-    const data = (await response.json()) as any;
-    let models: Model[];
+    const data = object(await response.json());
+    const entries = data[p.kind === "ollama" ? "models" : "data"];
+    if (!Array.isArray(entries))
+      throw new HttpError(
+        502,
+        `${p.name} returned an invalid model list. Check its discovery endpoint.`,
+      );
+    const models: Model[] = [];
+    const seen = new Set<string>();
+    const add = (model: Model | null) => {
+      if (model && !seen.has(model.id)) {
+        models.push(model);
+        seen.add(model.id);
+      }
+    };
     if (p.kind === "ollama") {
-      models = [];
       // Bound introspection; discovery remains useful if a server does not implement /api/show.
-      for (const m of (data.models ?? []).slice(0, 100)) {
-        let info: any = {};
+      for (const entry of entries.slice(0, 100)) {
+        const m = object(entry);
+        const identifier = modelSchema.shape.id.safeParse(m.name);
+        if (!identifier.success || !identifier.data.trim()) continue;
+        let info: Record<string, unknown> = {};
         try {
-          info = await (
-            await this.fetch(
-              p,
-              "/api/show",
-              { model: m.name },
-              AbortSignal.timeout(5_000),
-            )
-          ).json();
+          info = object(
+            await (
+              await this.fetch(
+                p,
+                "/api/show",
+                { model: identifier.data },
+                AbortSignal.timeout(5_000),
+              )
+            ).json(),
+          );
         } catch {
           /* explicit fallback below */
         }
-        const limit = Object.entries(info.model_info ?? {}).find(([k]) =>
+        const limit = Object.entries(object(info.model_info)).find(([k]) =>
           k.endsWith(".context_length"),
         )?.[1];
-        const previous = p.models.find((v) => v.id === m.name);
-        models.push({
-          id: m.name,
-          name: m.name,
-          contextWindow:
-            previous?.contextSource === "user"
-              ? previous.contextWindow
-              : typeof limit === "number"
-                ? limit
-                : 8192,
-          contextSource:
-            previous?.contextSource === "user"
-              ? "user"
-              : typeof limit === "number"
-                ? "provider"
-                : "fallback",
-          tools: (info.capabilities ?? []).includes("tools"),
-          vision: (info.capabilities ?? []).includes("vision"),
-        });
+        add(
+          discoveredModel(
+            {
+              id: identifier.data,
+              name: identifier.data,
+              contextWindow: limit,
+              tools: capability(info.capabilities, "tools"),
+              vision: capability(info.capabilities, "vision"),
+            },
+            p.models.find((v) => v.id === identifier.data),
+          ),
+        );
       }
     } else {
-      models = (data.data ?? [])
-        .filter((m: any) => typeof m.id === "string")
-        .slice(0, 200)
-        .map((m: any): Model => {
-          const prev = p.models.find((x) => x.id === m.id);
-          const limit =
-            m.context_length ??
-            m.context_window ??
-            m.top_provider?.context_length;
-          return {
-            id: m.id,
-            name: m.name ?? m.id,
-            contextWindow:
-              prev?.contextSource === "user"
-                ? prev.contextWindow
-                : Number.isInteger(limit) && limit >= 2048
-                  ? limit
-                  : 8192,
-            contextSource:
-              prev?.contextSource === "user"
-                ? "user"
-                : Number.isInteger(limit) && limit >= 2048
-                  ? "provider"
-                  : "fallback",
-            tools:
-              prev?.tools ?? m.supported_parameters?.includes("tools") ?? false,
-            vision:
-              prev?.vision ??
-              m.architecture?.input_modalities?.includes("image") ??
-              false,
-          };
-        });
+      for (const entry of entries.slice(0, 200)) {
+        const m = object(entry);
+        add(
+          discoveredModel(
+            {
+              id: m.id,
+              name: m.name ?? m.id,
+              contextWindow:
+                m.context_length ??
+                m.context_window ??
+                object(m.top_provider).context_length,
+              tools: capability(m.supported_parameters, "tools"),
+              vision: capability(
+                object(m.architecture).input_modalities,
+                "image",
+              ),
+            },
+            p.models.find((x) => x.id === m.id),
+          ),
+        );
+      }
     }
     this.store.saveProvider({ ...p, models });
     return models;

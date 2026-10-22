@@ -39,6 +39,7 @@ import {
   type ToolExecution,
 } from "../api";
 import { CopyButton, Logo, Spinner } from "./ui";
+import { ContextOverview } from "./ContextOverview";
 
 function plain(node: ReactNode): string {
   return Children.toArray(node)
@@ -233,37 +234,55 @@ export function ToolCard({
 export function EmptyWorkspace({
   onSuggestion,
   onContext,
+  onAddSource,
   workspaceName,
+  sources,
 }: {
   onSuggestion: (s: string) => void;
   onContext: () => void;
+  onAddSource: () => void;
   workspaceName: string;
+  sources: Source[];
 }) {
   return (
     <div className="welcome">
       <div className="welcome-topline">
-        <span className="welcome-line" />
-        <span className="eyebrow">SPACE TO THINK. TOOLS TO BUILD.</span>
-        <span className="welcome-line" />
+        <span className="welcome-index">01 /</span>
+        <span className="eyebrow">NEW CONVERSATION</span>
+        <button className="welcome-context-link" onClick={onContext}>
+          <span className="status-dot" />
+          <strong>{workspaceName}</strong>
+          <ArrowRight size={13} />
+        </button>
       </div>
-      <div className="welcome-logo">
-        <Logo />
+      <div className="welcome-hero">
+        <div className="welcome-copy">
+          <h1>
+            Your next build.
+            <br />
+            <span>In clear context.</span>
+          </h1>
+          <p className="welcome-description">
+            Bring the right files into focus.
+            <br />
+            Keep your conversation. Shape what your model sees.
+          </p>
+          <div className="welcome-actions">
+            <button className="welcome-add-source" onClick={onAddSource}>
+              <Plus size={15} /> Add your context <ArrowRight size={14} />
+            </button>
+          </div>
+        </div>
+        <div className="welcome-leaf" aria-hidden="true">
+          <Logo />
+          <span>canopy</span>
+        </div>
       </div>
-      <h1>
-        Your workspace.
-        <br />
-        <span>Your context.</span>
-      </h1>
-      <p className="welcome-description">
-        Good work starts with the right context.
-        <br />
-        Bring your code, choose your model, and make something great.
-      </p>
-      <button className="welcome-context-link" onClick={onContext}>
-        <span className="status-dot" />
-        Connected to <strong>{workspaceName}</strong>
-        <ArrowRight size={13} />
-      </button>
+      <ContextOverview sources={sources} onOpen={onContext} />
+      <div className="suggestions-heading">
+        <span>A starting point</span>
+        <span>OR WRITE YOUR OWN BELOW</span>
+      </div>
       <div className="suggestion-grid">
         {[
           [
@@ -327,6 +346,10 @@ export function MessageList({
   const bottom = useRef<HTMLDivElement>(null);
   const scroll = useRef<HTMLDivElement>(null);
   const [follow, setFollow] = useState(true);
+  const latestUser = messages.findLastIndex((m) => m.role === "user");
+  const latestAssistant = messages.findLastIndex((m) => m.role === "assistant");
+  const retryId =
+    latestAssistant > latestUser ? messages[latestAssistant]?.id : undefined;
   useEffect(() => {
     if (follow)
       bottom.current?.scrollIntoView({
@@ -416,10 +439,12 @@ export function MessageList({
                       View context
                     </button>
                   )}
-                  <button disabled={running} onClick={() => onRetry(m)}>
-                    <RotateCcw size={13} />
-                    Retry
-                  </button>
+                  {m.id === retryId && (
+                    <button disabled={running} onClick={() => onRetry(m)}>
+                      <RotateCcw size={13} />
+                      Retry
+                    </button>
+                  )}
                 </div>
               )}
             </article>

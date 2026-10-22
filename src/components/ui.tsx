@@ -6,9 +6,9 @@ export function Logo({ small = false }: { small?: boolean }) {
     <span className={`logo-mark ${small ? "small" : ""}`} aria-hidden="true">
       <svg viewBox="0 0 32 32" fill="none">
         <path
-          d="M8 23V12l8-5 8 5v11M8 18l8-5 8 5M16 13v14"
+          d="M16 28V17M16 21C7 21 4 16 5 7c8-1 13 4 11 14ZM16 17C15 9 20 4 28 4c1 8-3 13-12 13ZM8 10l8 11M24 8l-8 9"
           stroke="currentColor"
-          strokeWidth="2"
+          strokeWidth="1.65"
           strokeLinecap="round"
           strokeLinejoin="round"
         />
@@ -64,6 +64,8 @@ export function Modal({
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const titleId = useId();
+  const close = useRef(onClose);
+  close.current = onClose;
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
     const focusable = () => [
@@ -76,7 +78,7 @@ export function Modal({
       if (e.key === "Escape") {
         e.preventDefault();
         e.stopPropagation();
-        onClose();
+        close.current();
       }
       if (e.key === "Tab") {
         const all = focusable();
@@ -97,7 +99,7 @@ export function Modal({
       document.removeEventListener("keydown", key, true);
       previous?.focus();
     };
-  }, [onClose]);
+  }, []);
   return (
     <div
       className="modal-backdrop"

@@ -1,21 +1,41 @@
 # Local verification record
 
-Verified on **2026-10-20**, using Node **26.12.0**, npm **11.20.0**, and installed system Chromium. The application is a local, single-user workspace. No public deployment or live neural-model performance is claimed.
+Latest complete regression run: **2026-10-22**, using Node **26.12.1**, npm **11.20.0**, and installed system Chromium. `npm run verify` passed end to end. The application is a local, single-user workspace. No public deployment or live neural-model performance is claimed.
 
 ## Completed checks
 
-| Check                       | Result                                   | Evidence                                                                               |
-| --------------------------- | ---------------------------------------- | -------------------------------------------------------------------------------------- |
-| TypeScript validation       | Passed                                   | `npm run check`, also required by the production build                                 |
-| Backend/integration suite   | **25/25 passed**                         | `npm test` → `tests/harness.test.ts`                                                   |
-| Browser workflows           | **8/8 passed**                           | `npm run test:e2e` → `e2e/workspace.spec.ts`                                           |
-| Production build            | Passed                                   | `npm run build`; built frontend and Node ESM bundle                                    |
-| Full process restart        | **1/1 passed**                           | `npm run test:production` → `tests/production.smoke.ts`                                |
-| Production dependency audit | **0 known vulnerabilities reported**     | `npm audit --omit=dev --json`                                                          |
-| Whitespace/conflict checks  | Passed                                   | `git diff --check`                                                                     |
-| Visual review               | Desktop and mobile screenshots inspected | Ignored `artifacts/canopy-desktop.png`, `canopy-conversation.png`, `canopy-mobile.png` |
+| Check                       | Result                                              | Evidence                                                                                                                                             |
+| --------------------------- | --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| TypeScript validation       | Passed                                              | `npm run check`, also required by the production build                                                                                               |
+| Backend/integration suite   | **40/40 passed**                                    | `npm test` → harness, discovery, and redaction tests                                                                                                 |
+| Browser workflows           | **16/16 passed**                                    | `npm run test:e2e` → `e2e/workspace.spec.ts` and `e2e/presentation.spec.ts`                                                                          |
+| Production build            | Passed                                              | `npm run build`; built frontend and Node ESM bundle                                                                                                  |
+| Full process restart        | **1/1 passed**                                      | `npm run test:production` → `tests/production.smoke.ts`                                                                                              |
+| Production dependency audit | **0 known vulnerabilities reported on 2026-10-20**  | Historical `npm audit --omit=dev --json`; dependencies unchanged in this review                                                                      |
+| Whitespace/conflict checks  | Passed                                              | `git diff --check`                                                                                                                                   |
+| Visual review               | Dark/light desktop and mobile screenshots inspected | Ignored `artifacts/canopy-original-dark.png`, `canopy-original-light.png`, `canopy-original-mobile.png`, plus existing desktop/conversation captures |
 
 The browser suite runs against separate temporary project/data directories. It never configures a test provider in the normal application's database.
+
+## Presentation and documentation verified on 2026-10-22
+
+- The workspace, conversation composer, context panel, source cards, profiles, settings, and inspector use graphite/ice-blue or cool light themes, editorial headings, flat sections, and restrained borders. A shared two-leaf Canopy mark appears in the sidebar, welcome screen, assistant replies, and favicon. The character illustration and pastel map have been removed. Light, dark, and system appearance persist; system changes update the current page.
+- The linear welcome context brief derives category counts and names from the active conversation's configuration. Tests cover separate empty conversations, disabled sources, switching, reload persistence, and a missing configured file. The brief never asserts successful loading or model inclusion; explicit request preview reports actual excerpts and exclusions.
+- Keyboard activation opens the context panel without opening source selection or sending/composing a request. The separate add-context control opens source selection.
+- Browser checks cover 1440×960, 1024×768, 768×900, and 390×844. The desktop sidebar, mobile navigation/context access, compact context brief, reachable composer, and absence of document horizontal overflow are verified. Desktop quick actions remain fully visible. Screenshot capture disables transitions to record settled theme colors.
+- README navigation, setup, workflows, provider settings, appearance, architecture, backup, troubleshooting, and verification boundaries are structured and linked. The ignored local guide documents the new presentation files and their connections.
+
+## Review fixes verified on 2026-10-21
+
+- Failed context saves retain the pending selection during in-app navigation and block sends, previews, and retries until a save succeeds. Browser tests force a failed disable, verify no model request escapes, then recover and confirm the source remains absent. A full browser reload intentionally loads authoritative saved server state.
+- Delayed request acceptance preserves newly typed drafts and newly added attachments while removing only attachments already submitted. Keyboard renaming retains focus. Delayed context previews cannot appear over another conversation.
+- Repeated retries resolve the original latest user turn, do not duplicate user messages, and omit superseded assistant attempts from later effective history. Retry preview and send use identical cutoff validation and their payloads match. Earlier-turn retries are rejected rather than appended out of chronological order.
+- Streaming redaction buffers unfinished configured credentials across provider chunks. Credential-bearing tool arguments and source metadata are sanitized before request persistence and inspection. Tests cover every split position of a configured key, overlapping keys, nested values, actual SSE output, persisted responses, and model tool-call continuation requests. This does not claim universal recognition of arbitrary secrets; image data is preserved as binary input and omitted from inspection views.
+- Both adapters validate discovered model IDs, context limits, and capabilities, deduplicate IDs, preserve explicit settings, and retain saved model lists on malformed discovery responses. Eight isolated discovery tests cover these cases.
+- `LOCAL_CODEBASE_GUIDE.md` exists locally, has an exact anchored `.gitignore` rule, is untracked, and is excluded from file access/retrieval. The guide inventories the actual files, imports, request flows, tools, APIs, database, tests, and inactive retained tooling.
+- `npm run verify` now includes backend tests, the checked production build, the production restart test, and the complete browser suite.
+
+The original 2026-10-20 run covered 25 backend tests and eight browser workflows. The latest run extends that baseline to 40 backend tests and 16 browser workflows without changing the live-inference verification boundary.
 
 ## Required acceptance scenarios
 
@@ -38,7 +58,7 @@ Additional checks cover provider discovery/settings, incomplete stream errors, s
 
 - **Not verified: live AI inference.** No Ollama runtime/model or user-hosted provider credentials were available. `tests/fixture-provider.ts` is a deterministic network-protocol fixture, not a neural model and not a production application provider.
 - **Not verified: remote CI execution.** A GitHub Actions workflow is included; no push or remote CI run was performed by this implementation session.
-- **Not verified: exhaustive accessibility or cross-browser support.** Chromium desktop (1440×960) and mobile layout (390×844) were tested. Keyboard/focus controls are implemented; no independent accessibility certification is claimed.
+- **Not verified: exhaustive accessibility or cross-browser support.** Chromium desktop, tablet, and mobile layouts were tested at the dimensions above. Keyboard/focus controls are implemented; no independent accessibility certification is claimed.
 - **Not a shell sandbox.** Approved terminal commands run as the local OS account. The UI and README explain that broader access explicitly.
 - Token counts are conservative estimates; actual usage is recorded when returned by a provider. Unknown model metadata is labeled and user-configurable.
 - Imported previous chats intentionally include user-authored turns, excluding assistant replies that could reintroduce revoked source data. Retrieval is bounded lexical scanning, not an embedding index.

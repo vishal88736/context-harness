@@ -7,7 +7,9 @@ import {
   redact,
   HttpError,
   isWithin,
+  redactValue,
 } from "./security";
+import { retryCutoff, supersededAttempts } from "./turns";
 import { searchRepository } from "./retrieval";
 import { buildPayload, type Providers } from "./providers";
 import { toolDefinitions } from "./tool-catalog";
@@ -127,9 +129,9 @@ export class ContextEngine {
       options.signal?.throwIfAborted();
       const report: SourceReport = {
         id: source.id,
-        name: source.name,
+        name: clean(source.name),
         type: source.type,
-        path: source.path,
+        path: source.path ? clean(source.path) : undefined,
         status: "excluded",
         tokens: 0,
       };
@@ -295,8 +297,19 @@ export class ContextEngine {
     const outputReserve = Math.min(4096, Math.floor(model.contextWindow / 4));
     const limit = model.contextWindow - outputReserve - 256;
     const continuation = structuredClone(options.continuation ?? []);
-    for (const m of continuation)
+    for (const m of continuation) {
       if (typeof m.content === "string") m.content = clean(m.content);
+      for (const call of m.tool_calls ?? []) {
+        call.function.name = clean(call.function.name);
+        try {
+          call.function.arguments = JSON.stringify(
+            redactValue(JSON.parse(call.function.arguments), keys),
+          );
+        } catch {
+          call.function.arguments = clean(call.function.arguments);
+        }
+      }
+    }
     const pending: WireMessage = {
       role: "user",
       content: clean(
@@ -363,15 +376,17 @@ export class ContextEngine {
     }
     const history: Snapshot["history"] = [];
     const allMessages = this.store.messages(c.id);
+    const cutoff = options.cutoff ?? retryCutoff(allMessages, input);
     const eligible =
-      options.cutoff !== undefined
-        ? allMessages.slice(0, options.cutoff)
-        : allMessages;
+      cutoff !== undefined ? allMessages.slice(0, cutoff) : allMessages;
+    const superseded = supersededAttempts(eligible);
     const picked: WireMessage[] = [];
     let historyFull = false;
     for (const m of [...eligible].reverse()) {
       let reason =
         m.status !== "complete" ? `Response is ${m.status}` : undefined;
+      if (superseded.has(m.id))
+        reason = "Superseded by a later response attempt in this user turn";
       if (!reason && m.role === "assistant" && m.invocationId) {
         try {
           if (
@@ -402,12 +417,10 @@ export class ContextEngine {
       }
     }
     messages.push(...picked, pending, ...continuation);
-    const payload = buildPayload(
-      provider,
-      model,
-      messages,
-      definitions,
-      outputReserve,
+    const payload = redactValue(
+      buildPayload(provider, model, messages, definitions, outputReserve),
+      keys,
+      true,
     );
     // Images use a conservative reservation, rather than the length of base64 text.
     const previewHash = digest(JSON.stringify({ providerId, payload }));
@@ -418,33 +431,37 @@ export class ContextEngine {
         r.reason !== "Disabled for this conversation"
       )
         warnings.push(`${r.name}: ${r.reason}`);
-    return {
-      id: id(),
-      conversationId,
-      providerId: provider.id,
-      providerName: provider.name,
-      model: structuredClone(model),
-      createdAt: now(),
-      fingerprint,
-      previewHash,
-      instructions: { base, workspace: workspaceInstructions },
-      sources,
-      history,
-      budget: {
-        estimated: used + 256,
-        limit: model.contextWindow,
-        outputReserve,
-        remaining: Math.max(
-          0,
-          model.contextWindow - used - outputReserve - 256,
-        ),
-        method:
-          "Conservative UTF-8 byte upper estimate + message framing and 256-token safety margin. Images reserve 4,096 tokens. Provider usage is recorded separately.",
+    return redactValue(
+      {
+        id: id(),
+        conversationId,
+        providerId: provider.id,
+        providerName: provider.name,
+        model: structuredClone(model),
+        createdAt: now(),
+        fingerprint,
+        previewHash,
+        instructions: { base, workspace: workspaceInstructions },
+        sources,
+        history,
+        budget: {
+          estimated: used + 256,
+          limit: model.contextWindow,
+          outputReserve,
+          remaining: Math.max(
+            0,
+            model.contextWindow - used - outputReserve - 256,
+          ),
+          method:
+            "Conservative UTF-8 byte upper estimate + message framing and 256-token safety margin. Images reserve 4,096 tokens. Provider usage is recorded separately.",
+        },
+        permissions,
+        payload,
+        messages,
+        warnings: [...new Set(warnings)],
       },
-      permissions,
-      payload,
-      messages,
-      warnings: [...new Set(warnings)],
-    };
+      keys,
+      true,
+    );
   }
 }

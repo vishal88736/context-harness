@@ -17,7 +17,7 @@
     "test:e2e": "playwright test",
     "test:production": "tsx --test tests/production.smoke.ts",
     "format": "prettier --write src server tests e2e *.ts *.json *.md index.html",
-    "verify": "npm run check && npm test && npm run build",
+    "verify": "npm test && npm run build && npm run test:production && npm run test:e2e",
     "preview": "vite preview --host 127.0.0.1"
   },
   "dependencies": {

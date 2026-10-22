@@ -82,6 +82,9 @@ export function App() {
   const [busy, setBusy] = useState(false);
   const [navigating, setNavigating] = useState(true);
   const [saving, setSaving] = useState(0);
+  const [contextFailures, setContextFailures] = useState<
+    Record<string, string>
+  >({});
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [isPreview, setIsPreview] = useState(false);
   const [inspector, setInspector] = useState<{
@@ -90,7 +93,11 @@ export function App() {
     sendable: boolean;
   } | null>(null);
   const queues = useRef(new Map<string, Promise<unknown>>());
+  const pendingConfigs = useRef(new Map<string, ContextConfig>());
+  const failedConfigs = useRef(new Set<string>());
   const sequences = useRef(new Map<string, number>());
+  const navigationSequence = useRef(0);
+  const previewSequence = useRef(0);
   const streams = useRef(new Map<string, AbortController>());
   const mounted = useRef(true);
   const conversation =
@@ -113,12 +120,24 @@ export function App() {
     setToast(message);
     setTimeout(() => setToast(""), 3200);
   };
+  function detailWithPending(d: Detail): Detail {
+    const config = pendingConfigs.current.get(d.conversation.id);
+    return config ? { ...d, conversation: { ...d.conversation, config } } : d;
+  }
   const refresh = useCallback(async () => {
     const b = await api<Bootstrap>("/bootstrap");
     setToken(b.csrf);
-    setData(b);
+    setData({
+      ...b,
+      conversations: b.conversations.map((c) =>
+        pendingConfigs.current.has(c.id)
+          ? { ...c, config: pendingConfigs.current.get(c.id)! }
+          : c,
+      ),
+    });
   }, []);
   async function load(id: string) {
+    navigationSequence.current += 1;
     setNavigating(true);
     setActiveId(id);
     activeRef.current = id;
@@ -130,7 +149,7 @@ export function App() {
     try {
       const d = await api<Detail>(`/conversations/${id}`);
       if (activeRef.current !== id) return;
-      setDetail(d);
+      setDetail(detailWithPending(d));
       setWorkspaceId(d.conversation.workspaceId);
       if (d.running) setRunning((prev) => new Set([...prev, id]));
     } finally {
@@ -256,7 +275,7 @@ export function App() {
       void api<Detail>(`/conversations/${activeId}`)
         .then((d) => {
           if (activeRef.current !== activeId) return;
-          setDetail(d);
+          setDetail(detailWithPending(d));
           if (!d.running)
             setRunning((prev) => {
               const next = new Set(prev);
@@ -270,6 +289,7 @@ export function App() {
   }, [activeId, detail?.running]);
   async function updateConfig(config: ContextConfig) {
     const cid = activeId;
+    pendingConfigs.current.set(cid, config);
     const sequence = (sequences.current.get(cid) ?? 0) + 1;
     sequences.current.set(cid, sequence);
     setSnapshot(null);
@@ -298,6 +318,13 @@ export function App() {
           config,
         });
         if (sequences.current.get(cid) === sequence) {
+          pendingConfigs.current.delete(cid);
+          failedConfigs.current.delete(cid);
+          setContextFailures((prev) => {
+            const next = { ...prev };
+            delete next[cid];
+            return next;
+          });
           setDetail((d) =>
             d?.conversation.id === cid ? { ...d, conversation: c } : d,
           );
@@ -313,7 +340,11 @@ export function App() {
           );
         }
       })
-      .catch((e) => setError(e.message))
+      .catch((e) => {
+        failedConfigs.current.add(cid);
+        setContextFailures((prev) => ({ ...prev, [cid]: e.message }));
+        throw e;
+      })
       .finally(() => setSaving((n) => Math.max(0, n - 1)));
     queues.current.set(cid, operation);
     await operation;
@@ -330,20 +361,35 @@ export function App() {
     };
   }
   async function preview() {
+    const cid = activeId;
+    if (failedConfigs.current.has(cid)) {
+      setError(
+        "Save your context changes before previewing or sending a request.",
+      );
+      return;
+    }
     if (!selected.model) {
       setSettingsTab("providers");
       setDialog("settings");
       return;
     }
+    const navigation = navigationSequence.current;
+    const request = ++previewSequence.current;
+    const isCurrent = () =>
+      activeRef.current === cid &&
+      navigationSequence.current === navigation &&
+      previewSequence.current === request;
     setBusy(true);
     setError("");
     try {
-      await queues.current.get(activeId);
+      await queues.current.get(cid);
+      if (!isCurrent()) return;
       const s = await api<Snapshot>(
-        `/conversations/${activeId}/preview`,
+        `/conversations/${cid}/preview`,
         "POST",
         inputFor(),
       );
+      if (!isCurrent()) return;
       setSnapshot(s);
       setIsPreview(true);
       setInspector({
@@ -352,21 +398,27 @@ export function App() {
         sendable: !!draft.prompt.trim(),
       });
     } catch (e) {
-      setError((e as Error).message);
+      if (isCurrent()) setError((e as Error).message);
     } finally {
-      setBusy(false);
+      if (previewSequence.current === request) setBusy(false);
     }
   }
   async function send(previewHash?: string, retry?: Message) {
     const cid = activeId;
+    if (failedConfigs.current.has(cid)) {
+      setError(
+        "Save your context changes before previewing or sending a request.",
+      );
+      return;
+    }
     if (running.has(cid) || !selected.model || !detail) return;
+    const submittedDraft = draft;
     let retryPrompt: string | undefined;
     if (retry) {
       const i = detail.messages.findIndex((m) => m.id === retry.id);
-      retryPrompt =
-        detail.messages[i - 1]?.role === "user"
-          ? detail.messages[i - 1].content
-          : undefined;
+      retryPrompt = detail.messages
+        .slice(0, i)
+        .findLast((m) => m.role === "user")?.content;
       if (!retryPrompt) return;
     }
     const input = {
@@ -377,7 +429,15 @@ export function App() {
       ...(previewHash ? { previewHash } : {}),
     };
     if (!input.prompt.trim()) return;
-    await queues.current.get(cid);
+    try {
+      await queues.current.get(cid);
+    } catch {
+      setError(
+        "Save your context changes before previewing or sending a request.",
+      );
+      return;
+    }
+    if (failedConfigs.current.has(cid)) return;
     const controller = new AbortController();
     streams.current.set(cid, controller);
     setRunning((prev) => new Set([...prev, cid]));
@@ -394,16 +454,32 @@ export function App() {
             if (!accepted) {
               accepted = true;
               if (!retry)
-                setDrafts((prev) => ({
-                  ...prev,
-                  [cid]: {
-                    ...(prev[cid] ?? blankDraft()),
-                    prompt: "",
-                    instructions: "",
-                    attachments: [],
-                    override: "",
-                  },
-                }));
+                setDrafts((prev) => {
+                  const current = prev[cid] ?? blankDraft();
+                  return {
+                    ...prev,
+                    [cid]: {
+                      prompt:
+                        current.prompt === submittedDraft.prompt
+                          ? ""
+                          : current.prompt,
+                      instructions:
+                        current.instructions === submittedDraft.instructions
+                          ? ""
+                          : current.instructions,
+                      attachments: current.attachments.filter(
+                        (attachment) =>
+                          !submittedDraft.attachments.some(
+                            (sent) => sent.id === attachment.id,
+                          ),
+                      ),
+                      override:
+                        current.override === submittedDraft.override
+                          ? ""
+                          : current.override,
+                    },
+                  };
+                });
             }
             if (activeRef.current === cid)
               setDetail((d) =>
@@ -487,7 +563,7 @@ export function App() {
       if (mounted.current) {
         try {
           const d = await api<Detail>(`/conversations/${cid}`);
-          if (activeRef.current === cid) setDetail(d);
+          if (activeRef.current === cid) setDetail(detailWithPending(d));
           await refresh();
         } catch (e) {
           setError((e as Error).message);
@@ -656,6 +732,25 @@ export function App() {
             </button>
           </div>
         )}
+        {contextFailures[activeId] && (
+          <div className="app-error" role="alert">
+            <CircleAlert size={16} />
+            <span>
+              Context changes are not saved. Model requests are blocked.{" "}
+              {contextFailures[activeId]}
+            </span>
+            <button
+              className="text-button"
+              disabled={saving > 0}
+              onClick={() => {
+                const config = pendingConfigs.current.get(activeId);
+                if (config) void updateConfig(config).catch(() => {});
+              }}
+            >
+              Retry saving context
+            </button>
+          </div>
+        )}
         <div className="conversation-stage">
           {detail?.conversation.id !== activeId ? (
             <div className="loading-conversation">
@@ -677,7 +772,9 @@ export function App() {
           ) : (
             <EmptyWorkspace
               workspaceName={workspace.name}
-              onContext={() => {
+              sources={detail.conversation.config.sources}
+              onContext={() => setContextOpen(true)}
+              onAddSource={() => {
                 setContextOpen(true);
                 setDialog("add");
               }}
@@ -713,7 +810,7 @@ export function App() {
             setDialog("settings");
           }}
           running={isRunning}
-          busy={busy || saving > 0}
+          busy={busy || saving > 0 || !!contextFailures[activeId]}
           connected={!!selected.model}
           sourceCount={enabled}
         />
@@ -767,7 +864,7 @@ export function App() {
             conversation={conversation}
             workspace={workspace}
             data={data}
-            onChange={(c) => void updateConfig(c)}
+            onChange={(c) => void updateConfig(c).catch(() => {})}
             onAdd={() => setDialog("add")}
             onProfiles={() => setDialog("profiles")}
             onInspect={() => void preview()}
@@ -812,13 +909,21 @@ export function App() {
           onRefresh={refresh}
           onClose={() => setDialog(null)}
           onApply={async (profileId) => {
+            const cid = activeId;
+            await queues.current.get(cid);
+            if (failedConfigs.current.has(cid))
+              throw new Error(
+                "Save your context changes before applying a profile.",
+              );
             const c = await api<Conversation>(
-              `/conversations/${activeId}/apply-profile`,
+              `/conversations/${cid}/apply-profile`,
               "POST",
               { profileId, mode: "merge" },
             );
-            setDetail((d) => (d ? { ...d, conversation: c } : d));
-            setSnapshot(null);
+            setDetail((d) =>
+              d?.conversation.id === cid ? { ...d, conversation: c } : d,
+            );
+            if (activeRef.current === cid) setSnapshot(null);
             await refresh();
             notify("Profile applied. Your conversation is intact.");
           }}

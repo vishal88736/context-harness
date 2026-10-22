@@ -68,7 +68,41 @@ export async function fixtureProvider() {
     const toolResult = payload.messages?.find((m: any) => m.role === "tool");
     const emit = (packet: unknown) =>
       res.write(`data: ${JSON.stringify(packet)}\n\n`);
-    if (prompt.includes("TOOL_WRITE") && !toolResult) {
+    if (prompt.includes("LEAK_STREAM_SECRET")) {
+      const secret =
+        req.headers.authorization?.replace(/^Bearer /, "") ?? "no-secret";
+      for (const content of [
+        "A private value: ",
+        secret.slice(0, 12),
+        secret.slice(12),
+        " was removed.",
+      ])
+        emit({ choices: [{ delta: { content }, finish_reason: null }] });
+      emit({ choices: [{ delta: {}, finish_reason: "stop" }] });
+    } else if (prompt.includes("LEAK_TOOL_SECRET") && !toolResult) {
+      const secret =
+        req.headers.authorization?.replace(/^Bearer /, "") ?? "no-secret";
+      emit({
+        choices: [
+          {
+            delta: {
+              tool_calls: [
+                {
+                  index: 0,
+                  id: "fixture-secret-call",
+                  type: "function",
+                  function: {
+                    name: "read_file",
+                    arguments: JSON.stringify({ path: `src/${secret}.ts` }),
+                  },
+                },
+              ],
+            },
+            finish_reason: "tool_calls",
+          },
+        ],
+      });
+    } else if (prompt.includes("TOOL_WRITE") && !toolResult) {
       emit({
         choices: [
           {
