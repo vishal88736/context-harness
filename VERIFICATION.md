@@ -1,5 +1,13 @@
 # Local verification record
 
+## Roo flight and final review — 2026-10-24
+
+- Ran the complete `npm run verify` suite for the mascot release: **61 backend tests, 25 browser workflows, production build, and one restart test passed**. After the final Roo flight changes, rebuilt the app and reran the restart check plus all **six affected navigation, theme, and context browser workflows**; all passed. Live inference remains outside these fixture-based checks.
+- Roo is now the sole travelling mascot in the home hero. Byte, Node, Stack, Codey, and the workspace illustration remain static. A live Chromium review confirmed that Roo's transform changes, pause freezes it, the paused preference survives reload, OS reduced motion disables flight, and hidden Home pauses before resuming on return.
+- Sampled four points of the animation at widths **390, 680, 700, 768, 820, 900, 1024, 1100, and 1440 px**; document width never exceeded viewport width. Tablet orbits are bounded without masking page content. Light emphasized headings measure **3.18:1** and dark headings **9.75:1** against their actual surfaces; these measurements are not a complete accessibility audit.
+- Verified hidden Home uses lazy/default-priority hero loading; visible Home restores eager/high priority. All five production WebP files match their source hashes, retain alpha, and total about 279.4 KiB. Reference/output hashes are recorded in `docs/mascots.md`.
+- Captured the actual browser animation in ignored `artifacts/canopy-roo-flight.mp4` (H.264, 1440 × 900, 12.64 seconds), including pause/resume. Responsive screenshots are saved as `artifacts/canopy-roo-*.png`.
+
 ## Mascot presentation update — 2026-10-23
 
 - Generated five reference-inspired transparent assets through the built-in image tool and encoded them as 768 × 768 WebP files with alpha. Total production artwork is approximately 280 KiB. The home page uses Byte, Codey, Node, Stack, and Roo; the workspace uses one compact Byte only in an empty conversation.
@@ -27,7 +35,7 @@ The browser suite runs against separate temporary project/data directories. It n
 ## Home, themes, and coding workspace — 2026-10-23
 
 - `/` is an informational home; `/workspace` opens the actual coding application. Home does not bootstrap the workspace or create a conversation. Once opened, the workspace stays mounted while hidden/inert during Home navigation, retaining in-memory drafts, editor tabs, and streams. Browser reloads retain database state, not unsaved buffers.
-- The workspace empty view now contains a concise conversation heading, add-context control, selection brief, and composer. The decorative modular SVG and feature explanations live on Home. Web excerpts remain accessible through **Add context → Web excerpt**; only the pasted excerpt and reference URL become a selected source.
+- The workspace empty view contains a concise conversation heading, add-context control, selection brief, and composer. Home now uses the five mascot illustrations; the modular SVG remains a retained alternative asset. Web excerpts remain accessible through **Add context → Web excerpt**; only the pasted excerpt and reference URL become a selected source.
 - **Settings → Appearance** offers Light, Dark, and System. SQLite retains the preference across service restarts; a validated browser cache applies it before workspace bootstrap. System follows OS changes. The default light palette retains the reference's off-white/lavender/teal/apricot colors; syntax and editor surfaces share semantic theme variables.
 - **Editor settings** controls font size, spaces per indent, and word wrap, with a reset action and validated browser-local persistence. CodeMirror reconfiguration preserves documents and undo history. Focus editor hides the explorer; the desktop conversation sidebar and independent context access remain available. Cursor position and language come from the active document.
 - The build keeps the workspace and editor in separate lazy chunks. Production routing serves the real built application for both `/` and `/workspace`, including after a complete process restart.
