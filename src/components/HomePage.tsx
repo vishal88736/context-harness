@@ -15,9 +15,11 @@ import { CanopyMascot } from "./CanopyMascot";
 export function HomePage({
   onOpenWorkspace,
   hasWorkspace,
+  visible = true,
 }: {
   onOpenWorkspace: () => void;
   hasWorkspace: boolean;
+  visible?: boolean;
 }) {
   function open(event: MouseEvent<HTMLAnchorElement>) {
     if (
@@ -110,7 +112,11 @@ export function HomePage({
             <span className="home-orbit-code">
               <Code2 size={24} />
             </span>
-            <CanopyMascot name="byte" className="home-hero-mascot" priority />
+            <CanopyMascot
+              name="byte"
+              className="home-hero-mascot"
+              priority={visible}
+            />
             <div className="home-art-caption">
               <span className="home-mascot-name">Meet Byte</span>
               <span>A little structure. A lot more clarity.</span>

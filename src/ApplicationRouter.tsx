@@ -50,6 +50,7 @@ export function ApplicationRouter() {
       <div hidden={!atHome} data-route-page="home">
         <HomePage
           hasWorkspace={opened}
+          visible={atHome}
           onOpenWorkspace={() => navigate("/workspace")}
         />
       </div>

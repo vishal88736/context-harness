@@ -111,7 +111,7 @@
 }
 .canopy-home em {
   font-style: normal;
-  color: var(--highlight);
+  color: var(--highlight-text);
 }
 .home-hero p {
   color: var(--secondary);
@@ -558,6 +558,12 @@
 }
 .home-skip:focus {
   top: 12px;
+}
+@media (max-width: 1100px) {
+  .home-mascot-orbit {
+    max-width: 100%;
+    transform: translate(-50%, -53%);
+  }
 }
 @media (max-width: 960px) {
   .home-header,

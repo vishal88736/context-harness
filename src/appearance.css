@@ -17,6 +17,7 @@
   --accent-wash: #7eb8c414;
   --primary-fill: linear-gradient(180deg, #82bac6, #6b9daa);
   --highlight: #efb477;
+  --highlight-text: var(--highlight);
   --send: #edb377;
   --rose: #5e353f;
   --border-warm: #574637;
