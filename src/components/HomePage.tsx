@@ -1,4 +1,4 @@
-import type { MouseEvent } from "react";
+import { useEffect, useState, type MouseEvent } from "react";
 import {
   ArrowDown,
   ArrowRight,
@@ -7,6 +7,8 @@ import {
   Files,
   GitPullRequest,
   Layers3,
+  Pause,
+  Play,
   ShieldCheck,
 } from "lucide-react";
 import { Logo } from "./ui";
@@ -21,6 +23,48 @@ export function HomePage({
   hasWorkspace: boolean;
   visible?: boolean;
 }) {
+  const [motionPaused, setMotionPaused] = useState(() => {
+    try {
+      return localStorage.getItem("canopy.homeMotion") === "paused";
+    } catch {
+      return false;
+    }
+  });
+  const [reducedMotion, setReducedMotion] = useState(
+    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+  );
+  const [documentVisible, setDocumentVisible] = useState(
+    () => !document.hidden,
+  );
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const preference = () => setReducedMotion(media.matches);
+    const visibility = () => setDocumentVisible(!document.hidden);
+    const sync = (event: StorageEvent) => {
+      if (event.key === "canopy.homeMotion")
+        setMotionPaused(event.newValue === "paused");
+    };
+    media.addEventListener("change", preference);
+    document.addEventListener("visibilitychange", visibility);
+    window.addEventListener("storage", sync);
+    return () => {
+      media.removeEventListener("change", preference);
+      document.removeEventListener("visibilitychange", visibility);
+      window.removeEventListener("storage", sync);
+    };
+  }, []);
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        "canopy.homeMotion",
+        motionPaused ? "paused" : "auto",
+      );
+    } catch {
+      /* Motion preference remains usable when storage is unavailable. */
+    }
+  }, [motionPaused]);
+  const motionRunning =
+    visible && documentVisible && !reducedMotion && !motionPaused;
   function open(event: MouseEvent<HTMLAnchorElement>) {
     if (
       event.button !== 0 ||
@@ -41,7 +85,10 @@ export function HomePage({
     </a>
   );
   return (
-    <div className="canopy-home">
+    <div
+      className="canopy-home"
+      data-motion={motionRunning ? "running" : "paused"}
+    >
       <a className="home-skip" href="#home-content">
         Skip to content
       </a>
@@ -96,9 +143,39 @@ export function HomePage({
                 Explore Canopy <ArrowDown size={15} />
               </a>
             </div>
-            <span className="home-local-note">
-              <ShieldCheck size={14} /> Local workspace. Your choice of model.
-            </span>
+            <div className="home-details">
+              <span className="home-local-note">
+                <ShieldCheck size={14} /> Local workspace. Your choice of model.
+              </span>
+              <button
+                className="home-motion-toggle"
+                disabled={reducedMotion}
+                aria-label={
+                  reducedMotion
+                    ? "Roo animation disabled by reduced motion"
+                    : motionPaused
+                      ? "Play Roo animation"
+                      : "Pause Roo animation"
+                }
+                title={
+                  reducedMotion
+                    ? "Your system's reduced-motion preference is enabled."
+                    : undefined
+                }
+                onClick={() => setMotionPaused((paused) => !paused)}
+              >
+                {reducedMotion || motionPaused ? (
+                  <Play size={12} />
+                ) : (
+                  <Pause size={12} />
+                )}
+                {reducedMotion
+                  ? "Motion off"
+                  : motionPaused
+                    ? "Play motion"
+                    : "Pause motion"}
+              </button>
+            </div>
           </div>
           <div className="home-art" aria-hidden="true">
             <div className="home-mascot-orbit home-mascot-orbit-outer" />
@@ -113,12 +190,12 @@ export function HomePage({
               <Code2 size={24} />
             </span>
             <CanopyMascot
-              name="byte"
+              name="roo"
               className="home-hero-mascot"
               priority={visible}
             />
             <div className="home-art-caption">
-              <span className="home-mascot-name">Meet Byte</span>
+              <span className="home-mascot-name">Meet Roo</span>
               <span>A little structure. A lot more clarity.</span>
             </div>
           </div>
@@ -169,11 +246,11 @@ export function HomePage({
             </article>
             <article>
               <div
-                className="home-feature-art home-feature-roo"
+                className="home-feature-art home-feature-byte"
                 aria-hidden="true"
               >
-                <CanopyMascot name="roo" />
-                <span className="home-mascot-name">Roo</span>
+                <CanopyMascot name="byte" />
+                <span className="home-mascot-name">Byte</span>
               </div>
               <h3>See the effective request</h3>
               <p>

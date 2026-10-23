@@ -132,6 +132,31 @@
   color: var(--muted);
   font-size: 11px;
 }
+.home-details {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 20px;
+}
+.home-details .home-local-note {
+  margin: 0;
+}
+.home-motion-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 6px 9px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 11px;
+}
+.home-motion-toggle:hover:not(:disabled) {
+  color: var(--accent);
+}
 .home-art {
   position: relative;
   display: flex;
@@ -209,18 +234,23 @@
     monospace;
   white-space: nowrap;
   z-index: 2;
+  animation: home-orbit-float 6s ease-in-out infinite;
 }
 .home-orbit-sources {
+  --home-orbit-tilt: -7deg;
   top: 74px;
   left: -9px;
   transform: rotate(-7deg);
 }
 .home-orbit-context {
+  --home-orbit-tilt: 6deg;
   right: -3px;
   bottom: 100px;
   transform: rotate(6deg);
+  animation-delay: -2s;
 }
 .home-orbit-code {
+  --home-orbit-tilt: 10deg;
   top: 69px;
   right: 6px;
   width: 50px;
@@ -229,6 +259,7 @@
   background: var(--highlight-wash);
   color: var(--warning);
   transform: rotate(10deg);
+  animation-delay: -4s;
 }
 .home-art-caption {
   position: absolute;
@@ -259,6 +290,88 @@
   }
   50% {
     transform: translateY(-9px) rotate(1deg);
+  }
+}
+@keyframes home-orbit-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(var(--home-orbit-tilt));
+  }
+  50% {
+    transform: translateY(-5px) rotate(var(--home-orbit-tilt));
+  }
+}
+@keyframes home-node-levitate {
+  0%,
+  100% {
+    transform: translateY(3px) rotate(-1deg);
+  }
+  50% {
+    transform: translateY(-7px) rotate(1deg);
+  }
+}
+@keyframes home-roo-glide {
+  0%,
+  100% {
+    transform: translate(-5px, 0) rotate(-2deg);
+  }
+  25% {
+    transform: translate(0, -6px) rotate(1deg);
+  }
+  50% {
+    transform: translate(5px, 0) rotate(2deg);
+  }
+  75% {
+    transform: translate(0, 4px) rotate(-1deg);
+  }
+}
+@keyframes home-stack-rock {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-2deg);
+  }
+  40% {
+    transform: translateY(-6px) rotate(2deg);
+  }
+  65% {
+    transform: translateY(1px) rotate(0);
+  }
+}
+@keyframes home-codey-rock {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-1.4deg);
+  }
+  50% {
+    transform: translateY(-3px) rotate(1.4deg);
+  }
+}
+.canopy-home[data-motion="paused"]
+  :is(
+    .home-hero-mascot,
+    .home-feature-art .canopy-mascot,
+    .home-build-mascot,
+    .home-orbit-card,
+    .home-orbit-code
+  ) {
+  animation-play-state: paused;
+}
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .canopy-home[data-motion="running"]
+    :is(
+      .home-hero-mascot,
+      .home-feature-art .canopy-mascot,
+      .home-build-mascot
+    ) {
+    transition: scale 180ms ease;
+  }
+  .canopy-home[data-motion="running"]
+    :is(
+      .home-art:hover .home-hero-mascot,
+      .home-feature-art:hover .canopy-mascot,
+      .home-build-mark:hover .home-build-mascot
+    ) {
+    scale: 1.035;
   }
 }
 .home-capabilities {
@@ -345,7 +458,19 @@
 .home-feature-art .canopy-mascot {
   width: 190px;
   height: 190px;
+  max-width: calc(100% - 28px);
+  max-height: calc(100% - 28px);
   object-fit: contain;
+}
+.home-feature-node .canopy-mascot {
+  animation: home-node-levitate 5.4s ease-in-out infinite;
+}
+.home-feature-roo .canopy-mascot {
+  animation: home-roo-glide 7.2s ease-in-out infinite;
+}
+.home-feature-stack .canopy-mascot {
+  transform-origin: 50% 75%;
+  animation: home-stack-rock 4.8s ease-in-out infinite;
 }
 .home-feature-art > .home-mascot-name {
   position: absolute;
@@ -407,6 +532,8 @@
   filter: drop-shadow(
     0 18px 16px color-mix(in srgb, var(--accent) 11%, transparent)
   );
+  transform-origin: 50% 78%;
+  animation: home-codey-rock 6.4s ease-in-out infinite;
 }
 .home-build-caption {
   position: relative;
@@ -783,7 +910,10 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .home-hero-mascot {
-    animation: none;
+  .canopy-home *,
+  .canopy-home *::before,
+  .canopy-home *::after {
+    animation: none !important;
+    transition: none !important;
   }
 }

@@ -18,6 +18,28 @@ All production assets live in `public/mascots/` as 768 × 768 WebP images with a
 
 The original two-leaf logo remains the application identity. The reference sheet's text, card backgrounds, and provider logos are not embedded in the application.
 
+## Animation and controls
+
+The artwork is animated in CSS: Byte bobs and sways, Node levitates, Roo glides, Stack rocks, and Codey gently sways. The hero's source cards float independently. These motions move the complete illustrations; they do not change facial expressions or simulate tool activity. Desktop hover reactions use a separate scale transform.
+
+`HomePage` applies `data-motion="running"` or `"paused"` to the home wrapper. The **Pause motion / Play motion** control stores `canopy.homeMotion` as `auto` or `paused` in browser storage. Route visibility, document visibility, and the OS reduced-motion preference also gate animation. Reduced motion disables loops and transitions. The workspace Byte has no animation.
+
+The home hero gets eager/high-priority loading only while the home route is visible. Hidden home artwork uses lazy/default-priority loading. Decorative orbits are bounded at tablet widths; small screens keep the same controls accessible.
+
+## Asset identity
+
+Reference-sheet SHA-256: `d8fb16d7b41251a0c1748c56d61beda870265f892c72143f0ffcfa2904da9c46`.
+
+The committed WebP assets have these SHA-256 checksums:
+
+| Asset | SHA-256 |
+| --- | --- |
+| `byte.webp` | `9343d1518a0632b7c1645ade2b090bd2b05a25368787d4ff2cf9fbcb72e701f7` |
+| `codey.webp` | `dd8fa232d901ee38162f90959e0de1134d79e52913d58dac7030bc13968a7aa0` |
+| `node.webp` | `ab12738260d9a93211771d5243681be85c919387f08da721224db1490f0723c6` |
+| `roo.webp` | `061ecd6a4f61454ef3f06df63c437428c5d630270a20764cc947a23b33208143` |
+| `stack.webp` | `dce3c93b52a5eb896bf5c4b02455a39b3ffb0791e2cfbe819444dd6a4ffee8fa` |
+
 ## Generation prompt set
 
 Each character used a separate built-in image-generation call, with the same supplied reference sheet and `transparent_background: true`. The shared prompt below replaces `{subject}` with one of the five subject descriptions that follow.
