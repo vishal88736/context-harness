@@ -1,5 +1,13 @@
 # Local verification record
 
+## Single branch and denser home — 2026-10-24
+
+- Made `main` the default and sole GitHub/local branch. The unique `dev` merge record was first preserved on `main`; deleting `dev` changed no application files and discarded no history.
+- Tightened the hero from 600 to about 500 px, section padding from 100 to 64 px, and feature-card spacing. Added full-frame light/dark previews of the actual production workspace above the context explanation. The capture uses a temporary sample project with two selected files and custom instructions, without a provider, model response, or normal user data. [Capture notes](docs/workspace-preview.md) describe the assets and their source.
+- Production build/type-check, the **restart test**, and **six affected browser workflows passed**. A direct Chromium review verified both images decode, only the matching-theme full-resolution link is exposed, and Home makes no workspace bootstrap request. All five mascots were decoded before full-page visual review.
+- Sampled Roo's flight at four phases across **390, 680, 700, 768, 820, 900, 1024, 1100, and 1440 px** with no horizontal overflow. Inspected desktop/mobile and full-page captures in ignored `artifacts/canopy-home-denser-*.png`.
+- Both committed lossless WebP previews match their built copies byte-for-byte. The editor, conversation state, context engine, and provider protocols were unchanged; backend tests and live inference were not repeated for this landing-page layout update.
+
 ## Roo flight and final review — 2026-10-24
 
 - Ran the complete `npm run verify` suite for the mascot release: **61 backend tests, 25 browser workflows, production build, and one restart test passed**. After the final Roo flight changes, rebuilt the app and reran the restart check plus all **six affected navigation, theme, and context browser workflows**; all passed. Live inference remains outside these fixture-based checks.

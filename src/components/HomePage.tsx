@@ -139,7 +139,7 @@ export function HomePage({
             </p>
             <div className="home-hero-actions">
               {enter("home-primary")}
-              <a href="#context" className="home-text-link">
+              <a href="#workspace-preview" className="home-text-link">
                 Explore Canopy <ArrowDown size={15} />
               </a>
             </div>
@@ -215,7 +215,10 @@ export function HomePage({
           </span>
         </div>
 
-        <section className="home-section home-product-section">
+        <section
+          id="workspace-preview"
+          className="home-section home-product-section"
+        >
           <div className="home-section-heading">
             <h2>See the workspace.</h2>
           </div>
@@ -271,6 +274,7 @@ export function HomePage({
                   <Layers3 size={13} /> Choose context
                 </span>
               </span>
+              {enter("home-text-link")}
             </figcaption>
           </figure>
         </section>
