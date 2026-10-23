@@ -215,6 +215,66 @@ export function HomePage({
           </span>
         </div>
 
+        <section className="home-section home-product-section">
+          <div className="home-section-heading">
+            <h2>See the workspace.</h2>
+          </div>
+          <figure className="home-product-preview">
+            <a
+              className="home-preview-image home-preview-light"
+              href="/workspace-preview-light.webp"
+              aria-label="Open workspace preview"
+              target="_blank"
+              rel="noreferrer"
+            >
+              <img
+                src="/workspace-preview-light.webp"
+                width="1440"
+                height="900"
+                loading="lazy"
+                alt="Canopy workspace showing a sample project's files, code editor, and selected conversation context."
+              />
+              <span className="home-preview-open">
+                <Eye size={14} /> Open workspace preview{" "}
+                <ArrowRight size={14} />
+              </span>
+            </a>
+            <a
+              className="home-preview-image home-preview-dark"
+              href="/workspace-preview-dark.webp"
+              aria-label="Open workspace preview"
+              target="_blank"
+              rel="noreferrer"
+            >
+              <img
+                src="/workspace-preview-dark.webp"
+                width="1440"
+                height="900"
+                loading="lazy"
+                alt="Canopy workspace showing a sample project's files, code editor, and selected conversation context."
+              />
+              <span className="home-preview-open">
+                <Eye size={14} /> Open workspace preview{" "}
+                <ArrowRight size={14} />
+              </span>
+            </a>
+            <figcaption>
+              <span>Actual Canopy workspace, shown with a sample project.</span>
+              <span className="home-preview-labels">
+                <span>
+                  <Files size={13} /> Browse files
+                </span>
+                <span>
+                  <Code2 size={13} /> Edit code
+                </span>
+                <span>
+                  <Layers3 size={13} /> Choose context
+                </span>
+              </span>
+            </figcaption>
+          </figure>
+        </section>
+
         <section id="context" className="home-section home-context-section">
           <div className="home-section-heading">
             <span className="home-eyebrow">01 / Context comes first</span>
