@@ -181,12 +181,12 @@
 .home-hero-mascot {
   position: relative;
   z-index: 1;
-  width: min(100%, 370px);
+  width: min(calc(100% - 52px), 370px);
   height: auto;
   filter: drop-shadow(
     0 22px 15px color-mix(in srgb, var(--accent) 13%, transparent)
   );
-  animation: home-mascot-float 7s ease-in-out infinite;
+  animation: home-roo-flight 10s ease-in-out infinite;
 }
 .home-mascot-orbit {
   position: absolute;
@@ -234,23 +234,18 @@
     monospace;
   white-space: nowrap;
   z-index: 2;
-  animation: home-orbit-float 6s ease-in-out infinite;
 }
 .home-orbit-sources {
-  --home-orbit-tilt: -7deg;
   top: 74px;
   left: -9px;
   transform: rotate(-7deg);
 }
 .home-orbit-context {
-  --home-orbit-tilt: 6deg;
   right: -3px;
   bottom: 100px;
   transform: rotate(6deg);
-  animation-delay: -2s;
 }
 .home-orbit-code {
-  --home-orbit-tilt: 10deg;
   top: 69px;
   right: 6px;
   width: 50px;
@@ -259,7 +254,6 @@
   background: var(--highlight-wash);
   color: var(--warning);
   transform: rotate(10deg);
-  animation-delay: -4s;
 }
 .home-art-caption {
   position: absolute;
@@ -283,94 +277,29 @@
   border-right: 1px solid var(--border);
   padding-right: 13px;
 }
-@keyframes home-mascot-float {
+@keyframes home-roo-flight {
   0%,
   100% {
-    transform: translateY(0) rotate(-1deg);
-  }
-  50% {
-    transform: translateY(-9px) rotate(1deg);
-  }
-}
-@keyframes home-orbit-float {
-  0%,
-  100% {
-    transform: translateY(0) rotate(var(--home-orbit-tilt));
-  }
-  50% {
-    transform: translateY(-5px) rotate(var(--home-orbit-tilt));
-  }
-}
-@keyframes home-node-levitate {
-  0%,
-  100% {
-    transform: translateY(3px) rotate(-1deg);
-  }
-  50% {
-    transform: translateY(-7px) rotate(1deg);
-  }
-}
-@keyframes home-roo-glide {
-  0%,
-  100% {
-    transform: translate(-5px, 0) rotate(-2deg);
+    transform: translate(-20px, 4px) rotate(-3deg);
   }
   25% {
-    transform: translate(0, -6px) rotate(1deg);
+    transform: translate(0, -10px) rotate(-5deg);
   }
   50% {
-    transform: translate(5px, 0) rotate(2deg);
+    transform: translate(20px, -4px) rotate(3deg);
   }
   75% {
-    transform: translate(0, 4px) rotate(-1deg);
+    transform: translate(0, 10px) rotate(5deg);
   }
 }
-@keyframes home-stack-rock {
-  0%,
-  100% {
-    transform: translateY(0) rotate(-2deg);
-  }
-  40% {
-    transform: translateY(-6px) rotate(2deg);
-  }
-  65% {
-    transform: translateY(1px) rotate(0);
-  }
-}
-@keyframes home-codey-rock {
-  0%,
-  100% {
-    transform: translateY(0) rotate(-1.4deg);
-  }
-  50% {
-    transform: translateY(-3px) rotate(1.4deg);
-  }
-}
-.canopy-home[data-motion="paused"]
-  :is(
-    .home-hero-mascot,
-    .home-feature-art .canopy-mascot,
-    .home-build-mascot,
-    .home-orbit-card,
-    .home-orbit-code
-  ) {
+.canopy-home[data-motion="paused"] .home-hero-mascot {
   animation-play-state: paused;
 }
 @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
-  .canopy-home[data-motion="running"]
-    :is(
-      .home-hero-mascot,
-      .home-feature-art .canopy-mascot,
-      .home-build-mascot
-    ) {
+  .canopy-home[data-motion="running"] .home-hero-mascot {
     transition: scale 180ms ease;
   }
-  .canopy-home[data-motion="running"]
-    :is(
-      .home-art:hover .home-hero-mascot,
-      .home-feature-art:hover .canopy-mascot,
-      .home-build-mark:hover .home-build-mascot
-    ) {
+  .canopy-home[data-motion="running"] .home-art:hover .home-hero-mascot {
     scale: 1.035;
   }
 }
@@ -447,7 +376,7 @@
   background: color-mix(in srgb, var(--accent) 7%, transparent);
   z-index: -1;
 }
-.home-feature-roo::before {
+.home-feature-byte::before {
   background: var(--highlight-wash);
   opacity: 0.6;
 }
@@ -461,16 +390,6 @@
   max-width: calc(100% - 28px);
   max-height: calc(100% - 28px);
   object-fit: contain;
-}
-.home-feature-node .canopy-mascot {
-  animation: home-node-levitate 5.4s ease-in-out infinite;
-}
-.home-feature-roo .canopy-mascot {
-  animation: home-roo-glide 7.2s ease-in-out infinite;
-}
-.home-feature-stack .canopy-mascot {
-  transform-origin: 50% 75%;
-  animation: home-stack-rock 4.8s ease-in-out infinite;
 }
 .home-feature-art > .home-mascot-name {
   position: absolute;
@@ -532,8 +451,6 @@
   filter: drop-shadow(
     0 18px 16px color-mix(in srgb, var(--accent) 11%, transparent)
   );
-  transform-origin: 50% 78%;
-  animation: home-codey-rock 6.4s ease-in-out infinite;
 }
 .home-build-caption {
   position: relative;
@@ -709,7 +626,7 @@
     height: 350px;
   }
   .home-hero-mascot {
-    width: 300px;
+    width: min(calc(100% - 52px), 290px);
   }
   .home-mascot-orbit {
     width: 275px;
@@ -815,7 +732,7 @@
     margin: 0 auto;
   }
   .home-hero-mascot {
-    width: 290px;
+    width: min(calc(100% - 52px), 270px);
   }
   .home-mascot-orbit-outer {
     width: min(325px, 100%);

@@ -202,7 +202,7 @@ The top bar exposes **Open folder**, provider connection, and context access. Th
 
 The home page features the five reference-inspired mascots: Byte, Node, Roo, Stack, and Codey. The workspace uses only a small Byte beside the empty conversation heading; mascots stay out of messages and the code editor. Artwork supports light/dark surfaces, responsive layouts, and reduced motion. [Mascot assets and generation prompts](docs/mascots.md) document their source and placement.
 
-Each home mascot has its own floating, rocking, or gliding motion, with subtle hover responses on desktop. **Pause motion / Play motion** saves your preference in this browser. System reduced motion takes precedence; animation also pauses when Home or the browser tab is hidden. The workspace illustration stays still.
+Roo flies through a contained path in the home hero, with a subtle desktop hover response. The other characters remain still. **Pause motion / Play motion** saves your preference in this browser. System reduced motion takes precedence; Roo also pauses when Home or the browser tab is hidden. The workspace illustration stays still.
 
 The compact new-conversation view contains a heading, **Add context**, and the context selection brief above the composer. Product explanations and larger character scenes live on the home page.
 

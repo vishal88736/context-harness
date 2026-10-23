@@ -6,13 +6,13 @@ These illustrations follow the user-supplied **Canopy Mascot Concepts** referenc
 
 All production assets live in `public/mascots/` as 768 × 768 WebP images with alpha transparency:
 
-| File         | Character                                    | Placement                                                                 |
-| ------------ | -------------------------------------------- | ------------------------------------------------------------------------- |
-| `byte.webp`  | Leaf-topped coding robot with a tablet       | Home hero; one compact illustration in the workspace's empty conversation |
-| `node.webp`  | Sprout-topped pod with orbiting source cards | Home source-selection feature                                             |
-| `roo.webp`   | Small robot riding a paper plane             | Home request-inspection feature                                           |
-| `stack.webp` | Friendly stack of context files              | Home saved-configuration feature                                          |
-| `codey.webp` | Headphone-wearing cat with a laptop          | Home coding-workspace section                                             |
+| File         | Character                                    | Placement                                                                   |
+| ------------ | -------------------------------------------- | --------------------------------------------------------------------------- |
+| `byte.webp`  | Leaf-topped coding robot with a tablet       | Home request-inspection feature; compact workspace empty-state illustration |
+| `node.webp`  | Sprout-topped pod with orbiting source cards | Home source-selection feature                                               |
+| `roo.webp`   | Small robot riding a paper plane             | Animated home hero                                                          |
+| `stack.webp` | Friendly stack of context files              | Home saved-configuration feature                                            |
+| `codey.webp` | Headphone-wearing cat with a laptop          | Home coding-workspace section                                               |
 
 `src/components/CanopyMascot.tsx` supplies fixed image dimensions, decorative semantics, lazy loading, and optional hero fetch priority. `HomePage.tsx` composes the larger scenes; `home-page.css` controls their layout and reduced-motion behavior. `Chat.EmptyWorkspace` adds only Byte, styled by `appearance.css`. Mascots do not appear over messages, code editing, or execution controls, and never indicate that a tool is scanning files or that context was actually sent.
 
@@ -20,7 +20,7 @@ The original two-leaf logo remains the application identity. The reference sheet
 
 ## Animation and controls
 
-The artwork is animated in CSS: Byte bobs and sways, Node levitates, Roo glides, Stack rocks, and Codey gently sways. The hero's source cards float independently. These motions move the complete illustrations; they do not change facial expressions or simulate tool activity. Desktop hover reactions use a separate scale transform.
+Roo is the single travelling mascot. A CSS flight loop moves the complete paper-plane illustration through a contained path inside the hero artwork. The other characters and source cards stay still. Roo's desktop hover response uses a separate scale transform; the animation does not change facial expressions or simulate tool activity.
 
 `HomePage` applies `data-motion="running"` or `"paused"` to the home wrapper. The **Pause motion / Play motion** control stores `canopy.homeMotion` as `auto` or `paused` in browser storage. Route visibility, document visibility, and the OS reduced-motion preference also gate animation. Reduced motion disables loops and transitions. The workspace Byte has no animation.
 
@@ -32,12 +32,12 @@ Reference-sheet SHA-256: `d8fb16d7b41251a0c1748c56d61beda870265f892c72143f0ffcfa
 
 The committed WebP assets have these SHA-256 checksums:
 
-| Asset | SHA-256 |
-| --- | --- |
-| `byte.webp` | `9343d1518a0632b7c1645ade2b090bd2b05a25368787d4ff2cf9fbcb72e701f7` |
+| Asset        | SHA-256                                                            |
+| ------------ | ------------------------------------------------------------------ |
+| `byte.webp`  | `9343d1518a0632b7c1645ade2b090bd2b05a25368787d4ff2cf9fbcb72e701f7` |
 | `codey.webp` | `dd8fa232d901ee38162f90959e0de1134d79e52913d58dac7030bc13968a7aa0` |
-| `node.webp` | `ab12738260d9a93211771d5243681be85c919387f08da721224db1490f0723c6` |
-| `roo.webp` | `061ecd6a4f61454ef3f06df63c437428c5d630270a20764cc947a23b33208143` |
+| `node.webp`  | `ab12738260d9a93211771d5243681be85c919387f08da721224db1490f0723c6` |
+| `roo.webp`   | `061ecd6a4f61454ef3f06df63c437428c5d630270a20764cc947a23b33208143` |
 | `stack.webp` | `dce3c93b52a5eb896bf5c4b02455a39b3ffb0791e2cfbe819444dd6a4ffee8fa` |
 
 ## Generation prompt set
