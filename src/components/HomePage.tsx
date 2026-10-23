@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import { Logo } from "./ui";
 import { CanopyMascot } from "./CanopyMascot";
+import { HomeRoamer } from "./HomeRoamer";
+import { HomeClosing } from "./HomeClosing";
 
 export function HomePage({
   onOpenWorkspace,
@@ -84,11 +86,35 @@ export function HomePage({
       <ArrowRight size={17} />
     </a>
   );
+  const motionControl = (
+    <button
+      type="button"
+      className="home-motion-toggle"
+      disabled={reducedMotion}
+      aria-label={
+        reducedMotion
+          ? "Roo animation disabled by reduced motion"
+          : motionPaused
+            ? "Play Roo animation"
+            : "Pause Roo animation"
+      }
+      title={
+        reducedMotion
+          ? "Your system's reduced-motion preference is enabled."
+          : undefined
+      }
+      onClick={() => setMotionPaused((paused) => !paused)}
+    >
+      {reducedMotion || motionPaused ? <Play size={12} /> : <Pause size={12} />}
+      {reducedMotion ? "Motion off" : motionPaused ? "Play Roo" : "Pause Roo"}
+    </button>
+  );
   return (
     <div
       className="canopy-home"
       data-motion={motionRunning ? "running" : "paused"}
     >
+      <HomeRoamer visible={visible} control={motionControl} />
       <a className="home-skip" href="#home-content">
         Skip to content
       </a>
@@ -147,34 +173,6 @@ export function HomePage({
               <span className="home-local-note">
                 <ShieldCheck size={14} /> Local workspace. Your choice of model.
               </span>
-              <button
-                className="home-motion-toggle"
-                disabled={reducedMotion}
-                aria-label={
-                  reducedMotion
-                    ? "Roo animation disabled by reduced motion"
-                    : motionPaused
-                      ? "Play Roo animation"
-                      : "Pause Roo animation"
-                }
-                title={
-                  reducedMotion
-                    ? "Your system's reduced-motion preference is enabled."
-                    : undefined
-                }
-                onClick={() => setMotionPaused((paused) => !paused)}
-              >
-                {reducedMotion || motionPaused ? (
-                  <Play size={12} />
-                ) : (
-                  <Pause size={12} />
-                )}
-                {reducedMotion
-                  ? "Motion off"
-                  : motionPaused
-                    ? "Play motion"
-                    : "Pause motion"}
-              </button>
             </div>
           </div>
           <div className="home-art" aria-hidden="true">
@@ -190,12 +188,12 @@ export function HomePage({
               <Code2 size={24} />
             </span>
             <CanopyMascot
-              name="roo"
+              name="byte"
               className="home-hero-mascot"
               priority={visible}
             />
             <div className="home-art-caption">
-              <span className="home-mascot-name">Meet Roo</span>
+              <span className="home-mascot-name">Meet Byte</span>
               <span>A little structure. A lot more clarity.</span>
             </div>
           </div>
@@ -310,11 +308,15 @@ export function HomePage({
             </article>
             <article>
               <div
-                className="home-feature-art home-feature-byte"
+                className="home-feature-art home-feature-inspect"
                 aria-hidden="true"
               >
-                <CanopyMascot name="byte" />
-                <span className="home-mascot-name">Byte</span>
+                <Eye
+                  className="home-inspect-glyph"
+                  size={54}
+                  strokeWidth={1.2}
+                />
+                <span className="home-mascot-name">Inspect</span>
               </div>
               <h3>See the effective request</h3>
               <p>
@@ -489,11 +491,7 @@ export function HomePage({
             </details>
           </div>
         </section>
-        <section className="home-closing">
-          <Logo />
-          <h2>Make room for your next idea.</h2>
-          {enter("home-primary")}
-        </section>
+        <HomeClosing action={enter("home-primary")} />
       </main>
       <footer className="home-footer">
         <span>Canopy · Context-first AI coding</span>

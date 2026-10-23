@@ -6,25 +6,27 @@ These illustrations follow the user-supplied **Canopy Mascot Concepts** referenc
 
 All production assets live in `public/mascots/` as 768 × 768 WebP images with alpha transparency:
 
-| File         | Character                                    | Placement                                                                   |
-| ------------ | -------------------------------------------- | --------------------------------------------------------------------------- |
-| `byte.webp`  | Leaf-topped coding robot with a tablet       | Home request-inspection feature; compact workspace empty-state illustration |
-| `node.webp`  | Sprout-topped pod with orbiting source cards | Home source-selection feature                                               |
-| `roo.webp`   | Small robot riding a paper plane             | Animated home hero                                                          |
-| `stack.webp` | Friendly stack of context files              | Home saved-configuration feature                                            |
-| `codey.webp` | Headphone-wearing cat with a laptop          | Home coding-workspace section                                               |
+| File         | Character                                    | Placement                                                    |
+| ------------ | -------------------------------------------- | ------------------------------------------------------------ |
+| `byte.webp`  | Leaf-topped coding robot with a tablet       | Static home hero; compact workspace empty-state illustration |
+| `node.webp`  | Sprout-topped pod with orbiting source cards | Home source-selection feature                                |
+| `roo.webp`   | Small robot riding a paper plane             | One roaming companion around the home viewport edges         |
+| `stack.webp` | Friendly stack of context files              | Home saved-configuration feature                             |
+| `codey.webp` | Headphone-wearing cat with a laptop          | Home coding-workspace section                                |
 
-`src/components/CanopyMascot.tsx` supplies fixed image dimensions, decorative semantics, lazy loading, and optional hero fetch priority. `HomePage.tsx` composes the larger scenes; `home-page.css` controls their layout and reduced-motion behavior. `Chat.EmptyWorkspace` adds only Byte, styled by `appearance.css`. Mascots do not appear over messages, code editing, or execution controls, and never indicate that a tool is scanning files or that context was actually sent.
+`src/components/CanopyMascot.tsx` supplies fixed image dimensions, decorative semantics, lazy loading, and optional priority loading. `HomePage.tsx` composes the static scenes; `home-page.css` controls their compact, responsive layout. The request-inspection feature uses an Eye icon rather than another Byte. `HomeRoamer.tsx` and `home-roamer.css` provide the single moving Roo and its stationary control. `Chat.EmptyWorkspace` adds only Byte, styled by `appearance.css`. Mascots do not appear over workspace messages, code editing, or execution controls, and never indicate that a tool is scanning files or that context was actually sent.
+
+`HomeClosing.tsx` and `home-closing.css` create the **Make room for your next idea** ending using layered paper, a small window, pencil lines, and the existing leaf logo. This illustration is code-native decorative artwork, not an additional mascot or a simulated application state.
 
 The original two-leaf logo remains the application identity. The reference sheet's text, card backgrounds, and provider logos are not embedded in the application.
 
 ## Animation and controls
 
-Roo is the single travelling mascot. A CSS flight loop moves the complete paper-plane illustration through a contained path inside the hero artwork. The other characters and source cards stay still. Roo's desktop hover response uses a separate scale transform; the animation does not change facial expressions or simulate tool activity.
+Roo is the single travelling mascot. A 22-second CSS loop moves the complete paper-plane illustration around the viewport edges, so it remains visible while scrolling through the home page. `HomeRoamer` measures the viewport on mount and resize, including visual-viewport changes; mobile layouts use a smaller illustration. The fixed decorative layer has `pointer-events: none` and is hidden from assistive technology. The other characters and source cards stay still; the animation does not change facial expressions or simulate tool activity.
 
-`HomePage` applies `data-motion="running"` or `"paused"` to the home wrapper. The **Pause motion / Play motion** control stores `canopy.homeMotion` as `auto` or `paused` in browser storage. Route visibility, document visibility, and the OS reduced-motion preference also gate animation. Reduced motion disables loops and transitions. The workspace Byte has no animation.
+`HomePage` applies `data-motion="running"` or `"paused"` to the home wrapper. The fixed **Pause Roo / Play Roo** control stores `canopy.homeMotion` as `auto` or `paused` in browser storage and synchronizes changes across tabs. Document visibility and the OS reduced-motion preference also gate animation. Reduced motion disables the flight and shows a disabled **Motion off** control. `HomeRoamer` returns no layer or control when the workspace route is active. The workspace Byte has no animation.
 
-The home hero gets eager/high-priority loading only while the home route is visible. Hidden home artwork uses lazy/default-priority loading. Decorative orbits are bounded at tablet widths; small screens keep the same controls accessible.
+The home hero gets eager/high-priority loading only while the home route is visible; Roo loads with priority when mounted on Home. Hidden static home artwork uses lazy/default-priority loading. Decorative hero orbits are bounded at tablet widths; small screens keep the stationary motion control accessible. The closing illustration has a subtle desktop hover response only when the OS permits motion.
 
 ## Asset identity
 

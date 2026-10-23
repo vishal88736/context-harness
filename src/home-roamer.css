@@ -1,0 +1,103 @@
+.home-roaming-layer {
+  --roam-width: 100vw;
+  --roam-height: 100dvh;
+  --roo-size: 108px;
+  --roo-inset: 16px;
+  --roo-left: var(--roo-inset);
+  --roo-right: calc(var(--roam-width) - var(--roo-size) - var(--roo-inset));
+  --roo-top: 108px;
+  --roo-bottom: max(140px, calc(var(--roam-height) - var(--roo-size) - 78px));
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  pointer-events: none;
+}
+.home-roamer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: var(--roo-size);
+  height: var(--roo-size);
+  transform: translate3d(var(--roo-right), var(--roo-bottom), 0) rotate(-4deg);
+  animation: canopy-roo-roam 22s linear infinite;
+  will-change: transform;
+  pointer-events: none;
+  filter: drop-shadow(
+    0 8px 8px color-mix(in srgb, var(--text) 12%, transparent)
+  );
+}
+.home-roamer-mascot {
+  width: 100%;
+  height: 100%;
+}
+@keyframes canopy-roo-roam {
+  0%,
+  100% {
+    transform: translate3d(var(--roo-right), var(--roo-bottom), 0) rotate(-4deg);
+  }
+  22% {
+    transform: translate3d(var(--roo-left), var(--roo-bottom), 0) rotate(-8deg);
+  }
+  46% {
+    transform: translate3d(var(--roo-left), var(--roo-top), 0) rotate(4deg);
+  }
+  68% {
+    transform: translate3d(var(--roo-right), var(--roo-top), 0) rotate(8deg);
+  }
+  86% {
+    transform: translate3d(
+        var(--roo-right),
+        calc((var(--roo-top) + var(--roo-bottom)) / 2),
+        0
+      )
+      rotate(-2deg);
+  }
+}
+.canopy-home[data-motion="paused"] .home-roamer {
+  animation-play-state: paused;
+}
+.home-roamer-controls {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 5px 4px 12px;
+  border: 1px solid var(--border);
+  border-radius: 30px;
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  color: var(--secondary);
+  box-shadow: var(--control-shadow);
+  backdrop-filter: blur(12px);
+  font-size: 10px;
+}
+.home-roamer-controls .home-motion-toggle {
+  border: 0;
+  border-radius: 20px;
+  background: transparent;
+  min-height: 28px;
+  padding: 5px 9px;
+}
+.home-roamer-controls .home-motion-toggle:hover:not(:disabled) {
+  background: var(--surface-2);
+}
+@media (max-width: 680px) {
+  .home-roaming-layer {
+    --roo-size: 72px;
+    --roo-inset: 12px;
+    --roo-top: 94px;
+    --roo-bottom: max(120px, calc(var(--roam-height) - var(--roo-size) - 70px));
+  }
+  .home-roamer-controls {
+    right: 12px;
+    bottom: 12px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-roamer {
+    animation: none !important;
+    will-change: auto;
+  }
+}

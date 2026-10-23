@@ -198,13 +198,13 @@ Bring any provider that implements one of these protocols. Other APIs/authentica
 
 The informational home page lives at `/`; **Open workspace** enters the working app at `/workspace`, and changes to **Resume workspace** after it has been opened. The sidebar's logo and **Home** control return home. Browser Back/Forward and direct `/workspace` loads are supported; the production server serves the app shell for that route. Opening the home page alone does not bootstrap workspace APIs or create a conversation. Once opened, the workspace stays mounted but hidden and inert while home is visible, preserving in-memory chat drafts, editor buffers, context selections, and active streams during in-app navigation. A browser reload still loses unsaved drafts.
 
-The home page includes a full-frame [workspace preview](docs/workspace-preview.md) captured from the actual app with a sample project. It follows the selected light/dark theme and opens at full resolution. It illustrates the editor and selected context without accessing the visitor's project or simulating an AI response.
+The compact home page includes a full-frame [workspace preview](docs/workspace-preview.md) captured from the actual app with a sample project. It follows the selected light/dark theme and opens at full resolution. It illustrates the editor and selected context without accessing the visitor's project or simulating an AI response. An illustrated **Make room for your next idea** section closes the page with a direct workspace entry.
 
 The top bar exposes **Open folder**, provider connection, and context access. The **Conversation** and **Code** tabs share the active workspace and conversation. The desktop sidebar keeps projects and chat history visible; smaller layouts retain navigation, file/context controls, and responsive panels.
 
-The home page features the five reference-inspired mascots: Byte, Node, Roo, Stack, and Codey. The workspace uses only a small Byte beside the empty conversation heading; mascots stay out of messages and the code editor. Artwork supports light/dark surfaces, responsive layouts, and reduced motion. [Mascot assets and generation prompts](docs/mascots.md) document their source and placement.
+The home page features the five reference-inspired mascots: Byte in the hero, Node and Stack in context features, Codey beside the coding-workspace section, and one roaming Roo. The inspection feature uses an Eye icon. The workspace uses only a small, static Byte beside the empty conversation heading; mascots stay out of messages and the code editor. Artwork supports light/dark surfaces, responsive layouts, and reduced motion. [Mascot assets and generation prompts](docs/mascots.md) document their source and placement.
 
-Roo flies through a contained path in the home hero, with a subtle desktop hover response. The other characters remain still. **Pause motion / Play motion** saves your preference in this browser. System reduced motion takes precedence; Roo also pauses when Home or the browser tab is hidden. The workspace illustration stays still.
+Roo travels around the viewport edges while you scroll the home page. Its decorative layer lets pointer input pass through to the page. A fixed **Pause Roo / Play Roo** control saves your preference in this browser. System reduced motion takes precedence; Roo also pauses when the browser tab is hidden and is removed from the working app. The other characters remain still.
 
 The compact new-conversation view contains a heading, **Add context**, and the context selection brief above the composer. Product explanations and larger character scenes live on the home page.
 
@@ -274,12 +274,16 @@ src/
 │   ├── FolderPicker.tsx        Local OS directory browser
 │   ├── ContextOverview.tsx     Per-chat selection brief
 │   ├── HomePage.tsx            Informational home and workspace entry
+│   ├── HomeRoamer.tsx          Home-only Roo, viewport sizing and motion control
+│   ├── HomeClosing.tsx         Illustrated next-idea workspace entry
 │   ├── CanopyMascot.tsx        Decorative character assets and loading behavior
 │   ├── WelcomeIllustration.tsx Retained alternative modular SVG
 │   ├── WebContextDialog.tsx    Explicit page URL and pasted excerpt
 │   └── ...                     Sidebar, chat, context, profiles, settings, inspector
 ├── styles.css                  Default light theme tokens and base layout
 ├── home-page.css               Responsive home-page layout
+├── home-roamer.css             Viewport flight path and accessible pause control
+├── home-closing.css            Layered paper/window artwork and responsive ending
 ├── readability.css             Readability overrides
 ├── workspace-presentation.css  Workspace, code editor, chat presentation
 └── context-presentation.css    Context and dialog presentation

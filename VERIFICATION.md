@@ -1,5 +1,13 @@
 # Local verification record
 
+## Compact landing, roaming Roo, and illustrated ending — 2026-10-24
+
+- Reduced the desktop hero from about 500 to 430 px and section padding from 64 to 36 px. Widened the content area to 1200 px, tightened feature cards, used a two-column context introduction, and switched mobile features to compact horizontal cards. The final **Make room for your next idea** CTA now has responsive layered-paper/window artwork, the Canopy leaf, and a reduced-motion-aware desktop hover response.
+- Moved the single Roo from its small hero path to a fixed, pointer-transparent viewport-edge path. Static Byte occupies the hero; the inspection feature uses an Eye glyph. The stationary Pause/Play control retains its browser-local preference. Roo is removed from `/workspace`.
+- Direct Chromium checks measured **300.7 px of real movement in 1.1 seconds**, verified pause/resume and pause persistence after reload, disabled animation under OS reduced motion, confirmed pointer pass-through, and found no Home workspace-bootstrap request or browser errors. **45 animation positions across nine widths (390–1440 px)** stayed within the viewport without horizontal overflow. Roo remained present while scrolling to the context and final sections and disappeared on workspace entry.
+- Inspected decoded light/dark desktop and mobile full-page screenshots and closing-section captures in ignored `artifacts/canopy-home-roaming-*.png` and `artifacts/canopy-closing-*.png`. Recorded the actual page movement and pause/resume in `artifacts/canopy-roo-roaming.mp4` (H.264, 1440 × 900, 18.08 seconds).
+- **Production build/type-check, one production restart test, and all six affected browser workflows passed.** The browser run covered home/workspace state retention, dialog focus, independent context selections, keyboard context access, theme persistence, mobile layout, and source controls. Backend/provider code was unchanged; backend tests and live inference were not repeated for this presentation update.
+
 ## Single branch and denser home — 2026-10-24
 
 - Made `main` the default and sole GitHub/local branch. The unique `dev` merge record was first preserved on `main`; deleting `dev` changed no application files and discarded no history.
