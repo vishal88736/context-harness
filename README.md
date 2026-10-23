@@ -12,7 +12,8 @@ Built with React, TypeScript, Vite, Express, and SQLite. OpenCode is a reference
 - **Four provider protocols:** native Ollama, Anthropic, Gemini, and Chat Completions compatible endpoints, with model discovery and per-request selection.
 - **Coding tools with approvals:** authorized reads/search, proposed file diffs, command decisions, execution records, cancellation, and retries.
 - **Code workbench:** local folder explorer, CodeMirror syntax editing, multiple file tabs, per-workspace edit drafts, and explicit diff approval before saving.
-- **Bright workspace:** a light-only interface, persistent desktop sidebar, resizable context panel, responsive navigation, and Markdown/code copying.
+- **Adaptable workspace:** Light, Dark, and System themes, a persistent desktop sidebar, resizable context panel, responsive navigation, and Markdown/code copying.
+- **Separate home and workspace:** an informational home page with explicit entry to the working app, preserving open drafts and streams during in-app navigation.
 
 ## Contents
 
@@ -48,7 +49,7 @@ npm ci
 npm run dev
 ```
 
-Open **http://127.0.0.1:5173**. Development runs Vite on port 5173 and the API on port 4317. Vite proxies `/api` to the backend. Keep both processes running; Ctrl+C stops them. The backend binds to loopback only.
+Open **http://127.0.0.1:5173**. The home page describes Canopy; select **Open workspace** to enter the app at `/workspace`. Development runs Vite on port 5173 and the API on port 4317. Vite proxies `/api` to the backend. Keep both processes running; Ctrl+C stops them. The backend binds to loopback only.
 
 ### Production
 
@@ -65,7 +66,7 @@ Run the commands from the application directory: production assets are resolved 
 
 ## First coding workflow
 
-1. Click **Open folder** in the top bar, or **Settings → Workspaces → Browse project folders**. Choose an existing project anywhere your OS account can access; it does not need to be inside Canopy's own repository.
+1. Select **Open workspace** on the home page, then click **Open folder** in the top bar, or **Settings → Workspaces → Browse project folders**. Choose an existing project anywhere your OS account can access; it does not need to be inside Canopy's own repository.
 2. Connect a real model using [Providers and model selection](#providers-and-model-selection). Connection templates fill endpoint details; discovery supplies actual model IDs.
 3. Create a conversation for that workspace. Switch to **Code** to browse files or open multiple editor tabs. Select **Add file to context** when the active conversation should receive a file's saved contents.
 4. Open **Context**, review enabled sources, and optionally apply **Coding**, **Debugging**, **Research**, **Code Review**, or your own profile. Opening a project or a file does not automatically authorize it for the AI.
@@ -90,9 +91,17 @@ The **Code** tab contains the project explorer and a multi-tab **CodeMirror 6** 
 
 **Add file to context references the saved file on disk.** Unsaved editor drafts are not silently sent to the model. Save an approved edit first, or provide an explicit snippet/temporary attachment when that is the intended input.
 
+### Editor preferences and focus
+
+Use **Editor settings** in the Code view to choose a 12, 14, 16, or 18 px font, 2- or 4-space indentation, and word wrap. **Reset editor settings** restores 14 px, 2 spaces, and wrapping off. Preferences are saved in this browser under `canopy.editorPreferences`; changing them reconfigures the editor without discarding drafts or undo history. The status bar reports the active file's language and actual cursor line/column.
+
+**Focus editor** hides the project explorer; **Exit focus** restores it. Workspace navigation remains available.
+
 ### Review and save
 
 Editor drafts and open tabs are maintained per workspace while the page stays open. You can switch conversations, projects, or views without merging those drafts. Closing a dirty tab asks before discarding it, and the page registers a browser-unload warning while unsaved edits exist. Drafts are not durable across a browser restart.
+
+Repeated file clicks share an in-flight read, and slower responses cannot switch you away from a newer selection. If you edit while a confirmed reload is pending, those newer edits are kept and the editor explains why it skipped the reload.
 
 Choose **Review & save** (or Ctrl/Cmd+S inside the editor) to stage a real diff. Staging does not write the file. **Apply file change** is a separate approval, guarded by the original file hash, current workspace/path checks, and a ten-minute one-use proposal. A changed file requires a fresh review. Approved writes use an atomic rename after fresh conflict checks and preserve an existing file's POSIX read/write/execute permission bits.
 
@@ -102,14 +111,14 @@ The editor currently modifies existing text files only, with a 250 KB UTF-8 edit
 
 The desktop sidebar remains visible. The independent context panel can be closed or resized; use its divider or arrow keys while the divider is focused. On compact screens it opens as a drawer.
 
-On a new conversation's welcome screen, the **Conversation context** brief groups its enabled selections into files/folders, instructions, chats/memories, and attachments, with a separate disabled count. These are configuration counts: they do not prove that files exist, content was included, or tokens were used. Open the brief to edit the context panel; **Add your context** opens source selection directly. The brief adapts to compact layouts, and context controls remain available on smaller screens. Use **Preview request** to verify actual inclusion.
+On a new conversation, the **Conversation context** brief groups its enabled selections into files/folders, instructions, chats/memories, and attachments, with a separate disabled count. These are configuration counts: they do not prove that files exist, content was included, or tokens were used. Open the brief to edit the context panel; **Add context** opens source selection directly. The brief adapts to compact layouts, and context controls remain available on smaller screens. Use **Preview request** to verify actual inclusion.
 
-The welcome shortcuts open the corresponding working controls: **Files & folders** opens file selection, **Instructions** starts a custom instruction source, **Tools** opens conversation permissions, and **Multiple providers** opens provider settings. **Web context** lets you name a page, record its URL, and paste the exact excerpt you want to share. It saves an untrusted reference snippet in the current conversation, with the URL preserved alongside the excerpt. The page is not fetched automatically; this is not browser search. Preview, disable, or remove it like any other selected source.
+Use **Add context** to select files, folders, instructions, previous conversations, memories, attachments, or a **Web excerpt**. The web dialog lets you name a page, record its URL, and paste the exact excerpt you want to share. It saves an untrusted reference snippet in the current conversation, with the URL preserved alongside the excerpt. The page is not fetched automatically; this is not browser search. Preview, disable, or remove it like any other selected source. Conversation permissions remain in the context panel, and provider connections remain in Settings.
 
 ### Sources
 
 - **Files & snippets:** choose workspace files or paste named code snippets. Files resolve from disk for every request.
-- **Web excerpts:** use the welcome **Web context** shortcut to paste selected page text and its reference URL. Only the pasted text and URL are supplied; there is no automatic page retrieval.
+- **Web excerpts:** use **Add context → Web excerpt** to paste selected page text and its reference URL. Only the pasted text and URL are supplied; there is no automatic page retrieval.
 - **Folders:** explicitly authorize a folder. Only relevant retrieved excerpts enter the prompt, rather than an assertion that the whole repository was sent.
 - **Project instructions:** select a repository rules file or write project guidance. Repository rules are never silently discovered and executed.
 - **Custom instructions:** editable guidance for this conversation.
@@ -185,11 +194,13 @@ Bring any provider that implements one of these protocols. Other APIs/authentica
 
 ## Appearance and navigation
 
-Canopy is **light-only**: off-white surfaces, soft lavender navigation, teal actions, apricot highlights, navy text, and a shared two-leaf mark. The palette uses workspace `#F8F7F5`, sidebar `#DEE1ED`, context panel `#DFE2EE`, teal `#426D79`, headline apricot `#EAA96A`, send-button apricot `#ECB379`, selected peach `#EFD2B8`, navy `#0C2236`, cards `#FCFAF9`, and borders `#D3D8E6`. **Settings → Appearance** describes the fixed theme; the interface stays light regardless of the operating system theme. Existing appearance settings migrate to light while saved projects, providers, and conversations remain intact.
+**Settings → Appearance** offers **Light**, **Dark**, and **System**. Light remains the default, with off-white surfaces, soft lavender navigation, teal actions, apricot highlights, navy text, and a shared two-leaf mark. Its palette uses workspace `#F8F7F5`, sidebar `#DEE1ED`, context panel `#DFE2EE`, teal `#426D79`, headline apricot `#EAA96A`, send-button apricot `#ECB379`, selected peach `#EFD2B8`, navy `#0C2236`, cards `#FCFAF9`, and borders `#D3D8E6`. Dark applies shared dark surface/text tokens to the home page, workspace, dialogs, and editor. System follows operating-system theme changes while the app is open. The preference persists in SQLite and a validated browser cache (`canopy.theme`) used before workspace loading.
+
+The informational home page lives at `/`; **Open workspace** enters the working app at `/workspace`, and changes to **Resume workspace** after it has been opened. The sidebar's logo and **Home** control return home. Browser Back/Forward and direct `/workspace` loads are supported; the production server serves the app shell for that route. Opening the home page alone does not bootstrap workspace APIs or create a conversation. Once opened, the workspace stays mounted but hidden and inert while home is visible, preserving in-memory chat drafts, editor buffers, context selections, and active streams during in-app navigation. A browser reload still loses unsaved drafts.
 
 The top bar exposes **Open folder**, provider connection, and context access. The **Conversation** and **Code** tabs share the active workspace and conversation. The desktop sidebar keeps projects and chat history visible; smaller layouts retain navigation, file/context controls, and responsive panels.
 
-The compact new-conversation view pairs its headline with a decorative geometric illustration, five pastel shortcut buttons, an add-context action, and the context selection brief. The shortcuts open real context, permission, or provider controls and wrap on smaller screens; the composer remains directly available below.
+The compact new-conversation view contains a heading, **Add context**, and the context selection brief above the composer. Product explanations and feature illustrations live on the home page.
 
 ## Coding tools and security
 
@@ -233,7 +244,7 @@ The app does not automatically load `.env` files. Export these variables in the 
 
 ### Persistent data
 
-SQLite runs in WAL mode with foreign keys, busy timeout, indexes, and versioned migrations. Schema version 2 adds hash-only manual file-change audit records and migrates old appearance preferences to light. Workspaces, conversations, messages, profiles, source configurations, model settings, memories, invocation snapshots, tool executions, and decisions persist across restarts. Interrupted generations/approvals are marked stopped/denied on startup; they never resume invisibly. Pending manual editor proposals expire after a restart; they are not reapplied from disk.
+SQLite runs in WAL mode with foreign keys, busy timeout, indexes, and versioned migrations. Schema version 2 adds hash-only manual file-change audit records. Valid Light/Dark/System appearance preferences are retained; missing or invalid values default to light. Workspaces, conversations, messages, profiles, source configurations, model settings, memories, invocation snapshots, tool executions, and decisions persist across restarts. Interrupted generations/approvals are marked stopped/denied on startup; they never resume invisibly. Pending manual editor proposals expire after a restart; they are not reapplied from disk.
 
 ### Backup and restore
 
@@ -245,7 +256,10 @@ Restore a stopped backup to a private directory and launch with `CANOPY_DATA_DIR
 
 ```text
 src/
+├── ApplicationRouter.tsx       Home/workspace routes, lazy retained workspace
 ├── App.tsx                     Workspace, conversation/code views, stream state
+├── appearance.tsx / .css       Theme preference, System listener, dark tokens
+├── editor-preferences.ts / .css Validated local editor settings and control styles
 ├── api.ts                      Typed JSON/SSE client
 ├── provider-presets.ts         Connection templates without keys or model IDs
 ├── components/
@@ -253,10 +267,12 @@ src/
 │   ├── SourceEditor.tsx        CodeMirror language modes, editing, undo/scroll state
 │   ├── FolderPicker.tsx        Local OS directory browser
 │   ├── ContextOverview.tsx     Per-chat selection brief
-│   ├── WelcomeIllustration.tsx Decorative modular-context SVG
+│   ├── HomePage.tsx            Informational home and workspace entry
+│   ├── WelcomeIllustration.tsx Decorative home-page context SVG
 │   ├── WebContextDialog.tsx    Explicit page URL and pasted excerpt
 │   └── ...                     Sidebar, chat, context, profiles, settings, inspector
-├── styles.css                  Light-only theme tokens and base layout
+├── styles.css                  Default light theme tokens and base layout
+├── home-page.css               Responsive home-page layout
 ├── readability.css             Readability overrides
 ├── workspace-presentation.css  Workspace, code editor, chat presentation
 └── context-presentation.css    Context and dialog presentation
@@ -281,7 +297,7 @@ Manual file changes follow `SourceEditor → CodeWorkbench → file-changes API 
 
 The main request path is `App → api/streamChat → app routes → Agent → ContextEngine → Providers`; tool calls return through `ToolRunner`, which validates permissions and records results in `Store`. Frontend types come from `server/schema.ts` through type-only imports; database, vault, and provider keys stay in the backend.
 
-`src/main.tsx` loads the base styles, readability overrides, then the workspace and context presentation layers. Light-only theme tokens remain in `src/styles.css`; the context brief derives its counts from the active conversation's actual source configuration and does not compose or send a model request.
+`src/main.tsx` renders `ApplicationRouter` inside `AppearanceProvider` and the error boundary. It loads base/readability/workspace/context styles, followed by home and appearance layers; the workbench imports editor-preference styles when loaded. Default light tokens live in `src/styles.css`, and `src/appearance.css` supplies dark overrides. The context brief derives its counts from the active conversation's actual source configuration and does not compose or send a model request.
 
 `LOCAL_CODEBASE_GUIDE.md` is a detailed local file-by-file and connection guide. It is intentionally excluded by the exact `/LOCAL_CODEBASE_GUIDE.md` rule in `.gitignore` and by context file access/retrieval. It is available in this working copy and will not be included in a fresh clone unless separately supplied. Git ignore rules alone are not general model-access rules.
 
