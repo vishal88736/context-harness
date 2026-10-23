@@ -200,7 +200,9 @@ The informational home page lives at `/`; **Open workspace** enters the working 
 
 The top bar exposes **Open folder**, provider connection, and context access. The **Conversation** and **Code** tabs share the active workspace and conversation. The desktop sidebar keeps projects and chat history visible; smaller layouts retain navigation, file/context controls, and responsive panels.
 
-The compact new-conversation view contains a heading, **Add context**, and the context selection brief above the composer. Product explanations and feature illustrations live on the home page.
+The home page features the five reference-inspired mascots: Byte, Node, Roo, Stack, and Codey. The workspace uses only a small Byte beside the empty conversation heading; mascots stay out of messages and the code editor. Artwork supports light/dark surfaces, responsive layouts, and reduced motion. [Mascot assets and generation prompts](docs/mascots.md) document their source and placement.
+
+The compact new-conversation view contains a heading, **Add context**, and the context selection brief above the composer. Product explanations and larger character scenes live on the home page.
 
 ## Coding tools and security
 
@@ -268,7 +270,8 @@ src/
 │   ├── FolderPicker.tsx        Local OS directory browser
 │   ├── ContextOverview.tsx     Per-chat selection brief
 │   ├── HomePage.tsx            Informational home and workspace entry
-│   ├── WelcomeIllustration.tsx Decorative home-page context SVG
+│   ├── CanopyMascot.tsx        Decorative character assets and loading behavior
+│   ├── WelcomeIllustration.tsx Retained alternative modular SVG
 │   ├── WebContextDialog.tsx    Explicit page URL and pasted excerpt
 │   └── ...                     Sidebar, chat, context, profiles, settings, inspector
 ├── styles.css                  Default light theme tokens and base layout

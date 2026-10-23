@@ -1,6 +1,13 @@
 # Local verification record
 
-Latest local regression: **2026-10-23**, using Node **26.12.1**, npm **11.20.0**, and installed system Chromium. The current home/workspace split and coding preferences have passed **61 backend tests**, the checked production build, **one production restart test**, and **25 browser workflows**. Checks were run through `npm test`, `npm run build`, `npm run test:production`, and `npm run test:e2e`. The application is a local, single-user workspace. No public deployment or live neural-model performance is claimed.
+## Mascot presentation update — 2026-10-23
+
+- Generated five reference-inspired transparent assets through the built-in image tool and encoded them as 768 × 768 WebP files with alpha. Total production artwork is approximately 280 KiB. The home page uses Byte, Codey, Node, Stack, and Roo; the workspace uses one compact Byte only in an empty conversation.
+- `npm run build` passed, including TypeScript validation. **13/13 targeted Chromium checks passed**: seven one-off mascot checks plus six existing navigation, presentation, and source-control workflows. Coverage includes all five loaded assets, desktop/mobile light/dark layouts, no horizontal page overflow, reduced motion, single-Byte workspace placement, and mascot-free code/populated-chat views. The one-off capture spec is retained locally under ignored `artifacts/mascot-visual-checks.spec.ts`.
+- Inspected desktop light/dark home, full home, mobile home, and compact workspace screenshots. Current evidence is in ignored `artifacts/canopy-mascot-home*.png` and `artifacts/canopy-mascot-workspace*.png`. Character art remains decorative and never represents an actual tool operation or inclusion status.
+- This update changes presentation and static assets. Backend tests, live inference, and the full 25-workflow suite were not rerun for this artwork-only change; the complete baseline below remains separately recorded. [Asset provenance, prompts, and placement](docs/mascots.md) describe generation and web encoding.
+
+Last complete regression baseline: **2026-10-23**, using Node **26.12.1**, npm **11.20.0**, and installed system Chromium. The current home/workspace split and coding preferences have passed **61 backend tests**, the checked production build, **one production restart test**, and **25 browser workflows**. Checks were run through `npm test`, `npm run build`, `npm run test:production`, and `npm run test:e2e`. The application is a local, single-user workspace. No public deployment or live neural-model performance is claimed.
 
 ## Completed checks
 

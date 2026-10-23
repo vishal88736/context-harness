@@ -10,7 +10,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { Logo } from "./ui";
-import { WelcomeIllustration } from "./WelcomeIllustration";
+import { CanopyMascot } from "./CanopyMascot";
 
 export function HomePage({
   onOpenWorkspace,
@@ -98,12 +98,23 @@ export function HomePage({
               <ShieldCheck size={14} /> Local workspace. Your choice of model.
             </span>
           </div>
-          <div className="home-art">
-            <WelcomeIllustration />
-            <span className="home-art-label">
-              A little structure.
-              <br />A lot more clarity.
+          <div className="home-art" aria-hidden="true">
+            <div className="home-mascot-orbit home-mascot-orbit-outer" />
+            <div className="home-mascot-orbit home-mascot-orbit-inner" />
+            <span className="home-orbit-card home-orbit-sources">
+              <Files size={16} /> your sources
             </span>
+            <span className="home-orbit-card home-orbit-context">
+              <Layers3 size={16} /> clear context
+            </span>
+            <span className="home-orbit-code">
+              <Code2 size={24} />
+            </span>
+            <CanopyMascot name="byte" className="home-hero-mascot" priority />
+            <div className="home-art-caption">
+              <span className="home-mascot-name">Meet Byte</span>
+              <span>A little structure. A lot more clarity.</span>
+            </div>
           </div>
         </section>
         <div className="home-capabilities" aria-label="Workspace capabilities">
@@ -136,9 +147,13 @@ export function HomePage({
           </div>
           <div className="home-feature-grid">
             <article>
-              <span className="home-feature-icon">
-                <Files size={21} />
-              </span>
+              <div
+                className="home-feature-art home-feature-node"
+                aria-hidden="true"
+              >
+                <CanopyMascot name="node" />
+                <span className="home-mascot-name">Node</span>
+              </div>
               <h3>Bring the right sources</h3>
               <p>
                 Select files, folders, instructions, previous chats, approved
@@ -147,9 +162,13 @@ export function HomePage({
               </p>
             </article>
             <article>
-              <span className="home-feature-icon">
-                <Eye size={21} />
-              </span>
+              <div
+                className="home-feature-art home-feature-roo"
+                aria-hidden="true"
+              >
+                <CanopyMascot name="roo" />
+                <span className="home-mascot-name">Roo</span>
+              </div>
               <h3>See the effective request</h3>
               <p>
                 Preview the assembled payload, actual excerpts, included
@@ -158,9 +177,13 @@ export function HomePage({
               </p>
             </article>
             <article>
-              <span className="home-feature-icon">
-                <Layers3 size={21} />
-              </span>
+              <div
+                className="home-feature-art home-feature-stack"
+                aria-hidden="true"
+              >
+                <CanopyMascot name="stack" />
+                <span className="home-mascot-name">Stack</span>
+              </div>
               <h3>Keep useful configurations</h3>
               <p>
                 Save context profiles for coding, debugging, research, and
@@ -173,8 +196,12 @@ export function HomePage({
 
         <section className="home-build-section home-section">
           <div className="home-build-mark" aria-hidden="true">
-            <Code2 size={44} />
-            <span>Room to focus.</span>
+            <div className="home-build-grid" />
+            <CanopyMascot name="codey" className="home-build-mascot" />
+            <div className="home-build-caption">
+              <span className="home-mascot-name">Codey</span>
+              <span>Room to focus.</span>
+            </div>
           </div>
           <div className="home-section-heading">
             <span className="home-eyebrow">02 / Made for the work</span>

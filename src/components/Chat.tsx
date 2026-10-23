@@ -40,6 +40,7 @@ import {
 } from "../api";
 import { CopyButton, Logo, Spinner } from "./ui";
 import { ContextOverview } from "./ContextOverview";
+import { CanopyMascot } from "./CanopyMascot";
 
 function plain(node: ReactNode): string {
   return Children.toArray(node)
@@ -243,7 +244,10 @@ export function EmptyWorkspace({
   return (
     <div className="workspace-empty">
       <div className="workspace-empty-heading">
-        <h1>New conversation</h1>
+        <div className="workspace-empty-title">
+          <CanopyMascot name="byte" className="workspace-mascot" />
+          <h1>New conversation</h1>
+        </div>
         <button className="secondary-button" onClick={() => onAddSource()}>
           <Plus size={14} /> Add context
         </button>
