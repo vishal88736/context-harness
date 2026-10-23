@@ -7,21 +7,36 @@ import {
   FileCode2,
   Folder,
   FolderOpen,
+  Maximize2,
+  Minimize2,
   PanelLeftClose,
   Plus,
   RefreshCw,
   Save,
+  SlidersHorizontal,
   X,
 } from "lucide-react";
 import { api, type Source, type Workspace } from "../api";
-import { Modal, Spinner } from "./ui";
-import { SourceEditor } from "./SourceEditor";
+import {
+  defaultEditorPreferences,
+  readEditorPreferences,
+  writeEditorPreferences,
+  type EditorPreferences,
+} from "../editor-preferences";
+import "../editor-preferences.css";
+import { Modal, Spinner, Toggle } from "./ui";
+import {
+  SourceEditor,
+  editorLanguage,
+  type EditorCursor,
+} from "./SourceEditor";
 
 type FileEntry = { name: string; path: string; directory: boolean };
 type EditorFile = {
   path: string;
   content: string;
   draft: string;
+  draftVersion: number;
   hash: string;
   redacted: boolean;
 };
@@ -65,6 +80,10 @@ export function CodeWorkbench({
   const session = sessions[workspace.id] ?? empty();
   const file = session.tabs.find((tab) => tab.path === session.active);
   const [collapsed, setCollapsed] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [preferences, setPreferences] = useState(readEditorPreferences);
+  const [cursor, setCursor] = useState<EditorCursor>({ line: 1, column: 1 });
   const [busy, setBusy] = useState(false);
   const [proposal, setProposal] = useState<
     (Proposal & { workspaceId: string; draft: string }) | null
@@ -72,6 +91,13 @@ export function CodeWorkbench({
   const [closing, setClosing] = useState<string | null>(null);
   const [reloading, setReloading] = useState<string | null>(null);
   const navigation = useRef(0);
+  const fileNavigation = useRef(new Map<string, number>());
+  const pendingFileReads = useRef(
+    new Map<string, Promise<Omit<EditorFile, "draft" | "draftVersion">>>(),
+  );
+  useEffect(() => {
+    writeEditorPreferences(preferences);
+  }, [preferences]);
   function patch(workspaceId: string, update: (previous: Session) => Session) {
     setSessions((previous) => ({
       ...previous,
@@ -119,31 +145,70 @@ export function CodeWorkbench({
   }, [hasDrafts]);
   async function open(path: string, reload = false) {
     const workspaceId = workspace.id;
+    const intent = (fileNavigation.current.get(workspaceId) ?? 0) + 1;
+    fileNavigation.current.set(workspaceId, intent);
+    const draftVersion = session.tabs.find(
+      (tab) => tab.path === path,
+    )?.draftVersion;
     if (!reload && session.tabs.some((tab) => tab.path === path)) {
       patch(workspaceId, (s) => ({ ...s, active: path }));
       return;
     }
     patch(workspaceId, (s) => ({ ...s, error: "" }));
+    const key = JSON.stringify([workspaceId, path]);
+    let read = pendingFileReads.current.get(key);
+    if (!read) {
+      read = api<Omit<EditorFile, "draft" | "draftVersion">>(
+        `/workspaces/${workspaceId}/file?path=${encodeURIComponent(path)}`,
+      );
+      pendingFileReads.current.set(key, read);
+    }
     try {
-      const result = await api<{
-        path: string;
-        content: string;
-        hash: string;
-        redacted: boolean;
-      }>(`/workspaces/${workspaceId}/file?path=${encodeURIComponent(path)}`);
-      const next = { ...result, path, draft: result.content };
-      patch(workspaceId, (s) => ({
-        ...s,
-        active: path,
-        tabs: s.tabs.some((t) => t.path === path)
-          ? s.tabs.map((t) => (t.path === path ? next : t))
-          : [...s.tabs, next],
-      }));
+      const result = await read;
+      patch(workspaceId, (s) => {
+        const existing = s.tabs.find((tab) => tab.path === path);
+        // A reload can discard only the draft that the user confirmed.
+        if (reload && (!existing || existing.draftVersion !== draftVersion))
+          return existing
+            ? {
+                ...s,
+                error:
+                  "Your draft changed while reloading. Your edits were kept.",
+              }
+            : s;
+        const next = {
+          ...result,
+          path,
+          draft: result.content,
+          draftVersion: (existing?.draftVersion ?? -1) + 1,
+        };
+        return {
+          ...s,
+          active:
+            fileNavigation.current.get(workspaceId) === intent
+              ? path
+              : s.active,
+          // Normal reads must never replace a tab that opened while awaiting I/O.
+          tabs: existing
+            ? reload
+              ? s.tabs.map((tab) => (tab.path === path ? next : tab))
+              : s.tabs
+            : [...s.tabs, next],
+        };
+      });
     } catch (e) {
-      patch(workspaceId, (s) => ({ ...s, error: (e as Error).message }));
+      if (fileNavigation.current.get(workspaceId) === intent)
+        patch(workspaceId, (s) => ({ ...s, error: (e as Error).message }));
+    } finally {
+      if (pendingFileReads.current.get(key) === read)
+        pendingFileReads.current.delete(key);
     }
   }
   function close(path: string) {
+    fileNavigation.current.set(
+      workspace.id,
+      (fileNavigation.current.get(workspace.id) ?? 0) + 1,
+    );
     patch(workspace.id, (s) => {
       const tabs = s.tabs.filter((t) => t.path !== path);
       return {
@@ -210,10 +275,11 @@ export function CodeWorkbench({
     !!file &&
     sources.some((s) => s.enabled && s.type === "file" && s.path === file.path);
   return (
-    <div className="coding-workspace">
+    <div className={`coding-workspace ${focused ? "is-editor-focused" : ""}`}>
       <aside
         className={`file-explorer ${collapsed ? "is-collapsed" : ""}`}
         aria-label="Project files"
+        hidden={focused}
       >
         <div className="explorer-header">
           <strong>EXPLORER</strong>
@@ -293,6 +359,25 @@ export function CodeWorkbench({
         )}
       </aside>
       <section className="code-workbench" aria-label="Code editor">
+        <div className="editor-workspace-tools">
+          <button
+            className="text-button editor-focus-button"
+            aria-label={focused ? "Exit editor focus" : "Focus editor"}
+            aria-pressed={focused}
+            onClick={() => setFocused(!focused)}
+          >
+            {focused ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+            {focused ? "Exit focus" : "Focus editor"}
+          </button>
+          <button
+            className="text-button"
+            aria-label="Editor settings"
+            onClick={() => setSettingsOpen(true)}
+          >
+            <SlidersHorizontal size={14} />
+            Editor settings
+          </button>
+        </div>
         <div className="editor-tabs" role="tablist" aria-label="Open files">
           {session.tabs.map((tab) => (
             <div className="editor-tab-wrap" key={tab.path}>
@@ -300,9 +385,7 @@ export function CodeWorkbench({
                 className="editor-tab"
                 role="tab"
                 aria-selected={tab.path === session.active}
-                onClick={() =>
-                  patch(workspace.id, (s) => ({ ...s, active: tab.path }))
-                }
+                onClick={() => void open(tab.path)}
               >
                 <FileCode2 size={13} />
                 {tab.path.split("/").pop()}
@@ -385,11 +468,26 @@ export function CodeWorkbench({
                 path={file.path}
                 readOnly={file.redacted}
                 value={file.draft}
+                preferences={preferences}
+                onCursorChange={(position) => {
+                  setCursor((previous) =>
+                    previous.line === position.line &&
+                    previous.column === position.column
+                      ? previous
+                      : position,
+                  );
+                }}
                 onChange={(value) => {
                   patch(workspace.id, (s) => ({
                     ...s,
                     tabs: s.tabs.map((t) =>
-                      t.path === file.path ? { ...t, draft: value } : t,
+                      t.path === file.path
+                        ? {
+                            ...t,
+                            draft: value,
+                            draftVersion: t.draftVersion + 1,
+                          }
+                        : t,
                     ),
                   }));
                 }}
@@ -402,10 +500,16 @@ export function CodeWorkbench({
             <div className="editor-status">
               <span>
                 {file.draft !== file.content
-                  ? "Unsaved draft · review a diff to save"
+                  ? "Unsaved draft"
                   : "Saved on disk"}
               </span>
-              <span>{file.draft.split("\n").length} lines · UTF-8</span>
+              <span className="editor-position" aria-label="Cursor position">
+                Ln {cursor.line}, Col {cursor.column}
+              </span>
+              <span>
+                {editorLanguage(file.path)} · Spaces: {preferences.tabSize} ·
+                UTF-8
+              </span>
             </div>
           </>
         ) : (
@@ -423,6 +527,89 @@ export function CodeWorkbench({
           </div>
         )}
       </section>
+      {settingsOpen && (
+        <Modal title="Editor settings" onClose={() => setSettingsOpen(false)}>
+          <div className="editor-preferences">
+            <label className="editor-preference-row">
+              <span>Font size</span>
+              <select
+                aria-label="Editor font size"
+                value={preferences.fontSize}
+                onChange={(event) =>
+                  setPreferences((previous) => ({
+                    ...previous,
+                    fontSize: Number(
+                      event.target.value,
+                    ) as EditorPreferences["fontSize"],
+                  }))
+                }
+              >
+                {[12, 14, 16, 18].map((size) => (
+                  <option key={size} value={size}>
+                    {size} px
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="editor-preference-row">
+              <span>Indentation</span>
+              <select
+                aria-label="Editor indentation"
+                value={preferences.tabSize}
+                onChange={(event) =>
+                  setPreferences((previous) => ({
+                    ...previous,
+                    tabSize: Number(
+                      event.target.value,
+                    ) as EditorPreferences["tabSize"],
+                  }))
+                }
+              >
+                <option value={2}>2 spaces</option>
+                <option value={4}>4 spaces</option>
+              </select>
+            </label>
+            <div className="editor-preference-row">
+              <span>Word wrap</span>
+              <Toggle
+                label="Editor word wrap"
+                checked={preferences.wordWrap}
+                onChange={() =>
+                  setPreferences((previous) => ({
+                    ...previous,
+                    wordWrap: !previous.wordWrap,
+                  }))
+                }
+              />
+            </div>
+            <div className="editor-shortcuts" aria-label="Editor shortcuts">
+              <span>
+                Review changes <kbd>Ctrl / ⌘ S</kbd>
+              </span>
+              <span>
+                Find / replace <kbd>Ctrl / ⌘ F</kbd>
+              </span>
+              <span>
+                Leave editor <kbd>Esc, then Tab</kbd>
+              </span>
+            </div>
+          </div>
+          <div className="modal-actions">
+            <button
+              className="secondary-button"
+              onClick={() => setPreferences({ ...defaultEditorPreferences })}
+            >
+              Reset editor settings
+            </button>
+            <button
+              className="primary-button"
+              onClick={() => setSettingsOpen(false)}
+            >
+              Done
+            </button>
+          </div>
+        </Modal>
+      )}
       {proposal && (
         <Modal
           title="Review your file change"

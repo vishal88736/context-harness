@@ -1,7 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
 test.beforeEach(async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/workspace");
   await expect(
     page.getByRole("textbox", { name: "Message Canopy" }),
   ).toBeVisible();
@@ -37,7 +37,7 @@ test("9. Desktop sidebar remains visible through context navigation; polished em
     page.getByRole("complementary", { name: "Conversation sidebar" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: /Your next build/ }),
+    page.getByRole("heading", { name: "New conversation", exact: true }),
   ).toBeVisible();
   await expect(
     page.getByRole("complementary", { name: "Conversation context" }),

@@ -22,7 +22,7 @@ export function FolderPicker({
   const [listing, setListing] = useState<Folders | null>(null);
   const [location, setLocation] = useState("");
   const [name, setName] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [opening, setOpening] = useState(false);
   const [error, setError] = useState("");
   const sequence = useRef(0);
@@ -97,6 +97,7 @@ export function FolderPicker({
           </button>
           <input
             aria-label="Folder location"
+            disabled={loading || opening}
             value={location}
             onChange={(e) => setLocation(e.target.value)}
             placeholder="Absolute path or ~/projects"

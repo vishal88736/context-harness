@@ -10,7 +10,11 @@ import {
 } from "@codemirror/state";
 import { EditorView, keymap } from "@codemirror/view";
 import { indentWithTab } from "@codemirror/commands";
-import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
+import {
+  HighlightStyle,
+  indentUnit,
+  syntaxHighlighting,
+} from "@codemirror/language";
 import { tags } from "@lezer/highlight";
 import { javascript } from "@codemirror/lang-javascript";
 import { json } from "@codemirror/lang-json";
@@ -18,14 +22,19 @@ import { python } from "@codemirror/lang-python";
 import { markdown } from "@codemirror/lang-markdown";
 import { html } from "@codemirror/lang-html";
 import { css } from "@codemirror/lang-css";
+import type { EditorPreferences } from "../editor-preferences";
+
+export type EditorCursor = { line: number; column: number };
 
 type SourceEditorProps = {
   documentId: string;
   path: string;
   value: string;
   readOnly: boolean;
+  preferences: EditorPreferences;
   onChange: (value: string) => void;
   onSave: () => void;
+  onCursorChange?: (position: EditorCursor) => void;
 };
 type CachedDocument = {
   state: EditorState;
@@ -52,9 +61,32 @@ function language(path: string): Extension {
   return [];
 }
 
-function configuration(path: string, readOnly: boolean): Extension {
+export function editorLanguage(path: string): string {
+  const extension = path.split(".").at(-1)?.toLowerCase() ?? "";
+  if (["ts", "tsx", "mts", "cts"].includes(extension)) return "TypeScript";
+  if (["js", "jsx", "mjs", "cjs"].includes(extension)) return "JavaScript";
+  if (extension === "json") return "JSON";
+  if (["py", "pyw"].includes(extension)) return "Python";
+  if (["md", "markdown"].includes(extension)) return "Markdown";
+  if (["html", "htm"].includes(extension)) return "HTML";
+  if (extension === "css") return "CSS";
+  return "Plain text";
+}
+
+function configuration(
+  path: string,
+  readOnly: boolean,
+  preferences: EditorPreferences,
+): Extension {
   return [
     language(path),
+    EditorState.tabSize.of(preferences.tabSize),
+    indentUnit.of(" ".repeat(preferences.tabSize)),
+    preferences.wordWrap ? EditorView.lineWrapping : [],
+    EditorView.theme({
+      "&": { fontSize: `${preferences.fontSize}px` },
+      ".cm-scroller": { lineHeight: "1.65" },
+    }),
     EditorState.readOnly.of(readOnly),
     EditorView.editable.of(!readOnly),
     EditorView.contentAttributes.of({
@@ -72,69 +104,64 @@ function configuration(path: string, readOnly: boolean): Extension {
   ];
 }
 
-const lightTheme = EditorView.theme(
-  {
-    "&": {
-      height: "100%",
-      color: "var(--text)",
-      backgroundColor: "var(--surface)",
-      fontSize: "14px",
-    },
-    "&.cm-focused": { outline: "none" },
-    ".cm-scroller": {
-      overflow: "auto",
-      fontFamily: 'ui-monospace, "SFMono-Regular", Consolas, monospace',
-      lineHeight: "22px",
-    },
-    ".cm-content": { padding: "15px 0", caretColor: "var(--accent)" },
-    ".cm-line": { padding: "0 18px" },
-    ".cm-gutters": {
-      color: "var(--muted)",
-      backgroundColor: "var(--bg)",
-      borderRight: "1px solid var(--border-soft)",
-    },
-    ".cm-gutterElement": { padding: "0 9px" },
-    ".cm-activeLine": { backgroundColor: "var(--surface-2)" },
-    ".cm-activeLineGutter": {
-      color: "var(--accent)",
-      backgroundColor: "var(--surface-2)",
-    },
-    ".cm-cursor, .cm-dropCursor": { borderLeftColor: "var(--accent)" },
-    "&.cm-focused .cm-selectionBackground, .cm-selectionBackground": {
-      backgroundColor: "var(--selected)",
-    },
-    ".cm-selectionMatch": { backgroundColor: "var(--highlight-wash)" },
-    ".cm-foldPlaceholder": {
-      color: "var(--accent)",
-      backgroundColor: "var(--bg)",
-      border: "1px solid var(--border)",
-      borderRadius: "4px",
-    },
-    ".cm-panels": {
-      color: "var(--secondary)",
-      backgroundColor: "var(--bg)",
-    },
-    ".cm-searchMatch": {
-      backgroundColor: "var(--highlight-wash)",
-      outline: "1px solid var(--highlight)",
-    },
-    ".cm-searchMatch-selected": { backgroundColor: "var(--selected)" },
-    ".cm-matchingBracket": {
-      backgroundColor: "var(--highlight-wash)",
-      outline: "1px solid var(--highlight)",
-    },
-    ".cm-tooltip": {
-      backgroundColor: "var(--surface)",
-      border: "1px solid var(--border)",
-      borderRadius: "6px",
-    },
-    ".cm-tooltip-autocomplete > ul > li[aria-selected]": {
-      color: "var(--accent)",
-      backgroundColor: "var(--selected)",
-    },
+const editorTheme = EditorView.theme({
+  "&": {
+    height: "100%",
+    color: "var(--text)",
+    backgroundColor: "var(--surface)",
   },
-  { dark: false },
-);
+  "&.cm-focused": { outline: "none" },
+  ".cm-scroller": {
+    overflow: "auto",
+    fontFamily: 'ui-monospace, "SFMono-Regular", Consolas, monospace',
+  },
+  ".cm-content": { padding: "15px 0", caretColor: "var(--accent)" },
+  ".cm-line": { padding: "0 18px" },
+  ".cm-gutters": {
+    color: "var(--muted)",
+    backgroundColor: "var(--bg)",
+    borderRight: "1px solid var(--border-soft)",
+  },
+  ".cm-gutterElement": { padding: "0 9px" },
+  ".cm-activeLine": { backgroundColor: "var(--surface-2)" },
+  ".cm-activeLineGutter": {
+    color: "var(--accent)",
+    backgroundColor: "var(--surface-2)",
+  },
+  ".cm-cursor, .cm-dropCursor": { borderLeftColor: "var(--accent)" },
+  "&.cm-focused .cm-selectionBackground, .cm-selectionBackground": {
+    backgroundColor: "var(--selected)",
+  },
+  ".cm-selectionMatch": { backgroundColor: "var(--highlight-wash)" },
+  ".cm-foldPlaceholder": {
+    color: "var(--accent)",
+    backgroundColor: "var(--bg)",
+    border: "1px solid var(--border)",
+    borderRadius: "4px",
+  },
+  ".cm-panels": {
+    color: "var(--secondary)",
+    backgroundColor: "var(--bg)",
+  },
+  ".cm-searchMatch": {
+    backgroundColor: "var(--highlight-wash)",
+    outline: "1px solid var(--highlight)",
+  },
+  ".cm-searchMatch-selected": { backgroundColor: "var(--selected)" },
+  ".cm-matchingBracket": {
+    backgroundColor: "var(--highlight-wash)",
+    outline: "1px solid var(--highlight)",
+  },
+  ".cm-tooltip": {
+    backgroundColor: "var(--surface)",
+    border: "1px solid var(--border)",
+    borderRadius: "6px",
+  },
+  ".cm-tooltip-autocomplete > ul > li[aria-selected]": {
+    color: "var(--accent)",
+    backgroundColor: "var(--selected)",
+  },
+});
 
 const syntaxTheme = syntaxHighlighting(
   HighlightStyle.define([
@@ -213,11 +240,14 @@ export function SourceEditor(props: SourceEditorProps) {
           doc: latest.current.value,
           extensions: [
             basicSetup,
-            EditorState.tabSize.of(2),
             settings.current.of(
-              configuration(latest.current.path, latest.current.readOnly),
+              configuration(
+                latest.current.path,
+                latest.current.readOnly,
+                latest.current.preferences,
+              ),
             ),
-            lightTheme,
+            editorTheme,
             syntaxTheme,
             Prec.highest(
               keymap.of([
@@ -235,11 +265,25 @@ export function SourceEditor(props: SourceEditorProps) {
             EditorView.updateListener.of((update) => {
               if (update.docChanged && !externalUpdate.current)
                 latest.current.onChange(update.state.doc.toString());
+              if (update.selectionSet || update.docChanged) {
+                const position = update.state.selection.main.head;
+                const line = update.state.doc.lineAt(position);
+                latest.current.onCursorChange?.({
+                  line: line.number,
+                  column: position - line.from + 1,
+                });
+              }
             }),
           ],
         }),
     });
     view.current = editor;
+    const position = editor.state.selection.main.head;
+    const line = editor.state.doc.lineAt(position);
+    latest.current.onCursorChange?.({
+      line: line.number,
+      column: position - line.from + 1,
+    });
     const restore = requestAnimationFrame(() => {
       if (cached) {
         editor.scrollDOM.scrollTop = cached.scrollTop;
@@ -265,10 +309,10 @@ export function SourceEditor(props: SourceEditorProps) {
   useLayoutEffect(() => {
     view.current?.dispatch({
       effects: settings.current.reconfigure(
-        configuration(props.path, props.readOnly),
+        configuration(props.path, props.readOnly, props.preferences),
       ),
     });
-  }, [props.documentId, props.path, props.readOnly]);
+  }, [props.documentId, props.path, props.readOnly, props.preferences]);
 
   useLayoutEffect(() => {
     const editor = view.current;

@@ -4,7 +4,7 @@ import path from "node:path";
 import { randomUUID } from "node:crypto";
 
 async function openProject(page: Page) {
-  await page.goto("/");
+  await page.goto("/workspace");
   await expect(page.getByLabel("Message Canopy")).toBeVisible();
   const bootstrap = await (await page.request.get("/api/bootstrap")).json();
   const root = path.join(
@@ -15,8 +15,21 @@ async function openProject(page: Page) {
   const original = 'export const external = "EXTERNAL_PROJECT_SENTINEL";\n';
   await writeFile(path.join(root, "src/notes.ts"), original);
   await writeFile(path.join(root, "README.md"), "# External project\n");
+  let releaseFolders!: () => void;
+  const initialFolders = new Promise<void>((resolve) => {
+    releaseFolders = resolve;
+  });
+  await page.route("**/api/folders", async (route) => {
+    const response = await route.fetch();
+    await initialFolders;
+    await route.fulfill({ response });
+  });
   await page.getByRole("button", { name: "Open folder", exact: true }).click();
   const picker = page.getByRole("dialog", { name: "Open a project folder" });
+  await expect(picker.getByLabel("Folder location")).toBeDisabled();
+  releaseFolders();
+  await expect(picker.getByLabel("Folder location")).toBeEnabled();
+  await page.unroute("**/api/folders");
   await picker.getByLabel("Folder location").fill(root);
   await expect(
     picker.getByRole("button", { name: "Open this folder", exact: true }),

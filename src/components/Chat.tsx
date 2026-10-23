@@ -18,10 +18,7 @@ import {
   Code2,
   Eye,
   FileCode2,
-  FileText,
-  Folder,
   GitPullRequest,
-  Globe,
   Layers3,
   LoaderCircle,
   Paperclip,
@@ -31,7 +28,6 @@ import {
   ShieldCheck,
   Square,
   Terminal,
-  Wrench,
   X,
 } from "lucide-react";
 import {
@@ -44,7 +40,6 @@ import {
 } from "../api";
 import { CopyButton, Logo, Spinner } from "./ui";
 import { ContextOverview } from "./ContextOverview";
-import { WelcomeIllustration } from "./WelcomeIllustration";
 
 function plain(node: ReactNode): string {
   return Children.toArray(node)
@@ -239,56 +234,18 @@ export function ToolCard({
 export function EmptyWorkspace({
   onContext,
   onAddSource,
-  onTools,
-  onWebContext,
-  onProviders,
   sources,
 }: {
   onContext: () => void;
   onAddSource: (type?: Source["type"]) => void;
-  onTools: () => void;
-  onWebContext: () => void;
-  onProviders: () => void;
   sources: Source[];
 }) {
   return (
-    <div className="welcome">
-      <div className="welcome-hero">
-        <div className="welcome-copy">
-          <h1>
-            Your next build.
-            <br />
-            <span>In clear context.</span>
-          </h1>
-        </div>
-        <WelcomeIllustration />
-      </div>
-      <nav className="welcome-capabilities" aria-label="Context shortcuts">
-        <button
-          className="welcome-capability files"
-          onClick={() => onAddSource("file")}
-        >
-          <Folder size={15} /> Files &amp; folders
-        </button>
-        <button
-          className="welcome-capability instructions"
-          onClick={() => onAddSource("instruction")}
-        >
-          <FileText size={15} /> Instructions
-        </button>
-        <button className="welcome-capability tools" onClick={onTools}>
-          <Wrench size={15} /> Tools
-        </button>
-        <button className="welcome-capability web" onClick={onWebContext}>
-          <Globe size={15} /> Web context
-        </button>
-        <button className="welcome-capability providers" onClick={onProviders}>
-          <Layers3 size={15} /> Multiple providers
-        </button>
-      </nav>
-      <div className="welcome-actions">
-        <button className="welcome-add-source" onClick={() => onAddSource()}>
-          <Plus size={15} /> Add your context <ArrowRight size={14} />
+    <div className="workspace-empty">
+      <div className="workspace-empty-heading">
+        <h1>New conversation</h1>
+        <button className="secondary-button" onClick={() => onAddSource()}>
+          <Plus size={14} /> Add context
         </button>
       </div>
       <ContextOverview sources={sources} onOpen={onContext} />

@@ -46,8 +46,8 @@ export class Store {
       "PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;",
     );
     this.migrate();
-    // Appearance is intentionally light-only; migrate older preferences without touching user data.
-    this.setSetting("theme", "light");
+    if (!["light", "dark", "system"].includes(this.setting("theme", "")))
+      this.setSetting("theme", "light");
     if (!this.workspaces().length)
       this.createWorkspace({
         name: path.basename(root),
@@ -421,7 +421,7 @@ export class Store {
       .prepare(
         "INSERT INTO settings VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
       )
-      .run(key, json(key === "theme" ? "light" : value));
+      .run(key, json(value));
   }
   recordFileChange(change: FileChangeAudit) {
     this.db

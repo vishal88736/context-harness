@@ -10,6 +10,8 @@ import {
   Info,
   KeyRound,
   Layers3,
+  Monitor,
+  Moon,
   Plus,
   RefreshCw,
   Save,
@@ -30,6 +32,7 @@ import {
 import { Modal, Spinner, Toggle } from "./ui";
 import { FolderPicker } from "./FolderPicker";
 import { adapterBaseUrls, providerPresets } from "../provider-presets";
+import { useAppearance, type ThemeMode } from "../appearance";
 
 export function SettingsDialog({
   data,
@@ -46,6 +49,7 @@ export function SettingsDialog({
   onClose: () => void;
   onWorkspace: (id: string) => void;
 }) {
+  const { theme, setTheme } = useAppearance();
   const [tab, setTab] = useState(initialTab ?? "providers");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -753,18 +757,45 @@ export function SettingsDialog({
             </>
           ) : tab === "appearance" ? (
             <>
-              <h3>A clear space to build.</h3>
+              <h3>Workspace appearance</h3>
               <p className="field-help">
-                Canopy uses an off-white workspace with lavender navigation,
-                teal actions, apricot highlights, and navy text. The interface
-                stays light regardless of your operating system theme.
+                Choose a light or dark workspace, or follow your system.
               </p>
-              <div className="notice">
-                <Sun size={18} />
-                <p>
-                  Light theme is always enabled. Existing projects, providers,
-                  and conversations remain saved.
-                </p>
+              <div
+                className="appearance-options"
+                role="group"
+                aria-label="Color theme"
+              >
+                {(
+                  [
+                    ["light", "Light", Sun],
+                    ["dark", "Dark", Moon],
+                    ["system", "System", Monitor],
+                  ] as const
+                ).map(([value, label, Icon]) => (
+                  <button
+                    key={value}
+                    className="appearance-option"
+                    data-mode={value}
+                    aria-label={label}
+                    aria-pressed={theme === value}
+                    disabled={busy}
+                    onClick={() =>
+                      perform(async () => {
+                        await api("/settings", "PUT", { theme: value });
+                        setTheme(value as ThemeMode);
+                        await onRefresh();
+                      })
+                    }
+                  >
+                    <span className="appearance-preview" aria-hidden="true" />
+                    <span>
+                      <Icon size={15} />
+                      {label}
+                      {theme === value && <Check size={14} />}
+                    </span>
+                  </button>
+                ))}
               </div>
             </>
           ) : (

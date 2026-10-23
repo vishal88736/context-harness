@@ -4,7 +4,7 @@ import { expect, test, type Page } from "@playwright/test";
 import type { Bootstrap, Conversation, Source } from "../src/api";
 
 test.beforeEach(async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/workspace");
   await expect(page.getByLabel("Message Canopy")).toBeVisible();
 });
 
@@ -72,7 +72,7 @@ async function openEmptyConversation(page: Page, id: string) {
   await page.reload();
   await expect(page.getByLabel("Message Canopy")).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: /Your next build/ }),
+    page.getByRole("heading", { name: "New conversation", exact: true }),
   ).toBeVisible();
 }
 
@@ -210,18 +210,18 @@ test("Keyboard context overview navigation opens the panel without composing or 
   expect(requests).toEqual([]);
 });
 
-test("Light-only workspace keeps its appearance and context access across desktop and mobile", async ({
+test("Light, dark, and system preferences persist and keep context accessible across desktop and mobile", async ({
   page,
 }) => {
   const session = await bootstrap(page);
-  const chat = await conversation(page, session, "Light coding workspace", []);
+  const chat = await conversation(page, session, "Theme workspace", []);
   await openEmptyConversation(page, chat.id);
   const root = page.locator("html");
   await api(page, session, "PUT", "/settings", { theme: "dark" });
   await page.emulateMedia({ colorScheme: "dark" });
   await page.reload();
-  await expect(root).toHaveAttribute("data-theme", "light");
-  expect((await bootstrap(page)).settings.theme).toBe("light");
+  await expect(root).toHaveAttribute("data-theme", "dark");
+  expect((await bootstrap(page)).settings.theme).toBe("dark");
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   const settings = page.getByRole("dialog", {
     name: "A workspace that fits you.",
@@ -229,15 +229,63 @@ test("Light-only workspace keeps its appearance and context access across deskto
   await settings
     .getByRole("button", { name: "Appearance", exact: true })
     .click();
-  await expect(settings).toContainText("Light theme is always enabled");
+  const modes = settings.getByRole("group", { name: "Color theme" });
   await expect(
-    settings.getByRole("button", { name: "Dark", exact: true }),
-  ).toHaveCount(0);
+    modes.getByRole("button", { name: "Dark", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await modes.getByRole("button", { name: "System", exact: true }).click();
   await expect(
-    settings.getByRole("button", { name: "System", exact: true }),
-  ).toHaveCount(0);
+    modes.getByRole("button", { name: "System", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await page.emulateMedia({ colorScheme: "light" });
+  await expect(root).toHaveAttribute("data-theme", "light");
+  await page.emulateMedia({ colorScheme: "dark" });
+  await expect(root).toHaveAttribute("data-theme", "dark");
   await settings.getByRole("button", { name: "Done", exact: true }).click();
+  await page.reload();
+  await expect(root).toHaveAttribute("data-theme", "dark");
+  expect((await bootstrap(page)).settings.theme).toBe("system");
+  await expect(page.getByLabel("Message Canopy")).toBeVisible();
   await mkdir("artifacts", { recursive: true });
+  await page.screenshot({
+    path: "artifacts/canopy-dark-workspace.png",
+    animations: "disabled",
+  });
+  await page.getByRole("tab", { name: "Code", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Open folder src", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Open file alpha.ts", exact: true })
+    .click();
+  await expect(
+    page.getByRole("textbox", { name: "Edit src/alpha.ts", exact: true }),
+  ).toBeVisible();
+  await page.screenshot({
+    path: "artifacts/canopy-dark-code.png",
+    animations: "disabled",
+  });
+  await page.getByRole("tab", { name: "Conversation", exact: true }).click();
+  await page.getByRole("button", { name: "Home", exact: true }).click();
+  await expect(root).toHaveAttribute("data-theme", "dark");
+  await page.screenshot({
+    path: "artifacts/canopy-home-dark.png",
+    animations: "disabled",
+  });
+  await page
+    .getByRole("link", { name: "Resume workspace", exact: true })
+    .first()
+    .click();
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await settings
+    .getByRole("button", { name: "Appearance", exact: true })
+    .click();
+  await modes.getByRole("button", { name: "Light", exact: true }).click();
+  await expect(root).toHaveAttribute("data-theme", "light");
+  await expect(
+    modes.getByRole("button", { name: "Light", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await settings.getByRole("button", { name: "Done", exact: true }).click();
   for (const viewport of [
     { width: 1440, height: 960 },
     { width: 1024, height: 768 },

@@ -2,10 +2,10 @@ import { mkdir } from "node:fs/promises";
 import { expect, test } from "@playwright/test";
 import type { Bootstrap, Conversation } from "../src/api";
 
-test("Welcome shortcuts open their real workflows and web excerpts remain explicit, inspectable context", async ({
+test("Clean workspace source controls keep files, instructions, permissions, providers, and web excerpts accessible", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/workspace");
   await expect(page.getByLabel("Message Canopy")).toBeVisible();
   const bootstrapResponse = await page.request.get("/api/bootstrap");
   expect(bootstrapResponse.ok()).toBe(true);
@@ -24,39 +24,49 @@ test("Welcome shortcuts open their real workflows and web excerpts remain explic
     }, chat.id);
     await page.reload();
     await expect(page.getByLabel("Message Canopy")).toBeVisible();
-    await expect(page.locator(".welcome-illustration")).toBeVisible();
-    const shortcuts = page.getByRole("navigation", {
-      name: "Context shortcuts",
-    });
+    await expect(
+      page.getByRole("heading", { name: "New conversation", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.locator('[data-route-page="workspace"] .welcome-illustration'),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("navigation", { name: "Context shortcuts" }),
+    ).toHaveCount(0);
     await mkdir("artifacts", { recursive: true });
     await page.screenshot({
-      path: "artifacts/canopy-welcome-elements.png",
+      path: "artifacts/canopy-clean-workspace.png",
       fullPage: true,
     });
 
-    await shortcuts
-      .getByRole("button", { name: "Files & folders", exact: true })
-      .click();
+    const addContext = page.getByRole("button", {
+      name: "Add context",
+      exact: true,
+    });
+    await addContext.click();
     const sources = page.getByRole("dialog", { name: "Add to your context" });
     await expect(
       sources.getByRole("button", { name: "src", exact: true }),
     ).toBeVisible();
     await sources.getByRole("button", { name: "Cancel", exact: true }).click();
 
-    await shortcuts
-      .getByRole("button", { name: "Instructions", exact: true })
+    await addContext.click();
+    await sources
+      .getByRole("button", { name: "Custom instructions", exact: true })
       .click();
     await expect(sources.getByLabel("Instructions / content")).toBeVisible();
     await sources.getByRole("button", { name: "Cancel", exact: true }).click();
 
-    await shortcuts.getByRole("button", { name: "Tools", exact: true }).click();
+    await page
+      .getByRole("button", { name: "Permissions", exact: true })
+      .click();
     await expect(page.getByLabel("Run commands permission")).toHaveValue(
       "deny",
     );
     await page.getByRole("button", { name: "Sources", exact: true }).click();
 
-    await shortcuts
-      .getByRole("button", { name: "Multiple providers", exact: true })
+    await page
+      .getByRole("button", { name: "Connect provider", exact: true })
       .click();
     const settings = page.getByRole("dialog", {
       name: "A workspace that fits you.",
@@ -69,8 +79,9 @@ test("Welcome shortcuts open their real workflows and web excerpts remain explic
     const url = "https://example.com/canopy-reference";
     const excerpt =
       "WELCOME_WEB_EXCERPT_SENTINEL: Use bounded, explicit context.";
-    await shortcuts
-      .getByRole("button", { name: "Web context", exact: true })
+    await addContext.click();
+    await sources
+      .getByRole("button", { name: "Web excerpt", exact: true })
       .click();
     const web = page.getByRole("dialog", { name: "Add web context" });
     await web.getByLabel("Page URL", { exact: true }).fill(url);
@@ -120,21 +131,15 @@ test("Welcome shortcuts open their real workflows and web excerpts remain explic
     });
     if (await closeContext.isVisible()) await closeContext.click();
     await page.setViewportSize({ width: 390, height: 844 });
-    for (const name of [
-      "Files & folders",
-      "Instructions",
-      "Tools",
-      "Web context",
-      "Multiple providers",
-    ]) {
-      const shortcut = shortcuts.getByRole("button", { name, exact: true });
-      await shortcut.scrollIntoViewIfNeeded();
-      await expect(shortcut).toBeInViewport();
-      const box = await shortcut.boundingBox();
-      expect(box).not.toBeNull();
-      expect(box!.x).toBeGreaterThanOrEqual(0);
-      expect(box!.x + box!.width).toBeLessThanOrEqual(390);
-    }
+    await expect(addContext).toBeInViewport();
+    await addContext.click();
+    const webExcerpt = sources.getByRole("button", {
+      name: "Web excerpt",
+      exact: true,
+    });
+    await webExcerpt.scrollIntoViewIfNeeded();
+    await expect(webExcerpt).toBeInViewport();
+    await sources.getByRole("button", { name: "Cancel", exact: true }).click();
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth),
     ).toBeLessThanOrEqual(390);

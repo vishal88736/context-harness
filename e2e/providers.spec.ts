@@ -215,7 +215,7 @@ for (const kind of ["anthropic", "gemini"] as const) {
     const key = `browser-${kind}-fixture-key-123456789`;
     let initial: Bootstrap | undefined;
     try {
-      await page.goto("/");
+      await page.goto("/workspace");
       await expect(page.getByLabel("Message Canopy")).toBeVisible();
       initial = await bootstrap(page);
       await page

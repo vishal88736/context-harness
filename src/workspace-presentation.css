@@ -1,4 +1,4 @@
-/* Canopy is a light, code-capable workspace. Color marks actions and context state. */
+/* Color marks actions and context state across workspace themes. */
 .app-shell {
   background: var(--bg);
 }
@@ -48,7 +48,7 @@
 }
 .new-chat svg,
 .new-chat kbd {
-  color: #fcfaf9e6;
+  color: var(--accent-ink);
 }
 .sidebar-search {
   margin-top: 15px;
@@ -657,7 +657,7 @@
 .composer-wrap {
   max-width: 1020px;
   padding: 14px clamp(24px, 4cqi, 44px) 0;
-  background: linear-gradient(0deg, var(--bg) 78%, #f8f7f500);
+  background: linear-gradient(0deg, var(--bg) 78%, transparent);
 }
 .composer {
   border: 1px solid var(--border);
@@ -711,11 +711,11 @@
   box-shadow: none;
 }
 .send-button {
-  color: var(--text);
+  color: #0c2236;
   background: var(--send);
 }
 .send-button:disabled {
-  color: var(--text);
+  color: #0c2236;
   background: var(--send);
   opacity: 0.8;
 }

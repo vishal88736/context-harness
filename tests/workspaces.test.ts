@@ -509,7 +509,7 @@ test("Folder picker reports permission errors and skips unreadable siblings", as
   }
 });
 
-test("External folders, conversations, light-only settings, and hash-only edit audits survive restart", async (t) => {
+test("External folders, conversations, theme preferences, and hash-only edit audits survive restart", async (t) => {
   const f = await fixture(t);
   const workspace = await f.connect();
   const conversation = await (
@@ -547,14 +547,14 @@ test("External folders, conversations, light-only settings, and hash-only edit a
       expectedHash: digest("persisted edit"),
     })
   ).json();
-  // Simulate an existing installation's old setting instead of the canonicalizing settings API.
+  // An existing preference must survive startup without being reset.
   f.service.store.db
     .prepare(
       "INSERT INTO settings VALUES('theme','\"dark\"') ON CONFLICT(key) DO UPDATE SET value=excluded.value",
     )
     .run();
   const restored = await f.restart();
-  assert.equal(restored.settings.theme, "light");
+  assert.equal(restored.settings.theme, "dark");
   assert.ok(
     restored.workspaces.some(
       (entry: { id: string; root: string }) =>
@@ -588,9 +588,10 @@ test("External folders, conversations, light-only settings, and hash-only edit a
     assert.equal((await f.call("/settings", "PUT", { theme })).status, 200);
     assert.equal(
       (await (await f.call("/bootstrap")).json()).settings.theme,
-      "light",
+      theme,
     );
-    assert.equal(f.service.store.setting("theme", ""), "light");
+    assert.equal(f.service.store.setting("theme", ""), theme);
+    assert.equal((await f.restart()).settings.theme, theme);
   }
 });
 

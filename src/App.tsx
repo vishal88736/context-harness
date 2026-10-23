@@ -45,6 +45,7 @@ import { ProfilesDialog } from "./components/Profiles";
 import { Logo, Modal, Spinner } from "./components/ui";
 import { FolderPicker } from "./components/FolderPicker";
 import { WebContextDialog } from "./components/WebContextDialog";
+import { useAppearance } from "./appearance";
 
 const CodeWorkbench = lazy(() =>
   import("./components/CodeWorkbench").then((module) => ({
@@ -64,7 +65,14 @@ const blankDraft = (): Draft => ({
   attachments: [],
   override: "",
 });
-export function App() {
+export function App({
+  active = true,
+  onHome,
+}: {
+  active?: boolean;
+  onHome: () => void;
+}) {
+  const { setTheme } = useAppearance();
   const [data, setData] = useState<Bootstrap | null>(null);
   const [detail, setDetail] = useState<Detail | null>(null);
   const [activeId, setActiveId] = useState("");
@@ -217,6 +225,7 @@ export function App() {
         const b = await api<Bootstrap>("/bootstrap");
         if (cancelled) return;
         setToken(b.csrf);
+        setTheme(b.settings.theme);
         setData(b);
         const stored = localStorage.getItem("canopy.activeConversation");
         const c =
@@ -244,8 +253,13 @@ export function App() {
     };
   }, []);
   useEffect(() => {
-    document.documentElement.dataset.theme = "light";
-  }, []);
+    if (!active) {
+      setDialog(null);
+      setInspector(null);
+      setAction(null);
+      setSidebarMobile(false);
+    }
+  }, [active]);
   useEffect(() => {
     localStorage.setItem("canopy.contextOpen", String(contextOpen));
   }, [contextOpen]);
@@ -261,6 +275,7 @@ export function App() {
     localStorage.setItem("canopy.contextWidth", String(panelWidth));
   }, [panelWidth]);
   useEffect(() => {
+    if (!active) return;
     function shortcuts(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
@@ -669,6 +684,7 @@ export function App() {
         Skip to composer
       </a>
       <Sidebar
+        onHome={onHome}
         data={data}
         activeId={activeId}
         workspaceId={workspaceId}
@@ -861,15 +877,6 @@ export function App() {
                   setContextOpen(true);
                 }}
                 onAddSource={openSource}
-                onTools={() => {
-                  setContextTab("permissions");
-                  setContextOpen(true);
-                }}
-                onWebContext={() => setDialog("web")}
-                onProviders={() => {
-                  setSettingsTab("providers");
-                  setDialog("settings");
-                }}
               />
             )}
           </div>
@@ -1031,6 +1038,7 @@ export function App() {
           data={data}
           conversationId={activeId}
           initialType={sourceType}
+          onWebContext={() => setDialog("web")}
           onClose={() => setDialog(null)}
           onAdd={async (sources) => {
             await updateConfig({

@@ -11,6 +11,7 @@ import {
   GripVertical,
   Layers3,
   Link2,
+  Globe,
   ListFilter,
   MessageSquare,
   Plus,
@@ -484,6 +485,7 @@ export function AddSourceDialog({
   onAdd,
   onClose,
   initialType = "file",
+  onWebContext,
 }: {
   workspace: Workspace;
   data: Bootstrap;
@@ -491,6 +493,7 @@ export function AddSourceDialog({
   onAdd: (s: Source[]) => Promise<void>;
   onClose: () => void;
   initialType?: Source["type"];
+  onWebContext?: () => void;
 }) {
   const [type, setType] = useState<Source["type"]>(initialType);
   const [folder, setFolder] = useState(".");
@@ -627,6 +630,12 @@ export function AddSourceDialog({
               {sourceLabels[t]}
             </button>
           ))}
+          {onWebContext && (
+            <button onClick={onWebContext}>
+              <Globe size={15} />
+              Web excerpt
+            </button>
+          )}
         </nav>
         <div className="source-dialog-body">
           {["file", "project"].includes(type) && (

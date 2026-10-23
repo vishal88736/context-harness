@@ -125,7 +125,7 @@ export async function createApp(options: {
       memories: store.memories(),
       settings: {
         defaultModel: store.setting("defaultModel", null),
-        theme: "light",
+        theme: store.setting("theme", "light"),
       },
     });
   });
