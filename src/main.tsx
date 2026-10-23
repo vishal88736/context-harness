@@ -1,12 +1,14 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import "@fontsource-variable/inter";
-import "highlight.js/styles/github-dark.css";
 import "./styles.css";
 import "./readability.css";
 import "./workspace-presentation.css";
 import "./context-presentation.css";
-import { App } from "./App";
+import { ApplicationRouter } from "./ApplicationRouter";
+import { AppearanceProvider } from "./appearance";
+import "./home-page.css";
+import "./appearance.css";
 
 class Boundary extends React.Component<
   { children: React.ReactNode },
@@ -32,7 +34,9 @@ class Boundary extends React.Component<
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <Boundary>
-      <App />
+      <AppearanceProvider>
+        <ApplicationRouter />
+      </AppearanceProvider>
     </Boundary>
   </React.StrictMode>,
 );

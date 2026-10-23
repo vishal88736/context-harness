@@ -11,6 +11,7 @@ import {
   GripVertical,
   Layers3,
   Link2,
+  Globe,
   ListFilter,
   MessageSquare,
   Plus,
@@ -298,6 +299,8 @@ export function ContextPanel({
   preview,
   width,
   onResize,
+  tab,
+  onTabChange,
 }: {
   conversation?: Conversation | null;
   workspace?: Workspace;
@@ -311,8 +314,9 @@ export function ContextPanel({
   preview: boolean;
   width: number;
   onResize: (n: number) => void;
+  tab: "sources" | "permissions";
+  onTabChange: (tab: "sources" | "permissions") => void;
 }) {
-  const [tab, setTab] = useState("sources");
   const config = conversation?.config;
   const enabled = config?.sources.filter((s) => s.enabled).length ?? 0;
   const profile = data.profiles.find((p) => p.id === config?.profileId);
@@ -364,22 +368,19 @@ export function ContextPanel({
           <X size={17} />
         </button>
       </div>
-      <div className="context-intro">
-        <span className="eyebrow">A CLEARER PICTURE</span>
-        <p>Choose what this conversation knows.</p>
-        <span>Independent context. Always in your control.</span>
-      </div>
       <div className="context-tabs">
         <button
           className={tab === "sources" ? "selected" : ""}
-          onClick={() => setTab("sources")}
+          aria-pressed={tab === "sources"}
+          onClick={() => onTabChange("sources")}
         >
           <Layers3 size={14} />
           Sources
         </button>
         <button
           className={tab === "permissions" ? "selected" : ""}
-          onClick={() => setTab("permissions")}
+          aria-pressed={tab === "permissions"}
+          onClick={() => onTabChange("permissions")}
         >
           <ShieldCheck size={14} />
           Permissions
@@ -409,23 +410,10 @@ export function ContextPanel({
             </div>
             {!config?.sources.length ? (
               <div className="context-empty">
-                <div className="context-orbit">
-                  <FileCode2 size={18} />
-                  <Folder size={17} />
-                  <BookOpen size={17} />
-                </div>
-                <h3>Start with what matters.</h3>
-                <p>
-                  Add files, instructions, or a folder.
-                  <br />
-                  Only enabled sources enter your context.
-                </p>
+                <p>No sources selected.</p>
                 <button className="secondary-button" onClick={onAdd}>
                   <Plus size={14} />
                   Add your first source
-                </button>
-                <button className="text-button" onClick={onProfiles}>
-                  Or start from a profile <ChevronRight size={13} />
                 </button>
               </div>
             ) : (
@@ -438,10 +426,7 @@ export function ContextPanel({
             )}
             <div className="context-note">
               <ShieldCheck size={14} />
-              <span>
-                Changes apply to your next request. Your conversation stays
-                right here.
-              </span>
+              <span>Changes apply to the next request.</span>
             </div>
           </>
         ) : config ? (
@@ -478,13 +463,13 @@ export function ContextPanel({
           <span>Inspect effective context</span>
           <ArrowIcon />
         </button>
-        <small>
-          {snapshot
-            ? preview
+        {snapshot && (
+          <small>
+            {preview
               ? "Preview · estimated token usage"
-              : "Last request · estimated token usage"
-            : "Preview exactly what will be sent"}
-        </small>
+              : "Last request · estimated token usage"}
+          </small>
+        )}
       </div>
     </aside>
   );
@@ -499,14 +484,18 @@ export function AddSourceDialog({
   conversationId,
   onAdd,
   onClose,
+  initialType = "file",
+  onWebContext,
 }: {
   workspace: Workspace;
   data: Bootstrap;
   conversationId?: string;
   onAdd: (s: Source[]) => Promise<void>;
   onClose: () => void;
+  initialType?: Source["type"];
+  onWebContext?: () => void;
 }) {
-  const [type, setType] = useState<Source["type"]>("file");
+  const [type, setType] = useState<Source["type"]>(initialType);
   const [folder, setFolder] = useState(".");
   const [listing, setListing] = useState<
     { name: string; path: string; directory: boolean }[] | null
@@ -641,6 +630,12 @@ export function AddSourceDialog({
               {sourceLabels[t]}
             </button>
           ))}
+          {onWebContext && (
+            <button onClick={onWebContext}>
+              <Globe size={15} />
+              Web excerpt
+            </button>
+          )}
         </nav>
         <div className="source-dialog-body">
           {["file", "project"].includes(type) && (

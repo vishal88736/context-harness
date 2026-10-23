@@ -13,6 +13,7 @@ import {
   Pin,
   Plus,
   Search,
+  House,
   Settings2,
   Trash2,
   X,
@@ -35,6 +36,7 @@ function dateGroup(timestamp: string) {
         : "Older";
 }
 export function Sidebar({
+  onHome,
   data,
   activeId,
   workspaceId,
@@ -51,6 +53,7 @@ export function Sidebar({
   onClose,
   sources,
 }: {
+  onHome: () => void;
   data: Bootstrap;
   activeId?: string;
   workspaceId: string;
@@ -102,10 +105,18 @@ export function Sidebar({
         <div className="brand-row">
           <a
             className="brand"
-            href="#"
+            href="/"
             onClick={(e) => {
+              if (
+                e.button !== 0 ||
+                e.metaKey ||
+                e.ctrlKey ||
+                e.shiftKey ||
+                e.altKey
+              )
+                return;
               e.preventDefault();
-              onNew();
+              onHome();
             }}
           >
             <Logo />
@@ -120,7 +131,14 @@ export function Sidebar({
           >
             <PanelLeftClose size={18} />
           </button>
-          <span className="local-badge">LOCAL</span>
+          <button
+            className="icon-button"
+            aria-label="Home"
+            title="Home"
+            onClick={onHome}
+          >
+            <House size={17} />
+          </button>
         </div>
         <button
           className="new-chat"

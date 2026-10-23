@@ -40,6 +40,7 @@ import {
 } from "../api";
 import { CopyButton, Logo, Spinner } from "./ui";
 import { ContextOverview } from "./ContextOverview";
+import { CanopyMascot } from "./CanopyMascot";
 
 function plain(node: ReactNode): string {
   return Children.toArray(node)
@@ -232,97 +233,26 @@ export function ToolCard({
   );
 }
 export function EmptyWorkspace({
-  onSuggestion,
   onContext,
   onAddSource,
-  workspaceName,
   sources,
 }: {
-  onSuggestion: (s: string) => void;
   onContext: () => void;
-  onAddSource: () => void;
-  workspaceName: string;
+  onAddSource: (type?: Source["type"]) => void;
   sources: Source[];
 }) {
   return (
-    <div className="welcome">
-      <div className="welcome-topline">
-        <span className="welcome-index">01 /</span>
-        <span className="eyebrow">NEW CONVERSATION</span>
-        <button className="welcome-context-link" onClick={onContext}>
-          <span className="status-dot" />
-          <strong>{workspaceName}</strong>
-          <ArrowRight size={13} />
+    <div className="workspace-empty">
+      <div className="workspace-empty-heading">
+        <div className="workspace-empty-title">
+          <CanopyMascot name="byte" className="workspace-mascot" />
+          <h1>New conversation</h1>
+        </div>
+        <button className="secondary-button" onClick={() => onAddSource()}>
+          <Plus size={14} /> Add context
         </button>
       </div>
-      <div className="welcome-hero">
-        <div className="welcome-copy">
-          <h1>
-            Your next build.
-            <br />
-            <span>In clear context.</span>
-          </h1>
-          <p className="welcome-description">
-            Bring the right files into focus.
-            <br />
-            Keep your conversation. Shape what your model sees.
-          </p>
-          <div className="welcome-actions">
-            <button className="welcome-add-source" onClick={onAddSource}>
-              <Plus size={15} /> Add your context <ArrowRight size={14} />
-            </button>
-          </div>
-        </div>
-        <div className="welcome-leaf" aria-hidden="true">
-          <Logo />
-          <span>canopy</span>
-        </div>
-      </div>
       <ContextOverview sources={sources} onOpen={onContext} />
-      <div className="suggestions-heading">
-        <span>A starting point</span>
-        <span>OR WRITE YOUR OWN BELOW</span>
-      </div>
-      <div className="suggestion-grid">
-        {[
-          [
-            Code2,
-            "Build something",
-            "Turn an idea into working code",
-            "Help me build a new feature. First inspect the authorized project files and suggest a focused implementation plan.",
-          ],
-          [
-            Search,
-            "Find the root cause",
-            "Follow the clues in your code",
-            "Help me investigate a bug. Ask what is failing, then use the authorized sources to identify the cause before proposing a fix.",
-          ],
-          [
-            GitPullRequest,
-            "Get a fresh perspective",
-            "A thoughtful review of your work",
-            "Review the authorized code for correctness, edge cases, and security. Prioritize concrete findings with file references.",
-          ],
-        ].map(([Icon, title, desc, prompt]) => {
-          const I = Icon as typeof Code2;
-          return (
-            <button
-              key={String(title)}
-              className="suggestion-card"
-              onClick={() => onSuggestion(String(prompt))}
-            >
-              <I size={19} />
-              <strong>{String(title)}</strong>
-              <span>{String(desc)}</span>
-              <ArrowUp size={13} />
-            </button>
-          );
-        })}
-      </div>
-      <div className="welcome-footnote">
-        <Layers3 size={13} />
-        <span>Every conversation has a context of its own.</span>
-      </div>
     </div>
   );
 }
@@ -675,6 +605,7 @@ export function Composer({
                 <span className="model-indicator" />
                 <select
                   aria-label="Model for next request"
+                  title="Switch provider or model for the next request. Your conversation and selected context stay together; each model’s input limits still apply."
                   disabled={navigating}
                   value={modelValue}
                   onChange={(e) => onModel(e.target.value)}
@@ -684,7 +615,7 @@ export function Composer({
                     <optgroup label={p.name} key={p.id}>
                       {p.models.map((m) => (
                         <option value={`${p.id}::${m.id}`} key={m.id}>
-                          {m.name}
+                          {p.name} · {m.name}
                         </option>
                       ))}
                     </optgroup>
@@ -730,7 +661,6 @@ export function Composer({
         )}
       </div>
       <div className="composer-caption">
-        <span>Context is yours to control. Outputs are yours to verify.</span>
         <button disabled={busy || running} onClick={onPreview}>
           <Eye size={12} />
           Preview request

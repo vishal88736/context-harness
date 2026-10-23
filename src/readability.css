@@ -7,7 +7,7 @@
   padding: 9px 24px;
   font-size: 11px;
   color: var(--warning);
-  background: #bdac7907;
+  background: #97611f07;
   border-bottom: 1px solid var(--border);
   line-height: 1.7;
 }
@@ -15,7 +15,7 @@
   flex: 1;
 }
 .request-notice:hover {
-  background: #bdac7910;
+  background: #97611f10;
 }
 .skip-link {
   top: 12px;

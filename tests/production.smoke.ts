@@ -96,6 +96,10 @@ test("Production process serves real assets and persists a complete conversation
     const asset = page.match(/src="([^\"]+\.js)"/)?.[1];
     assert.ok(asset);
     assert.equal((await fetch(origin + asset)).status, 200);
+    const workspace = await fetch(origin + "/workspace");
+    assert.equal(workspace.status, 200);
+    assert.match(workspace.headers.get("content-type")!, /text\/html/);
+    assert.equal(await workspace.text(), page);
     const b = await bootstrap();
     const c = await (
       await call("/conversations", "POST", { workspaceId: b.workspaces[0].id })
@@ -140,6 +144,7 @@ test("Production process serves real assets and persists a complete conversation
     );
     await stop();
     await start();
+    assert.equal((await fetch(origin + "/workspace")).status, 200);
     const restored = await bootstrap();
     assert.equal(restored.settings.theme, "light");
     assert.equal(restored.settings.defaultModel.modelId, "fixture-coder");

@@ -68,16 +68,31 @@ export function Modal({
   close.current = onClose;
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
-    const focusable = () => [
-      ...(ref.current?.querySelectorAll<HTMLElement>(
-        'button:not([disabled]),input,textarea,select,a[href],[tabindex="0"]',
-      ) ?? []),
-    ];
+    const focusable = () =>
+      [
+        ...(ref.current?.querySelectorAll<HTMLElement>(
+          "button,input,textarea,select,a[href],[tabindex]",
+        ) ?? []),
+      ].filter(
+        (element) =>
+          !element.matches(":disabled") &&
+          element.tabIndex >= 0 &&
+          element.getClientRects().length,
+      );
     focusable()[0]?.focus();
     const key = (e: KeyboardEvent) => {
+      // An opened workspace stays mounted behind Home. Hidden dialogs must not
+      // intercept keyboard navigation on the visible page.
+      if (!ref.current?.getClientRects().length) return;
+      const dialogs = [
+        ...document.querySelectorAll<HTMLElement>(
+          '[role="dialog"][aria-modal="true"]',
+        ),
+      ].filter((element) => element.getClientRects().length);
+      if (dialogs.at(-1) !== ref.current) return;
       if (e.key === "Escape") {
         e.preventDefault();
-        e.stopPropagation();
+        e.stopImmediatePropagation();
         close.current();
       }
       if (e.key === "Tab") {
@@ -85,7 +100,10 @@ export function Modal({
         if (!all.length) return;
         const first = all[0];
         const last = all[all.length - 1];
-        if (e.shiftKey && document.activeElement === first) {
+        if (!ref.current.contains(document.activeElement)) {
+          (e.shiftKey ? last : first).focus();
+          e.preventDefault();
+        } else if (e.shiftKey && document.activeElement === first) {
           last.focus();
           e.preventDefault();
         } else if (!e.shiftKey && document.activeElement === last) {

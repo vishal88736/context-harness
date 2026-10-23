@@ -30,6 +30,9 @@ import {
   type Workspace,
 } from "../api";
 import { Modal, Spinner, Toggle } from "./ui";
+import { FolderPicker } from "./FolderPicker";
+import { adapterBaseUrls, providerPresets } from "../provider-presets";
+import { useAppearance, type ThemeMode } from "../appearance";
 
 export function SettingsDialog({
   data,
@@ -46,6 +49,7 @@ export function SettingsDialog({
   onClose: () => void;
   onWorkspace: (id: string) => void;
 }) {
+  const { theme, setTheme } = useAppearance();
   const [tab, setTab] = useState(initialTab ?? "providers");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -70,6 +74,7 @@ export function SettingsDialog({
   });
   const [newRoot, setNewRoot] = useState("");
   const [newName, setNewName] = useState("");
+  const [pickingFolder, setPickingFolder] = useState(false);
   const provider = data.providers.find((p) => p.id === selectedProvider);
   async function perform(fn: () => Promise<void>, message = "") {
     setBusy(true);
@@ -118,6 +123,20 @@ export function SettingsDialog({
       `/providers/${provider.id}/discover`,
       "POST",
     );
+    const preset = providerPresets.find((p) => p.baseUrl === provider.baseUrl);
+    if (preset?.outputTokenParameter && provider.kind === "compatible") {
+      const discovered = r.models.map((model) => ({
+        ...model,
+        outputTokenParameter:
+          model.outputTokenParameter ?? preset.outputTokenParameter,
+      }));
+      await api(`/providers/${provider.id}`, "PUT", {
+        name: provider.name,
+        kind: provider.kind,
+        baseUrl: provider.baseUrl,
+        models: discovered,
+      });
+    }
     if (!data.settings.defaultModel && r.models.length)
       await api("/settings", "PUT", {
         defaultModel: { providerId: provider.id, modelId: r.models[0].id },
@@ -128,6 +147,17 @@ export function SettingsDialog({
         "The provider returned no models. Install a local model or check your provider account.",
       );
   }
+  if (pickingFolder)
+    return (
+      <FolderPicker
+        onClose={() => setPickingFolder(false)}
+        onOpen={async (next) => {
+          await onRefresh();
+          onWorkspace(next.id);
+          onClose();
+        }}
+      />
+    );
   return (
     <Modal
       title="A workspace that fits you."
@@ -140,7 +170,7 @@ export function SettingsDialog({
           {[
             ["providers", Cpu, "Models & providers"],
             ["workspace", Folder, "Workspaces"],
-            ["appearance", Moon, "Appearance"],
+            ["appearance", Sun, "Appearance"],
             ["about", Info, "About & shortcuts"],
           ].map(([key, Icon, label]) => {
             const I = Icon as typeof Cpu;
@@ -174,6 +204,33 @@ export function SettingsDialog({
                   <h3>
                     {selectedProvider ? "Edit provider" : "Connect a provider"}
                   </h3>
+                  {!selectedProvider && (
+                    <div
+                      className="provider-presets"
+                      aria-label="Provider connection templates"
+                    >
+                      {providerPresets.map((preset) => (
+                        <button
+                          className="provider-preset-card"
+                          key={preset.id}
+                          onClick={() => {
+                            setDraft({
+                              name: preset.id === "custom" ? "" : preset.name,
+                              kind: preset.kind,
+                              baseUrl: preset.baseUrl,
+                              apiKey: "",
+                            });
+                            setModels([]);
+                            setKeyChanged(true);
+                            setError("");
+                          }}
+                        >
+                          <strong>{preset.name}</strong>
+                          <small>{preset.description}</small>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                   <div className="form-grid">
                     <label className="field">
                       Name
@@ -195,14 +252,16 @@ export function SettingsDialog({
                             ...draft,
                             kind: e.target.value as Provider["kind"],
                             baseUrl:
-                              e.target.value === "ollama"
-                                ? "http://127.0.0.1:11434"
-                                : "",
+                              adapterBaseUrls[
+                                e.target.value as Provider["kind"]
+                              ],
                           })
                         }
                       >
                         <option value="ollama">Ollama (native)</option>
                         <option value="compatible">OpenAI-compatible</option>
+                        <option value="anthropic">Anthropic (native)</option>
+                        <option value="gemini">Google Gemini (native)</option>
                       </select>
                     </label>
                   </div>
@@ -223,7 +282,11 @@ export function SettingsDialog({
                     <small>
                       {draft.kind === "ollama"
                         ? "Use the server origin, without /api or /v1."
-                        : "Include the API prefix, usually /v1. Supports hosted endpoints, LM Studio, and compatible local servers."}
+                        : draft.kind === "anthropic"
+                          ? "Use the Messages API base, including /v1. Authentication uses your API key header."
+                          : draft.kind === "gemini"
+                            ? "Use the Gemini API base, including /v1beta. Keys are sent in a header."
+                            : "Include the API prefix, usually /v1. Supports hosted endpoints, gateways, and compatible local servers."}
                     </small>
                   </label>
                   <label className="field">
@@ -246,7 +309,8 @@ export function SettingsDialog({
                     />
                     <small>
                       Encrypted at rest. Never returned to the browser or
-                      context inspector.
+                      context inspector. Re-enter the key when changing the API
+                      endpoint or adapter.
                     </small>
                   </label>
                   <div className="model-editor">
@@ -256,6 +320,12 @@ export function SettingsDialog({
                       publish metadata, enter verified limits and capabilities
                       here.
                     </p>
+                    {draft.kind === "gemini" && (
+                      <p className="field-help">
+                        Use the exact resource ID returned by discovery,
+                        including its models/ prefix.
+                      </p>
+                    )}
                     {models.map((m, index) => (
                       <div className="model-edit-row" key={`${index}`}>
                         <label className="field">
@@ -331,6 +401,38 @@ export function SettingsDialog({
                           />
                           Images
                         </label>
+                        {draft.kind === "compatible" && (
+                          <label className="field">
+                            Output limit field
+                            <select
+                              aria-label={`Output token parameter for ${m.id}`}
+                              value={
+                                m.outputTokenParameter ??
+                                "max_completion_tokens"
+                              }
+                              onChange={(e) =>
+                                setModels(
+                                  models.map((model, i) =>
+                                    i === index
+                                      ? {
+                                          ...model,
+                                          outputTokenParameter: e.target
+                                            .value as
+                                            | "max_tokens"
+                                            | "max_completion_tokens",
+                                        }
+                                      : model,
+                                  ),
+                                )
+                              }
+                            >
+                              <option value="max_completion_tokens">
+                                max_completion_tokens
+                              </option>
+                              <option value="max_tokens">max_tokens</option>
+                            </select>
+                          </label>
+                        )}
                         <button
                           className="icon-button danger-text"
                           aria-label={`Remove model ${m.id}`}
@@ -407,8 +509,8 @@ export function SettingsDialog({
                       <Cpu size={30} />
                       <h3>Bring your own intelligence.</h3>
                       <p>
-                        Connect Ollama for local models, or a hosted service
-                        with an OpenAI-compatible API.
+                        Connect OpenAI, Anthropic, Gemini, a model gateway, or
+                        your own local server.
                       </p>
                       <button className="primary-button" onClick={() => edit()}>
                         <Plus size={14} />
@@ -607,6 +709,17 @@ export function SettingsDialog({
               </button>
               <div className="settings-divider" />
               <h3>Add a workspace</h3>
+              <p className="field-help">
+                Connect another existing project anywhere this computer can
+                access. Its conversations and selected context stay independent.
+              </p>
+              <button
+                className="primary-button"
+                onClick={() => setPickingFolder(true)}
+              >
+                <Folder size={15} />
+                Browse project folders
+              </button>
               <label className="field">
                 Name
                 <input
@@ -644,41 +757,45 @@ export function SettingsDialog({
             </>
           ) : tab === "appearance" ? (
             <>
-              <h3>Set the mood.</h3>
+              <h3>Workspace appearance</h3>
               <p className="field-help">
-                A considered workspace, in the light that works for you.
+                Choose a light or dark workspace, or follow your system.
               </p>
-              <div className="theme-options">
-                {[
-                  ["dark", Moon, "Dark"],
-                  ["light", Sun, "Light"],
-                  ["system", Monitor, "System"],
-                ].map(([key, Icon, label]) => {
-                  const I = Icon as typeof Moon;
-                  return (
-                    <button
-                      key={String(key)}
-                      className={data.settings.theme === key ? "active" : ""}
-                      onClick={() =>
-                        perform(async () => {
-                          await api("/settings", "PUT", { theme: key });
-                          await onRefresh();
-                        })
-                      }
-                    >
-                      <span className={`theme-preview ${key}`}>
-                        <i />
-                        <i />
-                        <i />
-                      </span>
-                      <span>
-                        <I size={14} />
-                        {String(label)}
-                        {data.settings.theme === key && <Check size={13} />}
-                      </span>
-                    </button>
-                  );
-                })}
+              <div
+                className="appearance-options"
+                role="group"
+                aria-label="Color theme"
+              >
+                {(
+                  [
+                    ["light", "Light", Sun],
+                    ["dark", "Dark", Moon],
+                    ["system", "System", Monitor],
+                  ] as const
+                ).map(([value, label, Icon]) => (
+                  <button
+                    key={value}
+                    className="appearance-option"
+                    data-mode={value}
+                    aria-label={label}
+                    aria-pressed={theme === value}
+                    disabled={busy}
+                    onClick={() =>
+                      perform(async () => {
+                        await api("/settings", "PUT", { theme: value });
+                        setTheme(value as ThemeMode);
+                        await onRefresh();
+                      })
+                    }
+                  >
+                    <span className="appearance-preview" aria-hidden="true" />
+                    <span>
+                      <Icon size={15} />
+                      {label}
+                      {theme === value && <Check size={14} />}
+                    </span>
+                  </button>
+                ))}
               </div>
             </>
           ) : (

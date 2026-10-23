@@ -12,7 +12,6 @@ import {
   isWithin,
   redact,
   safeEqual,
-  readText,
 } from "./security";
 import {
   configSchema,
@@ -25,6 +24,7 @@ import { Providers, validateProviderUrl } from "./providers";
 import { ContextEngine } from "./context";
 import { ToolRunner } from "./tools";
 import { Agent, publicSnapshot } from "./agent";
+import { browseFolders, projectFolder, WorkspaceFiles } from "./workspaces";
 
 export async function createApp(options: {
   dataDir: string;
@@ -44,6 +44,9 @@ export async function createApp(options: {
   const engine = new ContextEngine(store, providers, dataDir);
   const tools = new ToolRunner(store, dataDir, providers);
   const agent = new Agent(store, engine, providers, tools);
+  const workspaceFiles = new WorkspaceFiles(store, dataDir, () =>
+    providers.secrets(),
+  );
   const app = express();
   app.disable("x-powered-by");
   app.set("trust proxy", false);
@@ -105,7 +108,7 @@ export async function createApp(options: {
   });
   app.use(express.json({ limit: "16mb" }));
   app.get("/api/health", (_req, res) =>
-    res.json({ ok: true, app: "canopy", schema: 1 }),
+    res.json({ ok: true, app: "canopy", schema: 2 }),
   );
   app.get("/api/bootstrap", (_req, res) => {
     res.cookie("canopy-session", session, {
@@ -122,30 +125,34 @@ export async function createApp(options: {
       memories: store.memories(),
       settings: {
         defaultModel: store.setting("defaultModel", null),
-        theme: store.setting("theme", "dark"),
+        theme: store.setting("theme", "light"),
       },
     });
+  });
+  app.get("/api/folders", async (req, res) => {
+    const input = z
+      .object({ path: z.string().max(4096).optional() })
+      .parse(req.query);
+    res.json(await browseFolders(input.path, dataDir, store.workspaces()));
   });
   app.post("/api/workspaces", async (req, res) => {
     const input = z
       .object({
-        name: z.string().trim().min(1).max(100),
+        name: z.string().trim().min(1).max(100).optional(),
         root: z.string().min(1).max(4096),
         instructions: z.string().max(30_000).default(""),
       })
       .parse(req.body);
-    const canonical = await realpath(input.root);
-    if (!(await stat(canonical)).isDirectory())
-      throw new HttpError(400, "Workspace root must be a folder.");
-    if (
-      canonical === path.parse(canonical).root ||
-      canonical === process.env.HOME
-    )
-      throw new HttpError(
-        400,
-        "Choose a project folder rather than your home folder or filesystem root.",
-      );
-    res.status(201).json(store.createWorkspace({ ...input, root: canonical }));
+    const canonical = await projectFolder(input.root, dataDir);
+    const existing = store.workspaceByRoot(canonical);
+    res.status(existing ? 200 : 201).json(
+      existing ??
+        store.createWorkspace({
+          name: input.name ?? path.basename(canonical).slice(0, 100),
+          root: canonical,
+          instructions: input.instructions,
+        }),
+    );
   });
   app.patch("/api/workspaces/:id", (req, res) => {
     const w = store.workspace(req.params.id);
@@ -163,7 +170,19 @@ export async function createApp(options: {
     const target = await checkedPath(w, String(req.query.path ?? "."), {
       dataDir,
     });
-    const entries = await readdir(target, { withFileTypes: true });
+    let entries;
+    try {
+      if (!(await stat(target)).isDirectory())
+        throw new HttpError(400, "Choose a folder to browse its files.");
+      entries = await readdir(target, { withFileTypes: true });
+    } catch (error) {
+      if (error instanceof HttpError) throw error;
+      const code = (error as NodeJS.ErrnoException).code;
+      throw new HttpError(
+        code === "EACCES" || code === "EPERM" ? 403 : 400,
+        "This workspace folder is not accessible to the current OS account.",
+      );
+    }
     res.json({
       path: path.relative(w.root, target) || ".",
       entries: entries
@@ -188,15 +207,44 @@ export async function createApp(options: {
   });
   app.get("/api/workspaces/:id/file", async (req, res) => {
     const w = store.workspace(req.params.id);
-    res.json({
-      content: redact(
-        await readText(
-          await checkedPath(w, String(req.query.path ?? ""), { dataDir }),
-        ),
-        providers.secrets(),
-      ),
-    });
+    const { path: filePath } = z
+      .object({ path: z.string().min(1).max(4096) })
+      .parse(req.query);
+    res.json(await workspaceFiles.read(w, filePath));
   });
+  app.get("/api/workspaces/:id/file-changes", (req, res) => {
+    store.workspace(req.params.id);
+    res.json({ changes: store.fileChanges(req.params.id) });
+  });
+  app.post("/api/workspaces/:id/file-changes", async (req, res) => {
+    const input = z
+      .object({
+        path: z.string().min(1).max(4096),
+        content: z.string().max(250_000),
+        expectedHash: z.string().regex(/^[a-f0-9]{64}$/),
+      })
+      .strict()
+      .parse(req.body);
+    res
+      .status(201)
+      .json(
+        await workspaceFiles.propose(store.workspace(req.params.id), input),
+      );
+  });
+  app.post(
+    "/api/workspaces/:id/file-changes/:changeId/apply",
+    async (req, res) => {
+      z.object({ approved: z.literal(true) })
+        .strict()
+        .parse(req.body);
+      res.json(
+        await workspaceFiles.apply(
+          store.workspace(req.params.id),
+          req.params.changeId,
+        ),
+      );
+    },
+  );
   app.post("/api/conversations", (req, res) => {
     const input = z.object({ workspaceId: z.string() }).parse(req.body);
     res.status(201).json(store.createConversation(input.workspaceId));
@@ -412,17 +460,27 @@ export async function createApp(options: {
     const old = store.providers().find((p) => p.id === req.params.id);
     if (!old) throw new HttpError(404, "Provider not found");
     const input = providerSchema.parse(req.body);
+    const baseUrl = validateProviderUrl(input.baseUrl);
+    const connectionChanged =
+      baseUrl !== old.baseUrl || input.kind !== old.kind;
+    // A key belongs to its connection. Changing a host, path prefix, or adapter
+    // must never forward an omitted existing credential to the new destination.
+    const replacementKey =
+      input.apiKey === undefined && connectionChanged ? "" : input.apiKey;
+    if (connectionChanged) agent.stopAll();
     res.json(
       store.saveProvider(
         {
           ...input,
           id: old.id,
-          baseUrl: validateProviderUrl(input.baseUrl),
+          baseUrl,
           keyConfigured:
-            input.apiKey === undefined ? old.keyConfigured : !!input.apiKey,
+            replacementKey === undefined ? old.keyConfigured : !!replacementKey,
           apiKey: undefined,
         },
-        input.apiKey === undefined ? undefined : vault.encrypt(input.apiKey),
+        replacementKey === undefined
+          ? undefined
+          : vault.encrypt(replacementKey),
       ),
     );
   });

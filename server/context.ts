@@ -294,10 +294,15 @@ export class ContextEngine {
         content: `${base}${workspaceInstructions ? `\n\nWorkspace instructions:\n${workspaceInstructions}` : ""}`,
       },
     ];
-    const outputReserve = Math.min(4096, Math.floor(model.contextWindow / 4));
+    const outputReserve = Math.min(
+      4096,
+      Math.floor(model.contextWindow / 4),
+      model.maxOutputTokens ?? 4096,
+    );
     const limit = model.contextWindow - outputReserve - 256;
     const continuation = structuredClone(options.continuation ?? []);
     for (const m of continuation) {
+      if (m.providerData) m.providerData = redactValue(m.providerData, keys);
       if (typeof m.content === "string") m.content = clean(m.content);
       for (const call of m.tool_calls ?? []) {
         call.function.name = clean(call.function.name);

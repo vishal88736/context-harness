@@ -44,10 +44,14 @@ export const modelSchema = z.object({
   contextSource: z.enum(["provider", "user", "fallback"]).default("fallback"),
   tools: z.boolean().default(false),
   vision: z.boolean().default(false),
+  maxOutputTokens: z.number().int().min(1).max(10_000_000).optional(),
+  outputTokenParameter: z
+    .enum(["max_completion_tokens", "max_tokens"])
+    .optional(),
 });
 export const providerSchema = z.object({
   name: z.string().trim().min(1).max(100),
-  kind: z.enum(["ollama", "compatible"]),
+  kind: z.enum(["ollama", "compatible", "anthropic", "gemini"]),
   baseUrl: z.string().url().max(2048),
   apiKey: z.string().max(4096).optional(),
   models: z.array(modelSchema).max(200).default([]),
@@ -120,6 +124,8 @@ export interface WireMessage {
   tool_calls?: ToolCall[];
   tool_call_id?: string;
   images?: string[];
+  /** Provider-native continuation parts; rebuilt for the current invocation only. */
+  providerData?: { kind: "gemini"; parts: Record<string, unknown>[] };
 }
 export interface ToolCall {
   id: string;
