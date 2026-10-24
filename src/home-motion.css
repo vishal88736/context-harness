@@ -16,6 +16,15 @@
     animation-delay: 240ms;
   }
 
+  .canopy-home[data-motion="running"] [data-home-reveal="pending"] {
+    opacity: 0;
+    translate: 0 16px;
+  }
+  .canopy-home[data-motion="running"] [data-home-reveal="visible"] {
+    animation: canopy-home-reveal 650ms cubic-bezier(0.22, 1, 0.36, 1)
+      var(--home-reveal-delay, 0ms) both;
+  }
+
   .canopy-home .home-orbit-sources {
     --home-card-angle: -7deg;
     --home-card-duration: 7.6s;
@@ -60,19 +69,86 @@
       transform: translateY(-5px) rotate(calc(var(--home-card-angle) + 1deg));
     }
   }
+  @keyframes canopy-home-reveal {
+    from {
+      opacity: 0;
+      translate: 0 16px;
+    }
+    to {
+      opacity: 1;
+      translate: 0 0;
+    }
+  }
 }
 
 @media (prefers-reduced-motion: no-preference) and (hover: hover) and (pointer: fine) {
-  .canopy-home[data-motion="running"] .home-feature-grid article,
   .canopy-home[data-motion="running"] :is(.home-primary, .home-nav-action),
   .canopy-home[data-motion="running"]
     :is(.home-primary, .home-nav-action, .home-text-link)
     > svg {
     transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
   }
+  .canopy-home[data-motion="running"] .home-feature-grid article {
+    transition:
+      transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
+      border-color 240ms ease,
+      box-shadow 280ms ease;
+  }
   .canopy-home[data-motion="running"] .home-feature-grid article:hover,
   .canopy-home[data-motion="running"] .home-feature-grid article:focus-within {
+    transform: translateY(-4px);
+    border-color: color-mix(in srgb, var(--accent) 32%, var(--border));
+    box-shadow: 0 12px 28px color-mix(in srgb, var(--text) 7%, transparent);
+  }
+  .canopy-home[data-motion="running"] .home-preview-image {
+    transition:
+      transform 320ms cubic-bezier(0.22, 1, 0.36, 1),
+      border-color 240ms ease,
+      box-shadow 320ms ease;
+  }
+  .canopy-home[data-motion="running"]
+    .home-preview-image:is(:hover, :focus-visible) {
     transform: translateY(-3px);
+    border-color: color-mix(in srgb, var(--accent) 30%, var(--border));
+    box-shadow: 0 16px 36px color-mix(in srgb, var(--text) 9%, transparent);
+  }
+  .canopy-home[data-motion="running"] .home-header nav a {
+    position: relative;
+    transition: color 200ms ease;
+  }
+  .canopy-home[data-motion="running"] .home-header nav a::after {
+    position: absolute;
+    right: 0;
+    bottom: -5px;
+    left: 0;
+    height: 1px;
+    background: var(--accent);
+    content: "";
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .canopy-home[data-motion="running"]
+    .home-header
+    nav
+    a:is(:hover, :focus-visible) {
+    color: var(--accent);
+    text-decoration: none;
+  }
+  .canopy-home[data-motion="running"]
+    .home-header
+    nav
+    a:is(:hover, :focus-visible)::after {
+    transform: scaleX(1);
+  }
+  .canopy-home[data-motion="running"] .home-faq summary {
+    transition: color 200ms ease;
+  }
+  .canopy-home[data-motion="running"]
+    .home-faq
+    summary:is(:hover, :focus-visible),
+  .canopy-home[data-motion="running"] .home-faq details[open] summary {
+    color: var(--accent);
   }
   .canopy-home[data-motion="running"]
     :is(.home-primary, .home-nav-action):is(:hover, :focus-visible) {
@@ -96,10 +172,19 @@
 
 @media (prefers-reduced-motion: reduce) {
   .canopy-home .home-hero-copy > *,
-  .canopy-home :is(.home-orbit-sources, .home-orbit-context, .home-orbit-code) {
+  .canopy-home :is(.home-orbit-sources, .home-orbit-context, .home-orbit-code),
+  .canopy-home [data-home-reveal] {
     animation: none !important;
   }
+  .canopy-home [data-home-reveal] {
+    opacity: 1;
+    translate: none;
+  }
   .canopy-home .home-feature-grid article,
+  .canopy-home .home-preview-image,
+  .canopy-home .home-header nav a,
+  .canopy-home .home-header nav a::after,
+  .canopy-home .home-faq summary,
   .canopy-home :is(.home-primary, .home-nav-action, .home-text-link),
   .canopy-home :is(.home-primary, .home-nav-action, .home-text-link) > svg {
     transition: none !important;

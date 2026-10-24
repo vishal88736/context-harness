@@ -449,12 +449,6 @@
   max-height: 100%;
   object-fit: contain;
 }
-.home-feature-inspect > svg {
-  width: 46px;
-  height: 46px;
-  color: var(--accent);
-  stroke-width: 1.4;
-}
 .home-feature-art > .home-mascot-name {
   position: absolute;
   left: 0;
@@ -899,10 +893,6 @@
     left: 50%;
     transform: translateX(-50%);
     font-size: 8px;
-  }
-  .home-feature-inspect > svg {
-    width: 38px;
-    height: 38px;
   }
   .home-build-mark {
     min-height: 270px;

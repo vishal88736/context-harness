@@ -202,11 +202,11 @@ The compact home page includes a full-frame [workspace preview](docs/workspace-p
 
 The top bar exposes **Open folder**, provider connection, and context access. The **Conversation** and **Code** tabs share the active workspace and conversation. The desktop sidebar keeps projects and chat history visible; smaller layouts retain navigation, file/context controls, and responsive panels.
 
-The home page features the five reference-inspired mascots: Byte in the hero, Node and Stack in context features, Codey beside the coding-workspace section, and one roaming Roo. The inspection feature uses an Eye icon. The workspace uses only a small, static Byte beside the empty conversation heading; mascots stay out of messages and the code editor. Artwork supports light/dark surfaces, responsive layouts, and reduced motion. [Mascot assets and generation prompts](docs/mascots.md) document their source and placement.
+The home page features the five reference-inspired mascots: Byte in the hero and Inspect context card, Node and Stack in the other context features, Codey beside the coding-workspace section, and one roaming Roo. The workspace uses only a small, static Byte beside the empty conversation heading; mascots stay out of messages and the code editor. Artwork supports light/dark surfaces, responsive layouts, and reduced motion. [Mascot assets and generation prompts](docs/mascots.md) document their source and placement.
 
 Roo follows a 28-second eased flight around the viewport edges while you scroll the home page. The larger illustration turns to face its direction of travel, gently banks, and leaves a light dashed trail. Its decorative layer lets pointer input pass through to the page. A fixed **Pause Roo / Play Roo** control saves your preference in this browser and freezes both Roo and the slowly drifting hero chips. System reduced motion takes precedence; motion also pauses when the browser tab is hidden, and Roo is removed from the working app. The other characters remain still.
 
-The home page adds a brief staggered hero entrance and restrained card/button hover motion. These effects stay within the landing page and respect reduced motion; they do not animate the editor, messages, or context controls.
+The home page adds a brief staggered hero entrance and upward reveals as sections enter view. Completed reveals do not replay when scrolling back. Cards and the workspace preview lift subtly on hover; navigation underlines, FAQ highlights, and button arrows add restrained feedback. Pausing motion or enabling reduced motion keeps all content readable, and keyboard focus reveals any pending target immediately. These effects stay within the landing page; they do not animate the editor, messages, or context controls.
 
 The compact new-conversation view contains a heading, **Add context**, and the context selection brief above the composer. Product explanations and larger character scenes live on the home page.
 
@@ -270,6 +270,7 @@ src/
 ├── editor-preferences.ts / .css Validated local editor settings and control styles
 ├── api.ts                      Typed JSON/SSE client
 ├── provider-presets.ts         Connection templates without keys or model IDs
+├── use-home-reveals.ts         One-time section reveals, focus fallback and cleanup
 ├── components/
 │   ├── CodeWorkbench.tsx       Explorer, file tabs, drafts, diff approval
 │   ├── SourceEditor.tsx        CodeMirror language modes, editing, undo/scroll state
@@ -284,7 +285,7 @@ src/
 │   └── ...                     Sidebar, chat, context, profiles, settings, inspector
 ├── styles.css                  Default light theme tokens and base layout
 ├── home-page.css               Responsive home-page layout
-├── home-motion.css             Subtle hero entrance, floating chips and hover motion
+├── home-motion.css             Hero/section reveals, floating chips and hover motion
 ├── home-roamer.css             Viewport flight path and accessible pause control
 ├── home-closing.css            Layered paper/window artwork and responsive ending
 ├── readability.css             Readability overrides

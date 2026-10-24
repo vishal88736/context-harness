@@ -1,4 +1,4 @@
-import { useEffect, useState, type MouseEvent } from "react";
+import { useEffect, useRef, useState, type MouseEvent } from "react";
 import {
   ArrowDown,
   ArrowRight,
@@ -15,6 +15,7 @@ import { Logo } from "./ui";
 import { CanopyMascot } from "./CanopyMascot";
 import { HomeRoamer } from "./HomeRoamer";
 import { HomeClosing } from "./HomeClosing";
+import { useHomeReveals } from "../use-home-reveals";
 import "../home-motion.css";
 
 export function HomePage({
@@ -26,6 +27,7 @@ export function HomePage({
   hasWorkspace: boolean;
   visible?: boolean;
 }) {
+  const home = useRef<HTMLDivElement>(null);
   const [motionPaused, setMotionPaused] = useState(() => {
     try {
       return localStorage.getItem("canopy.homeMotion") === "paused";
@@ -68,6 +70,7 @@ export function HomePage({
   }, [motionPaused]);
   const motionRunning =
     visible && documentVisible && !reducedMotion && !motionPaused;
+  useHomeReveals(home, motionRunning);
   function open(event: MouseEvent<HTMLAnchorElement>) {
     if (
       event.button !== 0 ||
@@ -112,6 +115,7 @@ export function HomePage({
   );
   return (
     <div
+      ref={home}
       className="canopy-home"
       data-motion={motionRunning ? "running" : "paused"}
     >
@@ -312,11 +316,7 @@ export function HomePage({
                 className="home-feature-art home-feature-inspect"
                 aria-hidden="true"
               >
-                <Eye
-                  className="home-inspect-glyph"
-                  size={54}
-                  strokeWidth={1.2}
-                />
+                <CanopyMascot name="byte" />
                 <span className="home-mascot-name">Inspect</span>
               </div>
               <h3>See the effective request</h3>

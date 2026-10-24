@@ -1,5 +1,13 @@
 # Local verification record
 
+## Upward section reveals, elegant hovers, and Inspect mascot — 2026-10-24
+
+- Restored the existing Byte illustration to the Inspect feature, matching the neighboring Node/Stack cards. Removed the obsolete Eye-only artwork styles; Byte remains in the hero and compact workspace illustration.
+- Added `use-home-reveals.ts` and expanded `home-motion.css` for one-time upward section reveals, sibling staggering, softer feature-card/preview depth, animated navigation underlines, FAQ accents, and button/arrow feedback. The reveal uses individual CSS `translate` so existing hover transforms and responsive artwork scaling remain intact. Cleanup, pause/reduced-motion fallback, and immediate keyboard-focus reveal keep content readable.
+- Direct Chromium checks confirmed a heading moves from **16 px below its final position to 0** while opacity increases, completed reveals do not replay, card hover lifts **4 px**, and the navigation underline expands. Verified Byte decodes in Inspect, keyboard focus exposes pending content, pause removes hidden pending states, reduced motion disables reveals, Home makes no workspace-bootstrap request, and no browser errors occur. **Seven widths (360–1440 px)** had no horizontal overflow.
+- Inspected light/dark desktop and mobile card captures in ignored `artifacts/canopy-inspect-mascot-*.png`. Actual reveal/hover footage is in `artifacts/canopy-scroll-hover.mp4` (H.264, 1440 × 900, 15.68 seconds); detailed manual-check results are in `artifacts/canopy-scroll-hover-checks.json`.
+- **Production build/type-check, one production restart test, and all six affected browser workflows passed.** The browser run covered home/workspace state retention, dialog focus, independent context selections, keyboard context access, theme persistence, mobile layout, and source controls. Backend tests and live inference were not repeated for this presentation update.
+
 ## Subtle landing motion and clearer Roo flight — 2026-10-24
 
 - Added `home-motion.css`: a brief staggered hero entrance, 5 px drift on the source/context/code chips, and restrained card/button/arrow hover transforms. The other mascot illustrations and the coding workspace remain static.
