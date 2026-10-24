@@ -15,6 +15,7 @@ import { Logo } from "./ui";
 import { CanopyMascot } from "./CanopyMascot";
 import { HomeRoamer } from "./HomeRoamer";
 import { HomeClosing } from "./HomeClosing";
+import "../home-motion.css";
 
 export function HomePage({
   onOpenWorkspace,

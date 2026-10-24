@@ -1,5 +1,13 @@
 # Local verification record
 
+## Subtle landing motion and clearer Roo flight — 2026-10-24
+
+- Added `home-motion.css`: a brief staggered hero entrance, 5 px drift on the source/context/code chips, and restrained card/button/arrow hover transforms. The other mascot illustrations and the coding workspace remain static.
+- Enlarged Roo from 108 to **148 px on desktop** and from 72 to **104 px on mobile**. Its **28-second eased route**, direction flips, gentle bob/bank, stronger shadow, and light dashed trail make its travel easier to follow. The fixed layer remains pointer-transparent and Home-only.
+- Direct Chromium checks passed **60 sampled positions across ten widths (360–1440 px)**, including the illustration and SVG trail bounds, with no horizontal overflow. Verified left/right heading changes, actual movement, frozen route/heading/bank/chip transforms when paused, pause persistence after reload, visible hero content when initially paused, OS reduced-motion suppression, hidden trail under reduced motion, pointer pass-through, and removal on workspace entry. Home made no workspace-bootstrap request and produced no browser errors.
+- Inspected light/dark desktop and mobile captures in ignored `artifacts/canopy-motion-refined-*.png`. Recorded real page motion, scrolling, and pause/resume in `artifacts/canopy-motion-refined.mp4` (H.264, 1440 × 900, 21.72 seconds). Detailed sampling results are in ignored `artifacts/canopy-motion-refined-checks.json`.
+- **Production build/type-check, one production restart test, and all six affected browser workflows passed.** The browser run covered home/workspace navigation and state retention, dialog focus, independent context selections, keyboard context access, theme persistence, mobile layout, and source controls. Backend tests and live inference were not repeated for this presentation-only change.
+
 ## Compact landing, roaming Roo, and illustrated ending — 2026-10-24
 
 - Reduced the desktop hero from about 500 to 430 px and section padding from 64 to 36 px. Widened the content area to 1200 px, tightened feature cards, used a two-column context introduction, and switched mobile features to compact horizontal cards. The final **Make room for your next idea** CTA now has responsive layered-paper/window artwork, the Canopy leaf, and a reduced-motion-aware desktop hover response.

@@ -39,7 +39,12 @@ export function HomeRoamer({
     <>
       <div className="home-roaming-layer" ref={layer} aria-hidden="true">
         <div className="home-roamer" data-roaming-mascot="roo">
-          <CanopyMascot name="roo" className="home-roamer-mascot" priority />
+          <div className="home-roamer-heading">
+            <svg className="home-roamer-trail" viewBox="0 0 64 36" fill="none">
+              <path d="M3 12c18-6 32 5 58-1M13 27c17-6 30 2 44-3" />
+            </svg>
+            <CanopyMascot name="roo" className="home-roamer-mascot" priority />
+          </div>
         </div>
       </div>
       <div className="home-roamer-controls">

@@ -1,12 +1,14 @@
 .home-roaming-layer {
   --roam-width: 100vw;
   --roam-height: 100dvh;
-  --roo-size: 108px;
-  --roo-inset: 16px;
+  --roo-size: 148px;
+  --roo-inset: 32px;
   --roo-left: var(--roo-inset);
   --roo-right: calc(var(--roam-width) - var(--roo-size) - var(--roo-inset));
-  --roo-top: 108px;
-  --roo-bottom: max(140px, calc(var(--roam-height) - var(--roo-size) - 78px));
+  --roo-top: 116px;
+  --roo-bottom: max(140px, calc(var(--roam-height) - var(--roo-size) - 84px));
+  --roo-middle: calc((var(--roo-top) + var(--roo-bottom)) / 2);
+  --roo-duration: 28s;
   position: fixed;
   inset: 0;
   z-index: 30;
@@ -18,42 +20,81 @@
   left: 0;
   width: var(--roo-size);
   height: var(--roo-size);
-  transform: translate3d(var(--roo-right), var(--roo-bottom), 0) rotate(-4deg);
-  animation: canopy-roo-roam 22s linear infinite;
+  transform: translate3d(var(--roo-right), var(--roo-middle), 0);
+  animation: canopy-roo-roam var(--roo-duration) cubic-bezier(0.45, 0, 0.55, 1)
+    infinite;
   will-change: transform;
   pointer-events: none;
   filter: drop-shadow(
-    0 8px 8px color-mix(in srgb, var(--text) 12%, transparent)
+    0 10px 7px color-mix(in srgb, var(--text) 18%, transparent)
   );
+}
+.home-roamer-heading {
+  width: 100%;
+  height: 100%;
+  transform: scaleX(-1);
+  animation: canopy-roo-heading var(--roo-duration) steps(1, end) infinite;
 }
 .home-roamer-mascot {
   width: 100%;
   height: 100%;
+  animation: canopy-roo-bank 3.8s ease-in-out infinite;
+}
+.home-roamer-trail {
+  position: absolute;
+  left: -16px;
+  top: 56%;
+  width: 64px;
+  height: 36px;
+  color: var(--accent);
+  opacity: 0.55;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-dasharray: 8 7;
 }
 @keyframes canopy-roo-roam {
   0%,
   100% {
-    transform: translate3d(var(--roo-right), var(--roo-bottom), 0) rotate(-4deg);
+    transform: translate3d(var(--roo-right), var(--roo-middle), 0);
   }
-  22% {
-    transform: translate3d(var(--roo-left), var(--roo-bottom), 0) rotate(-8deg);
+  15% {
+    transform: translate3d(var(--roo-right), var(--roo-bottom), 0);
   }
-  46% {
-    transform: translate3d(var(--roo-left), var(--roo-top), 0) rotate(4deg);
+  40% {
+    transform: translate3d(var(--roo-left), var(--roo-bottom), 0);
   }
-  68% {
-    transform: translate3d(var(--roo-right), var(--roo-top), 0) rotate(8deg);
+  62% {
+    transform: translate3d(var(--roo-left), var(--roo-top), 0);
   }
-  86% {
-    transform: translate3d(
-        var(--roo-right),
-        calc((var(--roo-top) + var(--roo-bottom)) / 2),
-        0
-      )
-      rotate(-2deg);
+  85% {
+    transform: translate3d(var(--roo-right), var(--roo-top), 0);
   }
 }
-.canopy-home[data-motion="paused"] .home-roamer {
+@keyframes canopy-roo-heading {
+  0%,
+  100% {
+    transform: scaleX(-1);
+  }
+  40% {
+    transform: scaleX(1);
+  }
+  85% {
+    transform: scaleX(-1);
+  }
+}
+@keyframes canopy-roo-bank {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-3deg);
+  }
+  50% {
+    transform: translateY(-6px) rotate(4deg);
+  }
+}
+.canopy-home[data-motion="paused"] .home-roamer,
+.canopy-home[data-motion="paused"] .home-roamer-heading,
+.canopy-home[data-motion="paused"] .home-roamer-mascot {
   animation-play-state: paused;
 }
 .home-roamer-controls {
@@ -85,19 +126,29 @@
 }
 @media (max-width: 680px) {
   .home-roaming-layer {
-    --roo-size: 72px;
-    --roo-inset: 12px;
-    --roo-top: 94px;
+    --roo-size: 104px;
+    --roo-inset: 22px;
+    --roo-top: 100px;
     --roo-bottom: max(120px, calc(var(--roam-height) - var(--roo-size) - 70px));
   }
   .home-roamer-controls {
     right: 12px;
     bottom: 12px;
   }
+  .home-roamer-trail {
+    left: -8px;
+    width: 44px;
+    height: 28px;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
-  .home-roamer {
+  .home-roamer,
+  .home-roamer-heading,
+  .home-roamer-mascot {
     animation: none !important;
     will-change: auto;
+  }
+  .home-roamer-trail {
+    display: none;
   }
 }

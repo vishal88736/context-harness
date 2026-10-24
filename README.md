@@ -204,7 +204,9 @@ The top bar exposes **Open folder**, provider connection, and context access. Th
 
 The home page features the five reference-inspired mascots: Byte in the hero, Node and Stack in context features, Codey beside the coding-workspace section, and one roaming Roo. The inspection feature uses an Eye icon. The workspace uses only a small, static Byte beside the empty conversation heading; mascots stay out of messages and the code editor. Artwork supports light/dark surfaces, responsive layouts, and reduced motion. [Mascot assets and generation prompts](docs/mascots.md) document their source and placement.
 
-Roo travels around the viewport edges while you scroll the home page. Its decorative layer lets pointer input pass through to the page. A fixed **Pause Roo / Play Roo** control saves your preference in this browser. System reduced motion takes precedence; Roo also pauses when the browser tab is hidden and is removed from the working app. The other characters remain still.
+Roo follows a 28-second eased flight around the viewport edges while you scroll the home page. The larger illustration turns to face its direction of travel, gently banks, and leaves a light dashed trail. Its decorative layer lets pointer input pass through to the page. A fixed **Pause Roo / Play Roo** control saves your preference in this browser and freezes both Roo and the slowly drifting hero chips. System reduced motion takes precedence; motion also pauses when the browser tab is hidden, and Roo is removed from the working app. The other characters remain still.
+
+The home page adds a brief staggered hero entrance and restrained card/button hover motion. These effects stay within the landing page and respect reduced motion; they do not animate the editor, messages, or context controls.
 
 The compact new-conversation view contains a heading, **Add context**, and the context selection brief above the composer. Product explanations and larger character scenes live on the home page.
 
@@ -282,6 +284,7 @@ src/
 │   └── ...                     Sidebar, chat, context, profiles, settings, inspector
 ├── styles.css                  Default light theme tokens and base layout
 ├── home-page.css               Responsive home-page layout
+├── home-motion.css             Subtle hero entrance, floating chips and hover motion
 ├── home-roamer.css             Viewport flight path and accessible pause control
 ├── home-closing.css            Layered paper/window artwork and responsive ending
 ├── readability.css             Readability overrides
