@@ -68,9 +68,11 @@ const blankDraft = (): Draft => ({
 export function App({
   active = true,
   onHome,
+  onSignOut,
 }: {
   active?: boolean;
   onHome: () => void;
+  onSignOut?: () => void;
 }) {
   const { setTheme } = useAppearance();
   const [data, setData] = useState<Bootstrap | null>(null);
@@ -685,6 +687,7 @@ export function App({
       </a>
       <Sidebar
         onHome={onHome}
+        onSignOut={onSignOut}
         data={data}
         activeId={activeId}
         workspaceId={workspaceId}

@@ -37,6 +37,7 @@ function dateGroup(timestamp: string) {
 }
 export function Sidebar({
   onHome,
+  onSignOut,
   data,
   activeId,
   workspaceId,
@@ -54,6 +55,7 @@ export function Sidebar({
   sources,
 }: {
   onHome: () => void;
+  onSignOut?: () => void;
   data: Bootstrap;
   activeId?: string;
   workspaceId: string;
@@ -329,6 +331,11 @@ export function Sidebar({
           </button>
         </div>
         <div className="sidebar-bottom">
+          {onSignOut && (
+            <button className="sidebar-footer-link" onClick={onSignOut}>
+              Sign out
+            </button>
+          )}
           <button
             className="sidebar-footer-link"
             onClick={() => onSettings("providers")}
@@ -340,9 +347,12 @@ export function Sidebar({
           <div className="workspace-status">
             <div className="avatar">V</div>
             <span>
-              <strong>Local workspace</strong>
+              <strong>
+                {onSignOut ? "Private workspace" : "Local workspace"}
+              </strong>
               <small>
-                <span className="status-dot" /> Saved on this device
+                <span className="status-dot" />{" "}
+                {onSignOut ? "Saved in your instance" : "Saved on this device"}
               </small>
             </span>
             <button

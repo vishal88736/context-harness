@@ -1,4 +1,6 @@
-import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
+import { mkdtemp, mkdir, writeFile, rm, readFile } from "node:fs/promises";
+import { execFileSync } from "node:child_process";
+import { hashPassword } from "../server/access";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { createServer } from "vite";
@@ -47,9 +49,68 @@ const vite = await createServer({
     proxy: { "/api": "http://127.0.0.1:4318" },
   },
 });
+const privateRoot = path.join(temp, "Private project");
+await mkdir(privateRoot);
+await writeFile(
+  path.join(privateRoot, "private.txt"),
+  "Private project context\n",
+);
+const privateService = await createApp({
+  root: privateRoot,
+  dataDir: path.join(temp, "private-data"),
+  access: {
+    mode: "private",
+    publicOrigin: "https://127.0.0.1:5274",
+    passwordHash: await hashPassword("private-browser-test-password"),
+    trustedProxy: true,
+  },
+});
+const privateApi = privateService.app.listen(4319, "127.0.0.1");
+const certificate = path.join(temp, "test-cert.pem"),
+  key = path.join(temp, "test-key.pem");
+execFileSync(
+  "openssl",
+  [
+    "req",
+    "-x509",
+    "-newkey",
+    "rsa:2048",
+    "-nodes",
+    "-keyout",
+    key,
+    "-out",
+    certificate,
+    "-days",
+    "1",
+    "-subj",
+    "/CN=127.0.0.1",
+    "-addext",
+    "subjectAltName=IP:127.0.0.1",
+  ],
+  { stdio: "ignore" },
+);
+const privateVite = await createServer({
+  server: {
+    host: "127.0.0.1",
+    port: 5274,
+    strictPort: true,
+    https: { key: await readFile(key), cert: await readFile(certificate) },
+    proxy: {
+      "/api": {
+        target: "http://127.0.0.1:4319",
+        headers: { "X-Forwarded-Proto": "https" },
+      },
+    },
+  },
+});
+await privateVite.listen();
 await vite.listen();
 console.log("Canopy browser fixture ready at http://127.0.0.1:5273");
 async function stop() {
+  await privateVite.close();
+  privateApi.closeAllConnections();
+  await new Promise<void>((resolve) => privateApi.close(() => resolve()));
+  privateService.close();
   service.agent.stopAll();
   await vite.close();
   api.closeAllConnections();

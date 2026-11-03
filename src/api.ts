@@ -23,6 +23,10 @@ export type {
   Workspace,
 } from "../server/schema";
 export interface Bootstrap {
+  capabilities?: {
+    mode: "local" | "private";
+    terminal: "host" | "sandbox" | "disabled";
+  };
   csrf: string;
   workspaces: Workspace[];
   conversations: Conversation[];
@@ -57,6 +61,8 @@ export async function api<T>(
     ...(data === undefined ? {} : { body: JSON.stringify(data) }),
   });
   const result = await response.json();
+  if (response.status === 401 && result.code === "AUTH_REQUIRED")
+    window.dispatchEvent(new Event("canopy:sessionexpired"));
   if (!response.ok) throw new Error(result.error ?? "Request failed");
   return result as T;
 }
@@ -74,6 +80,8 @@ export async function streamChat(
   });
   if (!response.ok) {
     const result = await response.json();
+    if (response.status === 401 && result.code === "AUTH_REQUIRED")
+      window.dispatchEvent(new Event("canopy:sessionexpired"));
     throw new Error(result.error ?? "Generation failed");
   }
   if (!response.body) throw new Error("Server returned no response stream");

@@ -1,0 +1,57 @@
+.workspace-access {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--bg);
+  color: var(--text);
+}
+.workspace-access-card {
+  width: min(100%, 420px);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--surface);
+  padding: 32px;
+  box-shadow: var(--card-shadow);
+}
+.workspace-access-card > .logo-mark {
+  margin-bottom: 28px;
+}
+.workspace-access-card h1 {
+  margin: 12px 0;
+  font-size: 30px;
+  letter-spacing: -1px;
+}
+.workspace-access-card p {
+  color: var(--secondary);
+  font-size: 13px;
+  line-height: 1.7;
+  margin-bottom: 24px;
+}
+.workspace-access-card form {
+  display: grid;
+  gap: 12px;
+}
+.workspace-access-card label {
+  font-size: 12px;
+  font-weight: 550;
+}
+.workspace-access-card input {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+}
+.workspace-access-card .primary-button {
+  min-height: 44px;
+  margin-top: 8px;
+}
+.workspace-access-home {
+  display: block;
+  margin: 24px auto 0;
+  color: var(--secondary);
+  font-size: 12px;
+}

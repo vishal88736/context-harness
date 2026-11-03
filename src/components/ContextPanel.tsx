@@ -74,12 +74,26 @@ export const SourceIcon = ({
 export function PermissionEditor({
   permissions,
   onChange,
+  terminalPolicy,
 }: {
   permissions: Permissions;
   onChange: (p: Permissions) => void;
+  terminalPolicy?: "host" | "sandbox" | "disabled";
 }) {
   return (
     <div className="permissions-editor">
+      {terminalPolicy === "disabled" && (
+        <p className="permission-explainer" role="status">
+          Commands are disabled by this instance’s deployment policy.
+          Conversation settings cannot enable them.
+        </p>
+      )}
+      {terminalPolicy === "sandbox" && (
+        <p className="permission-explainer">
+          Approved commands run in an isolated project environment without
+          host-network access.
+        </p>
+      )}
       <div className="permission-explainer">
         <ShieldCheck size={18} />
         <p>
@@ -118,7 +132,12 @@ export function PermissionEditor({
           </span>
           <select
             aria-label={`${label} permission`}
-            value={permissions[key]}
+            disabled={key === "terminal" && terminalPolicy === "disabled"}
+            value={
+              key === "terminal" && terminalPolicy === "disabled"
+                ? "deny"
+                : permissions[key]
+            }
             onChange={(e) =>
               onChange({ ...permissions, [key]: e.target.value })
             }
@@ -432,6 +451,7 @@ export function ContextPanel({
         ) : config ? (
           <PermissionEditor
             permissions={config.permissions}
+            terminalPolicy={data.capabilities?.terminal}
             onChange={(permissions) => onChange({ ...config, permissions })}
           />
         ) : (

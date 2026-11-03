@@ -92,13 +92,21 @@ export async function browseFolders(
   input: string | undefined,
   dataDir: string,
   workspaces: Workspace[],
+  allowedRoot?: string,
 ) {
   const current = await accessibleFolder(input);
+  if (allowedRoot && !isWithin(allowedRoot, current))
+    throw new HttpError(
+      403,
+      "Choose a folder inside this instance’s project volume.",
+    );
   const privateData = await realpath(dataDir).catch(() =>
     path.resolve(dataDir),
   );
   const protectedFolder = (target: string) =>
-    isSensitive(target) || isWithin(privateData, target);
+    isSensitive(target) ||
+    isWithin(privateData, target) ||
+    !!(allowedRoot && !isWithin(allowedRoot, target));
   if (protectedFolder(current))
     throw new HttpError(
       403,
@@ -153,7 +161,10 @@ export async function browseFolders(
   const parent = path.dirname(current);
   return {
     path: current,
-    parentPath: parent === current ? null : parent,
+    parentPath:
+      parent === current || (allowedRoot && current === allowedRoot)
+        ? null
+        : parent,
     entries: entries.slice(0, 500),
     shortcuts,
     selectable: current !== home && current !== path.parse(current).root,

@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { HomePage } from "./components/HomePage";
 import { Logo, Spinner } from "./components/ui";
+import { WorkspaceAccess } from "./components/WorkspaceAccess";
 
 const WorkspaceApp = lazy(() =>
   import("./App").then((module) => ({ default: module.App })),
@@ -68,7 +69,15 @@ export function ApplicationRouter() {
               </main>
             }
           >
-            <WorkspaceApp active={inWorkspace} onHome={() => navigate("/")} />
+            <WorkspaceAccess onHome={() => navigate("/")}>
+              {(signOut) => (
+                <WorkspaceApp
+                  active={inWorkspace}
+                  onHome={() => navigate("/")}
+                  onSignOut={signOut}
+                />
+              )}
+            </WorkspaceAccess>
           </Suspense>
         </div>
       )}

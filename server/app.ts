@@ -1,6 +1,7 @@
 import express from "express";
+import { AccessController, type AccessOptions } from "./access";
+import type { TerminalPolicy } from "./sandbox";
 import path from "node:path";
-import { randomBytes } from "node:crypto";
 import { realpath, stat, readdir } from "node:fs/promises";
 import { z, ZodError } from "zod";
 import { Store, id, now } from "./store";
@@ -32,92 +33,88 @@ export async function createApp(options: {
   staticDir?: string;
   dbFile?: string;
   frontendPort?: number;
+  access?: AccessOptions;
+  terminalPolicy?: TerminalPolicy;
+  projectsRoot?: string;
 }) {
   const root = await realpath(options.root);
   const dataDir = path.resolve(options.dataDir);
+  const access = new AccessController(options.access, options.frontendPort);
+  const projectsRoot = await realpath(options.projectsRoot ?? root);
+  const terminalPolicy =
+    options.terminalPolicy ?? (access.mode === "private" ? "disabled" : "host");
+  if (
+    access.mode === "private" &&
+    (isWithin(projectsRoot, dataDir) || isWithin(dataDir, projectsRoot))
+  )
+    throw new Error(
+      "Private data and project volumes must be separate directories.",
+    );
+  if (
+    access.mode === "private" &&
+    (terminalPolicy === "host" || !isWithin(projectsRoot, root))
+  )
+    throw new Error(
+      "Private instances require isolated or disabled terminal execution and a project inside CANOPY_PROJECTS_ROOT.",
+    );
   const vault = await Vault.create(dataDir);
   const store = new Store(
     options.dbFile ?? path.join(dataDir, "canopy.sqlite"),
     root,
   );
+  if (
+    access.mode === "private" &&
+    store.workspaces().some((w) => !isWithin(projectsRoot, w.root))
+  ) {
+    store.close();
+    throw new Error(
+      "This data directory contains projects outside the private instance's project volume. Use a separate private data directory.",
+    );
+  }
   const providers = new Providers(store, vault);
-  const engine = new ContextEngine(store, providers, dataDir);
-  const tools = new ToolRunner(store, dataDir, providers);
+  if (
+    terminalPolicy === "sandbox" &&
+    store.workspaces().some((w) => isWithin(w.root, dataDir))
+  ) {
+    store.close();
+    throw new Error(
+      "Sandbox execution requires CANOPY_DATA_DIR outside every connected project.",
+    );
+  }
+  const engine = new ContextEngine(store, providers, dataDir, terminalPolicy);
+  const tools = new ToolRunner(store, dataDir, providers, terminalPolicy);
   const agent = new Agent(store, engine, providers, tools);
   const workspaceFiles = new WorkspaceFiles(store, dataDir, () =>
     providers.secrets(),
   );
   const app = express();
   app.disable("x-powered-by");
-  app.set("trust proxy", false);
-  const csrf = randomBytes(32).toString("hex");
-  const session = randomBytes(32).toString("hex");
-  app.use((req, res, next) => {
-    const host = (req.hostname || "").toLowerCase();
-    if (!["localhost", "127.0.0.1", "[::1]", "::1"].includes(host))
-      return res
-        .status(403)
-        .json({ error: "Canopy accepts loopback hosts only." });
-    const origin = req.get("Origin");
-    if (origin) {
-      let url: URL;
-      try {
-        url = new URL(origin);
-      } catch {
-        return res.status(403).json({ error: "Invalid origin" });
-      }
-      if (
-        !["http:", "https:"].includes(url.protocol) ||
-        !["localhost", "127.0.0.1", "[::1]"].includes(url.hostname) ||
-        ![
-          String(options.frontendPort ?? 5173),
-          String(req.socket.localPort),
-        ].includes(url.port)
-      )
-        return res.status(403).json({ error: "Cross-origin access denied." });
-    }
-    res.setHeader("X-Content-Type-Options", "nosniff");
-    res.setHeader("Referrer-Policy", "no-referrer");
-    res.setHeader("X-Frame-Options", "DENY");
-    if (req.path.startsWith("/api")) {
-      res.setHeader("Cache-Control", "no-store");
-      const cookies = req.get("Cookie") ?? "";
-      const cookie =
-        cookies
-          .split(";")
-          .map((c) => c.trim())
-          .find((c) => c.startsWith("canopy-session="))
-          ?.slice("canopy-session=".length) ?? "";
-      if (
-        req.path !== "/api/bootstrap" &&
-        req.path !== "/api/health" &&
-        !safeEqual(cookie, session)
-      )
-        return res
-          .status(401)
-          .json({ error: "Session expired. Reload the application." });
-      if (
-        !["GET", "HEAD", "OPTIONS"].includes(req.method) &&
-        !safeEqual(req.get("X-Canopy-CSRF") ?? "", csrf)
-      )
-        return res
-          .status(403)
-          .json({ error: "Invalid request token. Reload the application." });
-    }
-    next();
-  });
+  app.set(
+    "trust proxy",
+    options.access?.trustedProxy
+      ? ["loopback", "linklocal", "uniquelocal"]
+      : false,
+  );
+  app.use(access.middleware);
+  app.use("/api/auth/login", express.json({ limit: "4kb", inflate: false }));
   app.use(express.json({ limit: "16mb", inflate: false }));
+  access.routes(app, () => agent.stopAll());
+  app.get("/api/ready", (_req, res) => {
+    try {
+      store.db.prepare("SELECT 1").get();
+      res.json({ ok: true });
+    } catch {
+      res.status(503).json({ ok: false });
+    }
+  });
   app.get("/api/health", (_req, res) =>
     res.json({ ok: true, app: "canopy", schema: 2 }),
   );
-  app.get("/api/bootstrap", (_req, res) => {
-    res.cookie("canopy-session", session, {
-      httpOnly: true,
-      sameSite: "strict",
-      path: "/",
-    });
+  app.get("/api/bootstrap", (req, res) => {
+    access.bootstrap(req, res);
     res.json({
-      csrf,
+      csrf: access.csrf(req),
+      capabilities: { mode: access.mode, terminal: terminalPolicy },
       workspaces: store.workspaces(),
       conversations: store.conversations(),
       profiles: store.profiles(),
@@ -133,7 +130,14 @@ export async function createApp(options: {
     const input = z
       .object({ path: z.string().max(4096).optional() })
       .parse(req.query);
-    res.json(await browseFolders(input.path, dataDir, store.workspaces()));
+    res.json(
+      await browseFolders(
+        input.path ?? (access.mode === "private" ? projectsRoot : undefined),
+        dataDir,
+        store.workspaces(),
+        access.mode === "private" ? projectsRoot : undefined,
+      ),
+    );
   });
   app.post("/api/workspaces", async (req, res) => {
     const input = z
@@ -144,6 +148,11 @@ export async function createApp(options: {
       })
       .parse(req.body);
     const canonical = await projectFolder(input.root, dataDir);
+    if (access.mode === "private" && !isWithin(projectsRoot, canonical))
+      throw new HttpError(
+        403,
+        "Choose a folder inside this instance’s project volume.",
+      );
     const existing = store.workspaceByRoot(canonical);
     res.status(existing ? 200 : 201).json(
       existing ??
@@ -618,7 +627,9 @@ export async function createApp(options: {
           : error.message;
       res.status(status).json({
         error: redact(
-          message || "Unexpected server error",
+          access.mode === "private" && status >= 500
+            ? "Unexpected server error. Check the instance logs."
+            : message || "Unexpected server error",
           providers.secrets(),
         ),
       });
@@ -633,6 +644,7 @@ export async function createApp(options: {
     agent,
     close: () => {
       agent.stopAll();
+      access.close();
       store.close();
     },
   };

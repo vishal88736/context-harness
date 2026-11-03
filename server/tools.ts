@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { spawn } from "node:child_process";
+import { commandSpec, type TerminalPolicy } from "./sandbox";
 import { open, rename, unlink, stat } from "node:fs/promises";
 import path from "node:path";
 import { createTwoFilesPatch } from "diff";
@@ -50,11 +51,17 @@ export class ToolRunner {
     private store: Store,
     private dataDir: string,
     private providers: Providers,
+    private terminalPolicy: TerminalPolicy = "host",
   ) {}
   private clean(s: string) {
     return redact(s, this.providers.secrets());
   }
   private checkPermission(c: Conversation, name: ToolName) {
+    if (name === "run_command" && this.terminalPolicy === "disabled")
+      throw new HttpError(
+        403,
+        "Terminal execution is disabled by this instance’s deployment policy.",
+      );
     const p = c.config.permissions;
     if (
       (name === "read_file" && p.read !== "allow") ||
@@ -321,22 +328,22 @@ export class ToolRunner {
     signal: AbortSignal,
   ): Promise<string> {
     return new Promise((resolve) => {
-      const child = spawn(
-        "/bin/bash",
-        ["--noprofile", "--norc", "-c", command],
-        {
-          cwd,
-          env: {
-            PATH: process.env.PATH,
-            HOME: process.env.HOME,
-            LANG: "C.UTF-8",
-            TERM: "dumb",
-            CANOPY_TOOL: "1",
-          },
-          detached: process.platform !== "win32",
-          stdio: ["ignore", "pipe", "pipe"],
+      const spec = commandSpec(this.terminalPolicy, command, cwd);
+      const child = spawn(spec.binary, spec.args, {
+        cwd,
+        env: {
+          PATH: process.env.PATH,
+          HOME:
+            this.terminalPolicy === "sandbox"
+              ? "/home/agent"
+              : process.env.HOME,
+          LANG: "C.UTF-8",
+          TERM: "dumb",
+          CANOPY_TOOL: "1",
         },
-      );
+        detached: process.platform !== "win32",
+        stdio: ["ignore", "pipe", "pipe"],
+      });
       let out = "";
       let truncated = false;
       let timedOut = false;

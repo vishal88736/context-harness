@@ -1,4 +1,5 @@
 import path from "node:path";
+import type { TerminalPolicy } from "./sandbox";
 import { id, now, Store } from "./store";
 import {
   digest,
@@ -44,6 +45,7 @@ export class ContextEngine {
     private store: Store,
     private providers: Providers,
     private dataDir: string,
+    private terminalPolicy: TerminalPolicy = "host",
   ) {}
   async compose(
     conversationId: string,
@@ -75,6 +77,18 @@ export class ContextEngine {
     const sources: SourceReport[] = [];
     const enabled = c.config.sources.filter((s) => s.enabled);
     const permissions = { ...c.config.permissions };
+    if (this.terminalPolicy === "disabled") {
+      permissions.terminal = "deny";
+      sources.push({
+        id: "terminal-policy",
+        name: "Terminal execution",
+        type: "tools",
+        status: "excluded",
+        reason:
+          "Terminal execution is disabled by this instance’s deployment policy.",
+        tokens: 0,
+      });
+    }
     const definitions = toolDefinitions(
       permissions,
       enabled.some(
