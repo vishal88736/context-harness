@@ -106,7 +106,7 @@ export async function createApp(options: {
     }
     next();
   });
-  app.use(express.json({ limit: "16mb" }));
+  app.use(express.json({ limit: "16mb", inflate: false }));
   app.get("/api/health", (_req, res) =>
     res.json({ ok: true, app: "canopy", schema: 2 }),
   );
