@@ -31,6 +31,10 @@ export class HttpError extends Error {
 }
 export class Vault {
   private constructor(private key: Buffer) {}
+  static fromKey(key: Buffer) {
+    if (key.length !== 32) throw new Error("Invalid vault key.");
+    return new Vault(Buffer.from(key));
+  }
   static async create(dataDir: string) {
     await mkdir(dataDir, { recursive: true, mode: 0o700 });
     const filename = path.join(dataDir, "vault.key");
