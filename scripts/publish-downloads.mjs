@@ -22,7 +22,7 @@ let version, commit;
 for (const entry of entries) {
   const m = JSON.parse(await readFile(path.join(directory, entry), "utf8"));
   if (
-    m.dirty ||
+    m.dirty !== false ||
     m.standalone !== true ||
     !/^v\d+\.\d+\.\d+$/.test(m.version) ||
     !/^[a-f0-9]{40}$/.test(m.commit) ||
