@@ -245,8 +245,13 @@ test("namespace commands cannot read runtime secrets, host files, or the host ne
   await writeFile(path.join(project, "allowed.txt"), "project-data");
   const secret = path.join(temp, "vault.key");
   await writeFile(secret, "PRIVATE_OUTSIDE_WORKSPACE");
+  const hostListener = http.createServer((_req, res) => res.end("HOST_ONLY"));
+  hostListener.listen(0, "127.0.0.1");
+  await new Promise<void>((resolve) => hostListener.once("listening", resolve));
+  const hostPort = (hostListener.address() as { port: number }).port;
   try {
-    const command = `cat allowed.txt; if [ -e '${secret}' ]; then exit 91; fi; test ! -d /app; printf isolated > result.txt; test "$(ls /sys/class/net 2>/dev/null | wc -l)" -eq 0`;
+    const quotedSecret = "'" + secret.replaceAll("'", "'\\''") + "'";
+    const command = `cat allowed.txt; if [ -e ${quotedSecret} ]; then exit 91; fi; test ! -d /app; printf isolated > result.txt; if (echo probe > /dev/tcp/127.0.0.1/${hostPort}) 2>/dev/null; then exit 92; fi`;
     const spec = commandSpec("sandbox", command, project);
     const result = spawnSync(spec.binary, spec.args, {
       encoding: "utf8",
@@ -261,6 +266,8 @@ test("namespace commands cannot read runtime secrets, host files, or the host ne
     );
     assert.doesNotMatch(result.stdout, /PRIVATE_OUTSIDE_WORKSPACE/);
   } finally {
+    hostListener.closeAllConnections();
+    await new Promise<void>((resolve) => hostListener.close(() => resolve()));
     await rm(temp, { recursive: true, force: true });
   }
 });
