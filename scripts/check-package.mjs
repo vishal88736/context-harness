@@ -115,6 +115,7 @@ try {
   try {
     const [exit] = await once(collision, "exit");
     assert.equal(exit, 1);
+    assert.ok(!collisionOutput.includes("Canopy is ready"));
     assert.ok(!collisionOutput.includes("Canopy is open"));
   } finally {
     clearTimeout(collisionTimeout);

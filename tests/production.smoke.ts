@@ -8,6 +8,44 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fixtureProvider } from "./fixture-provider";
 
+test("Production startup rejects an occupied port without announcing readiness", async () => {
+  const temp = await mkdtemp(path.join(tmpdir(), "canopy-occupied-port-"));
+  const project = path.join(temp, "project");
+  await mkdir(project);
+  const reservation = net.createServer();
+  reservation.listen(0, "127.0.0.1");
+  await once(reservation, "listening");
+  const port = (reservation.address() as net.AddressInfo).port;
+  const child = spawn(process.execPath, ["dist-server/index.js"], {
+    env: {
+      ...process.env,
+      PORT: String(port),
+      CANOPY_WORKSPACE: project,
+      CANOPY_DATA_DIR: path.join(temp, "data"),
+    },
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  let stdout = "",
+    stderr = "";
+  child.stdout.on("data", (chunk) => (stdout += chunk));
+  child.stderr.on("data", (chunk) => (stderr += chunk));
+  const timeout = setTimeout(() => child.kill("SIGKILL"), 10_000);
+  try {
+    const [code] = await once(child, "exit");
+    assert.equal(code, 1, stderr);
+    assert.match(stderr, /EADDRINUSE/);
+    assert.doesNotMatch(stdout, /Canopy is ready/);
+  } finally {
+    clearTimeout(timeout);
+    if (child.exitCode === null && child.signalCode === null) {
+      child.kill("SIGKILL");
+      await once(child, "exit");
+    }
+    await new Promise<void>((resolve) => reservation.close(() => resolve()));
+    await rm(temp, { recursive: true, force: true });
+  }
+});
+
 test("Production process serves real assets and persists a complete conversation across a full restart", async () => {
   const temp = await mkdtemp(path.join(tmpdir(), "canopy-production-"));
   const root = path.join(temp, "project");

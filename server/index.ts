@@ -10,7 +10,8 @@ const service = await createApp({
   ...config,
   ...(existsSync(path.join(staticDir, "index.html")) ? { staticDir } : {}),
 });
-const server = service.app.listen(port, host, () =>
+const server = service.app.listen(port, host);
+server.once("listening", () =>
   console.log(
     config.access.mode === "private"
       ? JSON.stringify({
