@@ -12,7 +12,7 @@ Download the archive for your platform from a published release or the website:
 | `canopy-darwin-arm64.tar.gz` | macOS, Apple silicon    |
 | `canopy-darwin-x64.tar.gz`   | macOS, Intel            |
 
-The release workflow tests these targets separately. Check the relevant workflow result for actual platform evidence. Linux has been tested locally; cross-platform results come from their respective CI jobs. Windows native terminal execution is unsupported.
+The [2026-11-05 package validation](https://github.com/vishal88736/context-harness/actions/runs/41916960280) passed on all three targets at revision `6a788c0`. This was an artifact-only run, with downloads available in its Actions artifacts for 30 days; it did not publish a public release. Linux was also tested locally. Check the relevant workflow result for any later release. Windows native terminal execution is unsupported.
 
 Archives contain the app, runtime dependencies, matching Node runtime/license, launcher, and administrative commands. A separate Node installation is unnecessary for a normal portable launch. Project-specific compilers, interpreters, Git, and other developer tools remain your responsibility.
 

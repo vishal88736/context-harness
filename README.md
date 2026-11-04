@@ -389,7 +389,7 @@ Some inherited `.opencode/`, editor, and GitHub helper files remain outside the 
 | `npm test`                | Run backend/integration tests serially with Node's test runner via `tsx`.                      |
 | `npm run build`           | Type-check, build the web app to `dist/`, and bundle the backend to `dist-server/`.            |
 | `npm start`               | Serve the production frontend and API in one process.                                          |
-| `npm run test:production` | Test built assets and persistence across a full process restart; build first.                  |
+| `npm run test:production` | Test built assets, occupied-port rejection, and persistence across restart; build first.       |
 | `npm run test:e2e`        | Run Chromium workflows against an isolated temporary workspace and HTTP fixture.               |
 | `npm run verify`          | Run backend tests, both builds, production restart, public-site checks, and browser workflows. |
 | `npm run preview`         | Inspect only Vite's built frontend (normally port 4173); not the full app.                     |
@@ -416,7 +416,9 @@ Run the complete local suite with `npm run verify`, or run its checks individual
 npm run check
 npm test
 npm run build
+npm run build:site
 npm run test:production
+npm run test:site
 npm run test:e2e
 ```
 

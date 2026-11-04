@@ -10,6 +10,8 @@ Extract the package and run **Launch Canopy.command**. The interface opens in yo
 
 Packages include their Node.js runtime and runtime dependencies. Linux x64, macOS Apple silicon, and macOS Intel are separate build targets. Check the release workflow for the platforms actually verified and compare the archive with its `.sha256` file before running it. Native Windows terminal execution is unsupported.
 
+The [2026-11-05 artifact-only run](https://github.com/vishal88736/context-harness/actions/runs/41916960280) verified all three targets at `6a788c0`, including actual extracted-app startup, conversation persistence after restart, and occupied-port rejection. It did not publish a public release or deploy the website. Later releases need their own matching workflow results.
+
 These are portable local apps, not signed native installers. Approved local shell commands run with your OS account's access. Tool permissions and reviews remain important.
 
 Live-model validation was deliberately skipped at the owner's request. Protocol, browser, persistence, backup, and package tests have separate evidence in the repository's verification record.

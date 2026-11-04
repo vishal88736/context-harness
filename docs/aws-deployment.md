@@ -54,7 +54,7 @@ The final JSON contains the CloudFront website URL. No custom domain is necessar
 
 ### Optional custom domain
 
-Request or select an ACM certificate **in us-east-1**, covering your hostname. Set these before deploying:
+Request or select an ACM certificate **in us-east-1**, covering your hostname. Set both variables together; the script and template reject incomplete domain/certificate pairs. Leave both empty to use the default CloudFront hostname.
 
 ```bash
 export CANOPY_DOMAIN=canopy.example.com
