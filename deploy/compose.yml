@@ -1,0 +1,41 @@
+name: canopy-private
+services:
+  canopy:
+    build: ..
+    image: canopy-private:${CANOPY_IMAGE_TAG:-local}
+    restart: unless-stopped
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 128
+    mem_limit: 768m
+    cpus: 2
+    stop_grace_period: 15s
+    environment:
+      CANOPY_PUBLIC_ORIGIN: https://${CANOPY_DOMAIN:?Set CANOPY_DOMAIN}
+    volumes:
+      - data:/var/lib/canopy
+      - projects:/projects
+      - backups:/backups
+    tmpfs: [/tmp:rw, noexec, nosuid, size=128m]
+    networks: [private]
+  proxy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports: ["80:80", "443:443", "443:443/udp"]
+    environment:
+      CANOPY_DOMAIN: ${CANOPY_DOMAIN:?Set CANOPY_DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks: [private]
+volumes:
+  data:
+  projects:
+  backups:
+  caddy-data:
+  caddy-config:
+networks:
+  private:

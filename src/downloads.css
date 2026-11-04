@@ -1,0 +1,80 @@
+.home-downloads {
+  scroll-margin-top: 24px;
+}
+.home-download-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin: 24px 0;
+}
+.home-download-grid article {
+  padding: 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.home-download-grid article > svg {
+  color: var(--accent);
+}
+.home-download-grid h3 {
+  margin: 18px 0 6px;
+  font-size: 20px;
+  letter-spacing: -0.5px;
+}
+.home-download-grid p,
+.home-download-version {
+  color: var(--secondary);
+  font-size: 12px;
+}
+.home-download-grid .home-primary {
+  margin-top: 16px;
+  padding: 12px 14px;
+  gap: 8px;
+  font-size: 12px;
+}
+.home-download-grid .home-primary svg {
+  margin-left: 0;
+}
+.home-download-pending {
+  display: block;
+  margin-top: 24px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.home-download-grid details {
+  margin-top: 16px;
+  color: var(--secondary);
+  font-size: 10px;
+}
+.home-download-grid code {
+  display: block;
+  margin-top: 12px;
+  overflow-wrap: anywhere;
+  line-height: 1.8;
+}
+.home-download-guide {
+  display: flex;
+  gap: 12px;
+  padding: 18px;
+  margin-bottom: 20px;
+  background: var(--sidebar);
+  border-radius: 10px;
+  color: var(--secondary);
+}
+.home-download-guide svg {
+  flex-shrink: 0;
+  color: var(--accent);
+}
+.home-download-guide p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.8;
+}
+@media (max-width: 680px) {
+  .home-download-grid {
+    grid-template-columns: 1fr;
+  }
+  .home-download-grid article {
+    padding: 20px;
+  }
+}

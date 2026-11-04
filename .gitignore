@@ -47,6 +47,10 @@ auth.json
 credentials.json
 context-harness-data/
 dist-server/
+dist-site/
+deploy/.env
+deploy/secrets/
+canopy-backups/
 test-results/
 playwright-report/
 coverage/

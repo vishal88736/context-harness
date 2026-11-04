@@ -1,6 +1,6 @@
 import { defineConfig } from "tsup";
 export default defineConfig({
-  entry: ["server/index.ts"],
+  entry: { index: "server/index.ts", "canopy-admin": "scripts/admin.ts" },
   format: ["esm"],
   platform: "node",
   target: "node22.13",

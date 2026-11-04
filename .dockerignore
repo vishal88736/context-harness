@@ -10,3 +10,16 @@ node_modules
 **/.turbo
 **/.vite
 **/coverage
+context-harness-data
+dist-server
+dist-site
+artifacts
+playwright-report
+test-results
+.env
+.env.*
+*.key
+*.pem
+deploy/secrets
+LOCAL_CODEBASE_GUIDE.md
+.cache

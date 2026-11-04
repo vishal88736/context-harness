@@ -1,0 +1,9 @@
+{$CANOPY_DOMAIN} {
+  reverse_proxy canopy:4317 {
+    flush_interval -1
+    health_uri /api/ready
+    health_headers {
+      Host {$CANOPY_DOMAIN}
+    }
+  }
+}

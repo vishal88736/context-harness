@@ -4,6 +4,9 @@ on:
   pull_request:
 permissions:
   contents: read
+concurrency:
+  group: canopy-verification-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   verify:
     runs-on: ubuntu-latest
@@ -19,8 +22,10 @@ jobs:
       - run: npm run check
       - run: npm test
       - run: npm run build
+      - run: npm run build:site
       - run: npm run test:production
       - run: npx playwright install --with-deps chromium
+      - run: npm run test:site
       - run: npm run test:e2e
       - uses: actions/upload-artifact@v4
         if: always()
@@ -31,3 +36,22 @@ jobs:
             playwright-report/
             test-results/
           retention-days: 7
+  deployment-template:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -r deploy/requirements.txt
+      - run: cfn-lint deploy/aws-site.yml
+  private-container:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: docker build --build-arg CANOPY_BUILD_COMMIT="$GITHUB_SHA" -t canopy-ci .
+      - run: node scripts/check-container.mjs canopy-ci

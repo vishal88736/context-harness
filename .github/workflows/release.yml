@@ -1,0 +1,81 @@
+name: Build downloadable apps
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release version, for example v1.0.0
+        required: true
+        type: string
+      publish:
+        description: Publish a public GitHub release after all package checks pass
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: canopy-release
+  cancel-in-progress: false
+jobs:
+  package:
+    if: github.ref == 'refs/heads/main'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            platform: linux-x64
+          - os: macos-15
+            platform: darwin-arm64
+          - os: macos-15-intel
+            platform: darwin-x64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    env:
+      CANOPY_RELEASE_VERSION: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci
+      - run: npm audit --omit=dev --audit-level=moderate
+      - run: npm test
+      - run: npm run build
+      - run: npm run test:production
+      - run: npm run release:bundle -- --require-clean
+      - run: npm run test:package
+      - uses: actions/upload-artifact@v4
+        with:
+          name: canopy-${{ matrix.platform }}
+          path: artifacts/releases/*
+          if-no-files-found: error
+          retention-days: 30
+  publish:
+    if: inputs.publish && github.ref == 'refs/heads/main'
+    needs: package
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CANOPY_RELEASE_VERSION: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: canopy-*
+          path: artifacts/releases
+          merge-multiple: true
+      - name: Publish verified packages
+        shell: bash
+        run: |
+          [[ "$CANOPY_RELEASE_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          if gh release view "$CANOPY_RELEASE_VERSION" >/dev/null 2>&1; then
+            echo 'This release already exists; versioned packages cannot be overwritten.' >&2
+            exit 1
+          fi
+          if git ls-remote --exit-code --tags origin "refs/tags/$CANOPY_RELEASE_VERSION" >/dev/null 2>&1; then
+            echo 'This tag already exists; create a new release version.' >&2
+            exit 1
+          fi
+          gh release create "$CANOPY_RELEASE_VERSION" artifacts/releases/* --target "$GITHUB_SHA" --title "Canopy $CANOPY_RELEASE_VERSION" --notes-file docs/release-notes.md

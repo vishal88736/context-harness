@@ -1,4 +1,10 @@
-import { useEffect, useRef, useState, type MouseEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type MouseEvent,
+  type ReactNode,
+} from "react";
 import {
   ArrowDown,
   ArrowRight,
@@ -22,10 +28,14 @@ export function HomePage({
   onOpenWorkspace,
   hasWorkspace,
   visible = true,
+  downloadUrl,
+  downloads,
 }: {
   onOpenWorkspace: () => void;
   hasWorkspace: boolean;
   visible?: boolean;
+  downloadUrl?: string;
+  downloads?: ReactNode;
 }) {
   const home = useRef<HTMLDivElement>(null);
   const [motionPaused, setMotionPaused] = useState(() => {
@@ -72,6 +82,7 @@ export function HomePage({
     visible && documentVisible && !reducedMotion && !motionPaused;
   useHomeReveals(home, motionRunning);
   function open(event: MouseEvent<HTMLAnchorElement>) {
+    if (downloadUrl) return;
     if (
       event.button !== 0 ||
       event.metaKey ||
@@ -83,9 +94,13 @@ export function HomePage({
     event.preventDefault();
     onOpenWorkspace();
   }
-  const action = hasWorkspace ? "Resume workspace" : "Open workspace";
+  const action = downloadUrl
+    ? "Get Canopy"
+    : hasWorkspace
+      ? "Resume workspace"
+      : "Open workspace";
   const enter = (className: string) => (
-    <a className={className} href="/workspace" onClick={open}>
+    <a className={className} href={downloadUrl ?? "/workspace"} onClick={open}>
       {action}
       <ArrowRight size={17} />
     </a>
@@ -492,6 +507,7 @@ export function HomePage({
             </details>
           </div>
         </section>
+        {downloads}
         <HomeClosing action={enter("home-primary")} />
       </main>
       <footer className="home-footer">

@@ -1,0 +1,8 @@
+[Unit]
+Description=Back up Canopy conversations and matching credential vault
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/opt/canopy/current/runtime/node %h/.local/opt/canopy/current/scripts/scheduled-backup.mjs
+UMask=0077
+NoNewPrivileges=true

@@ -4,6 +4,8 @@ A local AI coding workspace where **every conversation owns its context**. Choos
 
 Built with React, TypeScript, Vite, Express, and SQLite. OpenCode is a reference, not a runtime dependency; this project is independently implemented and is not affiliated with the OpenCode team.
 
+The release model is a **public website with downloadable local apps**. AWS hosts the static website and verified app archives. The coding app runs on the user's computer, where it can connect local folders and supported providers. [AWS CloudShell deployment](docs/aws-deployment.md) · [Download and run the app](docs/local-app.md) · [Optional private hosting](docs/private-hosting.md).
+
 ## Features
 
 - **Independent conversation context:** files, folders, instructions, previous chats, approved memories, attachments, and tool permissions.
@@ -18,6 +20,8 @@ Built with React, TypeScript, Vite, Express, and SQLite. OpenCode is a reference
 ## Contents
 
 - [Requirements](#requirements)
+- [Download the local app](#download-the-local-app)
+- [Website and releases](#website-and-releases)
 - [Quick start](#quick-start)
 - [First coding workflow](#first-coding-workflow)
 - [Open projects and edit code](#open-projects-and-edit-code)
@@ -36,7 +40,28 @@ Built with React, TypeScript, Vite, Express, and SQLite. OpenCode is a reference
 
 ## Requirements
 
-Requires **Node 22.13+** and npm. The latest local verification used Node 26.12.1; CI is configured for Node 24. Node must include the built-in `node:sqlite` module. Terminal tools additionally require `/bin/bash`, so Linux/macOS are the intended platforms; native Windows command execution is not implemented.
+Portable packages include their Node runtime and runtime dependencies. Source development/builds require **Node 22.13+** and npm; Node 24 is the release/CI target. Node must include built-in `node:sqlite`. Terminal tools additionally require `/bin/bash`. Release targets are Linux x64, macOS Apple silicon, and macOS Intel; native Windows command execution is not implemented. Check each platform's release job for its verification result.
+
+## Download the local app
+
+From a published release, choose the archive for your OS, verify its SHA-256, extract it, and run **Launch Canopy.command**. The local workspace opens at `http://127.0.0.1:4317/workspace`. Keep the launcher running and use **Open folder** to connect your projects.
+
+The launcher stores data outside the app directory, under `${XDG_DATA_HOME:-~/.local/share}/canopy/data` by default, so an app upgrade can preserve conversations and provider settings. It initially opens `~/Canopy Projects`; additional local folders remain available through the folder picker. See [local app setup, upgrades, and backups](docs/local-app.md).
+
+Downloads appear on the website only after verified release manifests and archives are published. The portable package uses a browser interface; signed native installers and Windows packages are not included.
+
+## Website and releases
+
+Build the public website independently:
+
+```bash
+npm ci
+npm run build:site
+```
+
+Deploy `dist-site/` using the [CloudShell guide](docs/aws-deployment.md). The AWS template provides private S3 storage, CloudFront HTTPS, origin access control, security headers, versioning, a server-error alarm, and commit-based website rollback. Coding APIs and user data are not part of that upload.
+
+The **Build downloadable apps** GitHub workflow builds each OS package from one clean commit and boots the extracted app before publishing. Run it on `main` with a new version; public GitHub publishing is an explicit workflow option. CloudShell can then publish the verified archives to the website. Live-provider validation was skipped at the owner's request; release/protocol tests use isolated fixtures.
 
 ## Quick start
 
@@ -222,7 +247,11 @@ Every write presents a diff, and every terminal command presents the exact comma
 
 ### Local service and credentials
 
-The backend binds only to loopback, checks Host and Origin, uses an HttpOnly SameSite session cookie and a CSRF header for mutations, and sets security headers. No arbitrary CORS, remote login, telemetry, CDN fonts, or hosted storage is required. The production frontend uses a Content Security Policy. This is a **single-user local application**, not a multi-user internet service; do not expose it through a public proxy. It is not an OS-level adversarial process sandbox.
+Local mode binds only to loopback, validates Host/Origin, uses an HttpOnly SameSite cookie and CSRF protection, and sets security headers. The production frontend uses a Content Security Policy. No telemetry, CDN fonts, or hosted user-data storage is required.
+
+Optional **private mode** adds HTTPS-only owner login, per-session CSRF tokens, secure cookies, bounded sessions, sign-in/API rate limits, and project-volume boundaries. Use separate instances, storage, credentials, and hostnames for separate owners. It is not a shared multi-user account service. See [private hosting](docs/private-hosting.md); changing the bind address alone does not enable safe remote access.
+
+Deployment tool policy is enforced in the backend and actual context composition. `disabled` denies terminal calls even if saved permissions say “ask”. On supported Linux hosts, `sandbox` uses a probed Bubblewrap namespace with only the chosen project and read-only system files, without host networking; it never falls back to an unrestricted shell. The container template disables terminal execution. Normal local `host` mode retains the explicitly approved OS-account behavior described above.
 
 Provider keys are AES-256-GCM encrypted. The local `vault.key` and SQLite database use private filesystem permissions. Protect and back up **both** the data directory and key: encryption does not protect against an attacker who can read the key as your OS account. Redaction covers configured keys and common credential patterns; it is a safeguard, not a guarantee that arbitrary secrets can be detected. Choose source files carefully. Conversation content, snapshots, attachments, and tool output otherwise remain sensitive local data, not an encrypted archive.
 
@@ -232,11 +261,19 @@ Provider keys are AES-256-GCM encrypted. The local `vault.key` and SQLite databa
 
 Optional environment variables for the backend:
 
-| Variable           | Default                                    | Purpose                                                     |
-| ------------------ | ------------------------------------------ | ----------------------------------------------------------- |
-| `CANOPY_WORKSPACE` | Current working directory                  | Existing initial project folder; use an absolute path.      |
-| `CANOPY_DATA_DIR`  | `<initial workspace>/context-harness-data` | Private directory containing SQLite and the encryption key. |
-| `PORT`             | `4317`                                     | Backend port, an integer from 1024 to 65535.                |
+| Variable                 | Default                                    | Purpose                                                                  |
+| ------------------------ | ------------------------------------------ | ------------------------------------------------------------------------ |
+| `CANOPY_WORKSPACE`       | Current working directory                  | Existing initial project folder; use an absolute path.                   |
+| `CANOPY_DATA_DIR`        | `<initial workspace>/context-harness-data` | Private directory containing SQLite and the encryption key.              |
+| `PORT`                   | `4317`                                     | Backend port, an integer from 1024 to 65535.                             |
+| `CANOPY_MODE`            | `local`                                    | `local` or one-owner authenticated `private` mode.                       |
+| `CANOPY_HOST`            | `127.0.0.1`                                | Loopback in local mode; private mode may bind `0.0.0.0`.                 |
+| `CANOPY_PUBLIC_ORIGIN`   | Unset                                      | Exact HTTPS origin required by private mode.                             |
+| `CANOPY_PASSWORD_FILE`   | Unset                                      | Private salted owner-password hash file, generated by the admin command. |
+| `CANOPY_TRUST_PROXY`     | Unset                                      | Private mode requires `1` behind the documented trusted HTTPS proxy.     |
+| `CANOPY_PROJECTS_ROOT`   | Initial workspace                          | Private-mode folder/project boundary, separate from app data.            |
+| `CANOPY_TERMINAL_POLICY` | `host` locally; `disabled` privately       | `host`, `disabled`, or Linux `sandbox`; private mode rejects `host`.     |
+| `CANOPY_LOG_REQUESTS`    | Enabled privately                          | `1` enables JSON request metadata logs; `0` disables them.               |
 
 For example:
 
@@ -260,7 +297,29 @@ Back up the data directory while stopped. For a running database use SQLite's ba
 
 Restore a stopped backup to a private directory and launch with `CANOPY_DATA_DIR` pointing there. Keep `canopy.sqlite` and its matching `vault.key` together. Project source files are outside the database backup; back those up separately. Deleting a conversation permanently cascades to its messages, invocations, executions, and approval records. Disabling a source changes future requests and does not erase earlier snapshots.
 
+The bundled admin command provides consistent online snapshots and verified restore:
+
+```bash
+npm run backup -- --data-dir "/private/canopy-data" --output "/private/backups/snapshot-001"
+# Stop the app before restoring into a new directory.
+npm run restore -- --backup "/private/backups/snapshot-001" --data-dir "/private/canopy-restored"
+```
+
+Checksums, SQLite integrity, schema compatibility, and matching encrypted provider credentials are verified. Existing backup/restore destinations are never overwritten. See [the local-app guide](docs/local-app.md) for portable-package commands, scheduled backups, and upgrade/rollback instructions.
+
 ## Architecture
+
+Release/security entry points:
+
+| Module                                                              | Responsibility                                                                         |
+| ------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `src/site.tsx`, `Downloads.tsx`, `vite.site.config.ts`              | Independent public website and validated download metadata.                            |
+| `WorkspaceAccess.tsx`, `server/access.ts`                           | Private owner login, session/CSRF enforcement, rate limits, and logout.                |
+| `server/runtime.ts`, `server/sandbox.ts`                            | Validated deployment configuration and fail-closed terminal policy.                    |
+| `server/backup.ts`, `scripts/admin.ts`                              | Consistent online snapshots, restore verification, password setup, and smoke commands. |
+| `scripts/launcher.mjs`, `package-release.mjs`, `check-package.mjs`  | Bundled local app launch, clean-source packaging, and extracted-app verification.      |
+| `deploy/aws-site.yml`, `aws-cloudshell.sh`, `scripts/publish-*.mjs` | AWS website/download infrastructure, publishing, integrity checks, and rollback.       |
+| `Dockerfile`, `deploy/compose.yml`, `Caddyfile`                     | Optional isolated private instance with HTTPS and persistent volumes.                  |
 
 ```text
 src/
@@ -322,19 +381,34 @@ Some inherited `.opencode/`, editor, and GitHub helper files remain outside the 
 
 ### Commands
 
-| Command                   | Purpose                                                                                    |
-| ------------------------- | ------------------------------------------------------------------------------------------ |
-| `npm run dev`             | Watch API source and serve the Vite frontend on port 5173.                                 |
-| `npm run dev:server`      | Watch only the API on port 4317 (or `PORT`).                                               |
-| `npm run check`           | Type-check application, server, tests, and build configuration.                            |
-| `npm test`                | Run backend/integration tests serially with Node's test runner via `tsx`.                  |
-| `npm run build`           | Type-check, build the web app to `dist/`, and bundle the backend to `dist-server/`.        |
-| `npm start`               | Serve the production frontend and API in one process.                                      |
-| `npm run test:production` | Test built assets and persistence across a full process restart; build first.              |
-| `npm run test:e2e`        | Run Chromium workflows against an isolated temporary workspace and HTTP fixture.           |
-| `npm run verify`          | Run backend tests, build (including type checking), production restart, and browser tests. |
-| `npm run preview`         | Inspect only Vite's built frontend (normally port 4173); not the full app.                 |
-| `npm run format`          | Rewrite source, tests, and root config/docs with Prettier.                                 |
+| Command                   | Purpose                                                                                        |
+| ------------------------- | ---------------------------------------------------------------------------------------------- |
+| `npm run dev`             | Watch API source and serve the Vite frontend on port 5173.                                     |
+| `npm run dev:server`      | Watch only the API on port 4317 (or `PORT`).                                                   |
+| `npm run check`           | Type-check application, server, tests, and build configuration.                                |
+| `npm test`                | Run backend/integration tests serially with Node's test runner via `tsx`.                      |
+| `npm run build`           | Type-check, build the web app to `dist/`, and bundle the backend to `dist-server/`.            |
+| `npm start`               | Serve the production frontend and API in one process.                                          |
+| `npm run test:production` | Test built assets and persistence across a full process restart; build first.                  |
+| `npm run test:e2e`        | Run Chromium workflows against an isolated temporary workspace and HTTP fixture.               |
+| `npm run verify`          | Run backend tests, both builds, production restart, public-site checks, and browser workflows. |
+| `npm run preview`         | Inspect only Vite's built frontend (normally port 4173); not the full app.                     |
+| `npm run format`          | Rewrite source, tests, and root config/docs with Prettier.                                     |
+
+Release commands:
+
+| Command                                              | Purpose                                                                                  |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `npm run build:site`                                 | Build the standalone website to `dist-site/`.                                            |
+| `npm run test:site`                                  | Check the built website's download flow, mobile layout, and absence of coding API calls. |
+| `npm run release:bundle -- --require-clean`          | Package the current platform from matching clean build outputs, including its runtime.   |
+| `npm run test:package`                               | Extract and boot the actual archive, reject private files, and test restart persistence. |
+| `npm run auth:password -- --output FILE`             | Prompt for an owner password and create a private salted hash file.                      |
+| `npm run backup -- --data-dir DIR --output NEW_DIR`  | Create and verify an online data snapshot.                                               |
+| `npm run restore -- --backup DIR --data-dir NEW_DIR` | Validate a backup and restore into a new directory.                                      |
+| `npm run smoke:deployment -- --url URL`              | Check a running local/private coding deployment without model calls.                     |
+
+`npm run verify:live` is an optional real-provider tool for explicitly enabled future testing; no live-model calls are included in CI or this release verification.
 
 Run the complete local suite with `npm run verify`, or run its checks individually:
 
