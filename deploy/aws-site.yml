@@ -8,9 +8,24 @@ Parameters:
   CertificateArn:
     Type: String
     Default: ""
+    AllowedPattern: "^$|^arn:aws[a-zA-Z-]*:acm:us-east-1:[0-9]{12}:certificate/.+$"
+    ConstraintDescription: Leave empty, or provide an ACM certificate ARN from us-east-1.
     Description: ACM certificate in us-east-1, required with a custom hostname.
+Rules:
+  CustomDomainCertificatePair:
+    Assertions:
+      - Assert: !Or
+          - !And
+            - !Equals [!Ref DomainName, ""]
+            - !Equals [!Ref CertificateArn, ""]
+          - !And
+            - !Not [!Equals [!Ref DomainName, ""]]
+            - !Not [!Equals [!Ref CertificateArn, ""]]
+        AssertDescription: Set both DomainName and CertificateArn, or leave both empty.
 Conditions:
-  CustomDomain: !Not [!Equals [!Ref DomainName, ""]]
+  CustomDomain: !And
+    - !Not [!Equals [!Ref DomainName, ""]]
+    - !Not [!Equals [!Ref CertificateArn, ""]]
   GlobalMetricsRegion: !Equals [!Ref "AWS::Region", us-east-1]
 Resources:
   SiteBucket:
