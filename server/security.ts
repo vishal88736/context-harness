@@ -224,13 +224,20 @@ export function isSensitive(filename: string) {
     .split(/[\\/]/)
     .some(
       (segment) =>
-        ignoredDirs.has(segment) ||
-        segment === "LOCAL_CODEBASE_GUIDE.md" ||
+        ignoredDirs.has(segment.toLowerCase()) ||
+        segment.toLowerCase() === "local_codebase_guide.md" ||
+        (process.platform === "win32" &&
+          ((segment.includes(":") && !/^[a-z]:$/i.test(segment)) ||
+            /[. ]$/.test(segment) ||
+            /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(segment))) ||
         /^(?:\.env(?:\..*)?|\.ssh|\.aws|\.gnupg|\.npmrc|\.netrc|auth\.json|credentials(?:\.json)?|vault\.key|.*\.(?:pem|key|sqlite|sqlite3|db)(?:-wal|-shm)?)$/i.test(
           segment,
         ),
     );
 }
+// API/editor paths use forward slashes on every OS; absolute OS roots stay native.
+export const relativePath = (root: string, target: string) =>
+  path.relative(root, target).split(path.sep).join("/");
 export function isWithin(root: string, target: string) {
   const rel = path.relative(root, target);
   return (
@@ -361,10 +368,10 @@ export async function listFiles(
       )
         continue;
       if (entry.isDirectory()) await walk(file, depth + 1);
-      else if (entry.isFile()) found.push(path.relative(workspace.root, file));
+      else if (entry.isFile()) found.push(relativePath(workspace.root, file));
     }
   }
   if ((await stat(start)).isDirectory()) await walk(start, 0);
-  else found.push(path.relative(workspace.root, start));
+  else found.push(relativePath(workspace.root, start));
   return found;
 }

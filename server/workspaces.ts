@@ -18,6 +18,7 @@ import {
   HttpError,
   isSensitive,
   isWithin,
+  relativePath,
   readText,
   redact,
 } from "./security";
@@ -215,7 +216,7 @@ export class WorkspaceFiles {
     }
     const content = redact(original, this.secrets());
     return {
-      path: path.relative(workspace.root, target),
+      path: relativePath(workspace.root, target),
       hash: digest(original),
       content,
       redacted: content !== original,

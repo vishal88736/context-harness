@@ -1,4 +1,5 @@
 import type { Permissions, ToolDefinition } from "./schema";
+import { commandShell } from "./sandbox";
 export function toolDefinitions(
   permissions: Permissions,
   hasPaths: boolean,
@@ -57,7 +58,7 @@ export function toolDefinitions(
     definitions.push(
       fn(
         "run_command",
-        "Request a shell command in the workspace root. Every command requires explicit human approval and can access everything the local OS account can access.",
+        `Request a ${commandShell()} command in the workspace root. Every command requires explicit human approval. Deployment policy controls host or sandbox execution.`,
         { command: { type: "string" }, reason: { type: "string" } },
         ["command", "reason"],
       ),

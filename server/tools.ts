@@ -1,6 +1,11 @@
 import { z } from "zod";
 import { spawn } from "node:child_process";
-import { commandSpec, type TerminalPolicy } from "./sandbox";
+import {
+  commandSpec,
+  commandEnvironment,
+  terminateCommand,
+  type TerminalPolicy,
+} from "./sandbox";
 import { open, rename, unlink, stat } from "node:fs/promises";
 import path from "node:path";
 import { createTwoFilesPatch } from "diff";
@@ -331,17 +336,9 @@ export class ToolRunner {
       const spec = commandSpec(this.terminalPolicy, command, cwd);
       const child = spawn(spec.binary, spec.args, {
         cwd,
-        env: {
-          PATH: process.env.PATH,
-          HOME:
-            this.terminalPolicy === "sandbox"
-              ? "/home/agent"
-              : process.env.HOME,
-          LANG: "C.UTF-8",
-          TERM: "dumb",
-          CANOPY_TOOL: "1",
-        },
+        env: commandEnvironment(this.terminalPolicy),
         detached: process.platform !== "win32",
+        windowsHide: true,
         stdio: ["ignore", "pipe", "pipe"],
       });
       let out = "";
@@ -353,13 +350,7 @@ export class ToolRunner {
       };
       child.stdout.on("data", append);
       child.stderr.on("data", append);
-      const kill = () => {
-        try {
-          if (child.pid) process.kill(-child.pid, "SIGKILL");
-        } catch {
-          child.kill("SIGKILL");
-        }
-      };
+      const kill = () => terminateCommand(child);
       const timer = setTimeout(() => {
         timedOut = true;
         kill();
@@ -376,7 +367,7 @@ export class ToolRunner {
         signal.removeEventListener("abort", kill);
         resolve(
           this.clean(
-            `Exit: ${code ?? termSignal}${timedOut ? " (60-second timeout)" : ""}\n${out}${truncated ? "\n[Output truncated at 50 KB]" : ""}`,
+            `Exit: ${code ?? termSignal}${signal.aborted ? " (cancelled)" : timedOut ? " (60-second timeout)" : ""}\n${out}${truncated ? "\n[Output truncated at 50 KB]" : ""}`,
           ),
         );
       });

@@ -44,10 +44,11 @@ test("online backup restores committed WAL data, settings and matching encrypted
     } finally {
       copy.close();
     }
-    assert.equal(
-      (await stat(path.join(restored, "vault.key"))).mode & 0o777,
-      0o600,
-    );
+    if (process.platform !== "win32")
+      assert.equal(
+        (await stat(path.join(restored, "vault.key"))).mode & 0o777,
+        0o600,
+      );
     await assert.rejects(restoreData(backup, restored), /EEXIST/);
     await assert.rejects(backupData(data, backup), /EEXIST/);
     await writeFile(path.join(backup, "vault.key"), Buffer.alloc(32, 7));

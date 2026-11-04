@@ -23,7 +23,7 @@ export default defineConfig({
     },
   },
   webServer: {
-    command: "node_modules/.bin/tsx e2e/dev-server.ts",
+    command: "node --import tsx e2e/dev-server.ts",
     url: "http://127.0.0.1:5273",
     reuseExistingServer: false,
     timeout: 30_000,

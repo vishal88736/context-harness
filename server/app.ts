@@ -11,6 +11,7 @@ import {
   checkedPath,
   isSensitive,
   isWithin,
+  relativePath,
   redact,
   safeEqual,
 } from "./security";
@@ -193,7 +194,7 @@ export async function createApp(options: {
       );
     }
     res.json({
-      path: path.relative(w.root, target) || ".",
+      path: relativePath(w.root, target) || ".",
       entries: entries
         .filter(
           (e) =>
@@ -203,7 +204,7 @@ export async function createApp(options: {
         )
         .map((e) => ({
           name: e.name,
-          path: path.relative(w.root, path.join(target, e.name)),
+          path: relativePath(w.root, path.join(target, e.name)),
           directory: e.isDirectory(),
         }))
         .sort(

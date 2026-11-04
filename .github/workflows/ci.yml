@@ -45,6 +45,34 @@ jobs:
           python-version: "3.12"
       - run: python -m pip install -r deploy/requirements.txt
       - run: cfn-lint deploy/aws-site.yml
+  windows:
+    runs-on: windows-2022
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm audit --omit=dev --audit-level=moderate
+      - run: npm run check
+      - run: npm test
+      - run: npm run build
+      - run: npm run build:site
+      - run: npm run test:production
+      - run: npx playwright install chromium
+      - run: npm run test:site
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-browser-evidence
+          path: |
+            artifacts/
+            playwright-report/
+            test-results/
+          retention-days: 7
   private-container:
     runs-on: ubuntu-24.04
     timeout-minutes: 20

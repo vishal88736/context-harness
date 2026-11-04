@@ -1,5 +1,6 @@
 import { mkdtemp, mkdir, writeFile, rm, readFile } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
+import { existsSync } from "node:fs";
 import { hashPassword } from "../server/access";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -68,8 +69,18 @@ const privateService = await createApp({
 const privateApi = privateService.app.listen(4319, "127.0.0.1");
 const certificate = path.join(temp, "test-cert.pem"),
   key = path.join(temp, "test-key.pem");
+const gitOpenSSL = path.join(
+  process.env.ProgramFiles ?? "C:\\Program Files",
+  "Git",
+  "usr",
+  "bin",
+  "openssl.exe",
+);
 execFileSync(
-  "openssl",
+  process.env.OPENSSL_BIN ??
+    (process.platform === "win32" && existsSync(gitOpenSSL)
+      ? gitOpenSSL
+      : "openssl"),
   [
     "req",
     "-x509",

@@ -18,7 +18,7 @@ import path from "node:path";
 import type { AddressInfo } from "node:net";
 import type { Server } from "node:http";
 import { createApp } from "../server/app";
-import { digest } from "../server/security";
+import { digest, checkedPath, isSensitive } from "../server/security";
 import { Store } from "../server/store";
 
 async function fixture(t: TestContext) {
@@ -140,7 +140,11 @@ test("Authenticated OS folder browsing connects external folders, expands home p
   assert.equal(connected.root, f.external);
   assert.equal(connected.name, "External project with spaces");
   const alias = path.join(f.externalBase, "project-alias");
-  await symlink(f.external, alias);
+  await symlink(
+    f.external,
+    alias,
+    process.platform === "win32" ? "junction" : "dir",
+  );
   const repeated = await f.call("/workspaces", "POST", {
     root: alias,
     name: "Duplicate name",
@@ -294,7 +298,8 @@ test("Manual file changes show a real diff without writing and apply only after 
     content,
   });
   assert.equal(await readFile(filename, "utf8"), content);
-  assert.equal((await stat(filename)).mode & 0o777, 0o664);
+  if (process.platform !== "win32")
+    assert.equal((await stat(filename)).mode & 0o777, 0o664);
   assert.equal(
     (await f.call(`${endpoint}/${staged.id}/apply`, "POST", { approved: true }))
       .status,
@@ -489,6 +494,8 @@ test("Changed file targets invalidate proposals before any escaping write", asyn
 });
 
 test("Folder picker reports permission errors and skips unreadable siblings", async (t) => {
+  if (process.platform === "win32")
+    return t.skip("POSIX mode restrictions do not test Windows ACLs.");
   if (process.getuid?.() === 0)
     return t.skip("OS root bypasses directory mode restrictions.");
   const f = await fixture(t);
@@ -513,6 +520,53 @@ test("Folder picker reports permission errors and skips unreadable siblings", as
   } finally {
     await chmod(locked, 0o700);
   }
+});
+
+test("Nested workspace API and editor paths use forward slashes on every platform", async (t) => {
+  const f = await fixture(t);
+  await mkdir(path.join(f.external, "src", "nested"));
+  await writeFile(
+    path.join(f.external, "src", "nested", "example.ts"),
+    "portable paths\n",
+  );
+  const workspace = await f.connect();
+  const listing = await (
+    await f.call(`/workspaces/${workspace.id}/files?path=src/nested`)
+  ).json();
+  assert.equal(listing.path, "src/nested");
+  assert.deepEqual(listing.entries, [
+    { name: "example.ts", path: "src/nested/example.ts", directory: false },
+  ]);
+  const opened = await (
+    await f.call(`/workspaces/${workspace.id}/file?path=src/nested/example.ts`)
+  ).json();
+  assert.equal(opened.path, "src/nested/example.ts");
+  assert.equal(opened.content, "portable paths\n");
+});
+
+test("Windows credential aliases, alternate streams and device names cannot enter context", async (t) => {
+  if (process.platform !== "win32")
+    return t.skip("NTFS path aliases require Windows.");
+  const f = await fixture(t);
+  const workspace = await f.connect();
+  assert.equal(
+    isSensitive(workspace.root),
+    false,
+    "A normal drive root must remain usable.",
+  );
+  for (const filename of [
+    ".ENV",
+    ".env.",
+    ".env ",
+    ".env:stream",
+    "NUL",
+    "con.txt",
+    "LOCAL_codebase_GUIDE.md",
+  ])
+    await assert.rejects(
+      checkedPath(workspace, filename, { dataDir: f.dataDir }),
+      /protected/,
+    );
 });
 
 test("External folders, conversations, theme preferences, and hash-only edit audits survive restart", async (t) => {

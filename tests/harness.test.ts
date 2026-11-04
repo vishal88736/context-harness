@@ -562,7 +562,10 @@ test("Approved terminal commands execute with recorded decisions; stopped approv
     s.id,
     "run_command",
     JSON.stringify({
-      command: "printf approved > approved-output.txt",
+      command:
+        process.platform === "win32"
+          ? "[IO.File]::WriteAllText((Join-Path (Get-Location) 'approved-output.txt'), 'approved')"
+          : "printf approved > approved-output.txt",
       reason: "Verify explicit command approval",
     }),
     new AbortController().signal,
