@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
@@ -11,7 +11,9 @@ import { commandSpec, assertSandboxAvailable } from "../server/sandbox";
 import { runtimeConfig } from "../server/runtime";
 
 test("private instances require HTTPS, owner login, per-session CSRF, and isolated data", async () => {
-  const temp = await mkdtemp(path.join(tmpdir(), "canopy-private-"));
+  const temp = await realpath(
+    await mkdtemp(path.join(tmpdir(), "canopy-private-")),
+  );
   const password = "owner-private-test-password";
   const hash = await hashPassword(password);
   const instances: {

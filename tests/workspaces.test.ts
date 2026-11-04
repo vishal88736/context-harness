@@ -9,6 +9,7 @@ import {
   rm,
   symlink,
   readdir,
+  realpath,
   stat,
   chmod,
 } from "node:fs/promises";
@@ -21,8 +22,13 @@ import { digest } from "../server/security";
 import { Store } from "../server/store";
 
 async function fixture(t: TestContext) {
-  const temp = await mkdtemp(path.join(tmpdir(), "canopy-workspaces-"));
-  const externalBase = await mkdtemp(path.join(tmpdir(), "canopy-external-"));
+  // macOS /var and user-supplied TMPDIR aliases must match canonical API roots.
+  const temp = await realpath(
+    await mkdtemp(path.join(tmpdir(), "canopy-workspaces-")),
+  );
+  const externalBase = await realpath(
+    await mkdtemp(path.join(tmpdir(), "canopy-external-")),
+  );
   const root = path.join(temp, "initial-project");
   const external = path.join(externalBase, "External project with spaces");
   const dataDir = path.join(temp, "private-data");
@@ -128,7 +134,7 @@ test("Authenticated OS folder browsing connects external folders, expands home p
     /EXTERNAL_WORKSPACE_SENTINEL|PRIVATE_CREDENTIAL_SENTINEL/,
   );
   const home = await (await f.call("/folders?path=~")).json();
-  assert.equal(home.path, homedir());
+  assert.equal(home.path, await realpath(homedir()));
   assert.equal(home.selectable, false);
   const connected = await f.connect();
   assert.equal(connected.root, f.external);
