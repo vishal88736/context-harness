@@ -151,15 +151,16 @@ export function PermissionEditor({
           </select>
         </div>
       ))}
-      {permissions.terminal === "ask" && (
-        <div className="notice warning">
-          <Info size={15} />
-          <p>
-            Approved commands run as your OS user and can access files beyond
-            selected context. Inspect each command before approving.
-          </p>
-        </div>
-      )}
+      {permissions.terminal === "ask" &&
+        (terminalPolicy ?? "host") === "host" && (
+          <div className="notice warning">
+            <Info size={15} />
+            <p>
+              Approved commands run as your OS user and can access files beyond
+              selected context. Inspect each command before approving.
+            </p>
+          </div>
+        )}
     </div>
   );
 }

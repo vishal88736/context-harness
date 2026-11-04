@@ -243,7 +243,7 @@ The agent can read files, search authorized paths, propose an entire file's new 
 
 File tools are limited to this conversation's enabled file/folder grants. Explicitly disabled paths take precedence over overlapping folder grants. Traversal, symlink escapes, binary files, credentials, Git internals, build output, and application state are excluded. Text reads are bounded. File writes use a temporary file and atomic rename; approval rechecks the context revision and original file hash. Parent folders must already exist.
 
-Every write presents a diff, and every terminal command presents the exact command and reason. Neither can execute without the separate browser approval. Terminal is blocked by default. **An approved shell command runs as your OS user; it is not an OS sandbox and can access files beyond the context grants.** Commands receive a reduced environment without provider keys, have a 60-second timeout and bounded output, and have persistent execution/approval records. Review destructive commands before approving. The application never provides an approval tool to a model.
+Every write presents a diff, and every terminal command presents the exact command and reason. Neither can execute without the separate browser approval. Terminal is blocked by default. **In local `host` mode, an approved shell command runs as your OS user and can access files beyond the context grants.** Commands receive a reduced environment without provider keys, have a 60-second timeout and bounded output, and have persistent execution/approval records. Review destructive commands before approving. The application never provides an approval tool to a model.
 
 ### Local service and credentials
 
@@ -455,7 +455,7 @@ Verification results and their dates are maintained in [VERIFICATION.md](VERIFIC
 - Only the four documented protocols and supported API-key authentication are implemented. Other provider-specific APIs, custom auth, OAuth subscriptions, and advanced model orchestration require further integration.
 - The integrated editor handles existing bounded text files. It does not claim language-server completion, debugging, a terminal emulator, or automatic draft recovery after a browser restart.
 - Retrieval is bounded lexical scanning, not a semantic/vector index. There is no automatic summarization, OCR, language server, or background repository index.
-- Approved Bash commands run with the local OS account's access, outside any OS sandbox. Native Windows terminal execution is unsupported.
+- Local `host` terminal mode runs approved Bash commands with the OS account's access. Linux `sandbox` mode requires a working Bubblewrap installation; private mode rejects `host` execution. Native Windows terminal execution is unsupported.
 - Token counts are estimated until provider usage is returned. Context changes conservatively omit older dependent assistant replies; selected previous chats include user-authored turns only.
 - Browser coverage targets Chromium desktop/mobile workflows, not exhaustive cross-browser, accessibility, or adversarial security certification. Verify remote CI separately.
 
