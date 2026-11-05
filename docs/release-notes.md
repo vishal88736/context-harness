@@ -10,7 +10,7 @@ Extract the package and run **Launch Canopy.cmd** on Windows or **Launch Canopy.
 
 Packages include their Node.js runtime and runtime dependencies. Windows x64, Linux x64, macOS Apple silicon, and macOS Intel are separate build targets. Check the release workflow for the platforms actually verified and compare the archive with its `.sha256` file before running it. Windows uses native PowerShell commands with the same explicit approval policy; WSL and Git Bash are unnecessary for the app.
 
-The [2026-11-05 artifact-only run](https://github.com/vishal88736/context-harness/actions/runs/41916960280) verified all three targets at `6a788c0`, including actual extracted-app startup, conversation persistence after restart, and occupied-port rejection. It did not publish a public release or deploy the website. Later releases need their own matching workflow results.
+The [2026-11-05 artifact-only run](https://github.com/vishal88736/context-harness/actions/runs/42057057828) verified all four targets at `83e1b6f`, including actual extracted-app startup, conversation persistence after restart, occupied-port rejection, and graceful shutdown. Windows additionally passed its native launcher from a path with spaces and Unicode. It did not publish a public release or deploy the website. Later releases need their own matching workflow results.
 
 These are portable local apps, not signed native installers. Approved local shell commands run with your OS account's access. Tool permissions and reviews remain important.
 

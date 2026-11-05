@@ -64,3 +64,7 @@ Backup/restore refuses existing destinations and verifies checksums, SQLite inte
 | Windows blocks the launcher | These are unsigned portable packages. Follow your organization's application policy; signed installers are not supplied.     |
 
 The release target is Windows x64. Native Windows ARM64, a signed MSI installer, automatic updates, and Windows ACL isolation of approved commands are not implemented. Read [VERIFICATION.md](../VERIFICATION.md) for observed native Windows CI results; a Linux test or a download-card fixture does not prove Windows execution.
+
+The [verified Windows artifact](https://github.com/vishal88736/context-harness/actions/runs/42057057828) is named **canopy-win32-x64**. Its clean `83e1b6f` build passed native ZIP extraction, `.cmd` launch from a path with spaces and Unicode, restart persistence, occupied-port rejection, and graceful IPC shutdown. The separate [Windows browser/backend run](https://github.com/vishal88736/context-harness/actions/runs/42057061369) passed 78 backend cases and all 26 browser workflows, with two explicitly recorded platform skips.
+
+Platform references: [Node child-process behavior on Windows](https://nodejs.org/api/child_process.html#spawning-bat-and-cmd-files-on-windows), [Windows PowerShell command-line options](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_powershell_exe?view=powershell-5.1), and [Windows process-tree termination](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/taskkill).

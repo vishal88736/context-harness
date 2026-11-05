@@ -13,7 +13,7 @@ Download the archive for your platform from a published release or the website:
 | `canopy-darwin-x64.tar.gz`   | macOS, Intel              |
 | `canopy-win32-x64.zip`       | Windows, Intel/AMD 64-bit |
 
-The earlier [three-platform package validation](https://github.com/vishal88736/context-harness/actions/runs/41916960280) passed at revision `6a788c0`; that run predates Windows support. Current releases include a separate Windows job and must pass every target's package check before publishing. See [the dated verification record](../VERIFICATION.md) for observed results and [Windows setup](windows.md) for native ZIP instructions.
+The [four-platform package validation](https://github.com/vishal88736/context-harness/actions/runs/42057057828) passed at revision `83e1b6f`, including the native Windows ZIP and `.cmd` launcher. It was an artifact-only run, without a public release. Current releases must pass every target's package check before publishing. See [the dated verification record](../VERIFICATION.md) for exact counts and [Windows setup](windows.md) for native ZIP instructions.
 
 Archives contain the app, runtime dependencies, matching Node runtime/license, launcher, and administrative commands. A separate Node installation is unnecessary for a normal portable launch. Project-specific compilers, interpreters, Git, and other developer tools remain your responsibility.
 
