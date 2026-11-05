@@ -74,7 +74,7 @@ test("Production process serves real assets and persists a complete conversation
         CANOPY_WORKSPACE: root,
         CANOPY_DATA_DIR: path.join(temp, "data"),
       },
-      stdio: ["ignore", "pipe", "pipe"],
+      stdio: ["ignore", "pipe", "pipe", "ipc"],
     });
     child.stdout?.on("data", (chunk) => {
       log += String(chunk);
@@ -97,8 +97,18 @@ test("Production process serves real assets and persists a complete conversation
   async function stop() {
     if (!child || child.exitCode !== null) return;
     const exit = once(child, "exit");
-    child.kill("SIGTERM");
-    await exit;
+    child.send({ type: "canopy:shutdown" });
+    const timeout = setTimeout(() => child?.kill("SIGKILL"), 15_000);
+    try {
+      const [code] = await exit;
+      assert.equal(
+        code,
+        0,
+        "The built server must stop gracefully on every OS.",
+      );
+    } finally {
+      clearTimeout(timeout);
+    }
     child = null;
   }
   async function bootstrap() {

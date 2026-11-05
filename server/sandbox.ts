@@ -1,16 +1,14 @@
 import { existsSync } from "node:fs";
-import { spawn, spawnSync, type ChildProcess } from "node:child_process";
-import path from "node:path";
+import { spawnSync, type ChildProcess } from "node:child_process";
+import {
+  powershellBinary,
+  powershellArguments,
+  terminateWindowsTree,
+} from "../shared/windows.mjs";
 
 export type TerminalPolicy = "host" | "disabled" | "sandbox";
 export const commandShell = () =>
   process.platform === "win32" ? "Windows PowerShell" : "Bash";
-export const windowsSystemFile = (...parts: string[]) =>
-  path.win32.join(
-    process.env.SystemRoot ?? "C:\\Windows",
-    "System32",
-    ...parts,
-  );
 
 export function commandEnvironment(policy: TerminalPolicy) {
   const env: NodeJS.ProcessEnv = {
@@ -33,6 +31,13 @@ export function commandEnvironment(policy: TerminalPolicy) {
       "APPDATA",
       "TEMP",
       "TMP",
+      "ALLUSERSPROFILE",
+      "ProgramData",
+      "ProgramFiles",
+      "ProgramFiles(x86)",
+      "CommonProgramFiles",
+      "CommonProgramFiles(x86)",
+      "PSModulePath",
     ])
       if (process.env[key]) env[key] = process.env[key];
   }
@@ -42,13 +47,7 @@ export function commandEnvironment(policy: TerminalPolicy) {
 export function terminateCommand(child: ChildProcess) {
   if (!child.pid) return;
   if (process.platform === "win32") {
-    // Terminate this approved command and its descendants, never unrelated tasks.
-    const killer = spawn(
-      windowsSystemFile("taskkill.exe"),
-      ["/PID", String(child.pid), "/T", "/F"],
-      { windowsHide: true, stdio: "ignore" },
-    );
-    killer.on("error", () => child.kill("SIGKILL"));
+    terminateWindowsTree(child);
     return;
   }
   try {
@@ -110,18 +109,11 @@ export function commandSpec(
   if (policy === "disabled")
     throw new Error("Terminal execution is disabled by deployment policy.");
   if (policy === "host" && platform === "win32") {
-    const script = `[Console]::OutputEncoding = New-Object System.Text.UTF8Encoding $false; $OutputEncoding = [Console]::OutputEncoding; $ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue'; $global:LASTEXITCODE = 0;\n& {\n${command}\n}\nexit $LASTEXITCODE`;
+    const location = cwd.replaceAll("'", "''");
+    const script = `Set-Location -LiteralPath '${location}'; [Environment]::CurrentDirectory = (Get-Location).ProviderPath; $global:LASTEXITCODE = 0;\n${command}\nexit $LASTEXITCODE`;
     return {
-      binary: windowsSystemFile("WindowsPowerShell", "v1.0", "powershell.exe"),
-      args: [
-        "-NoLogo",
-        "-NoProfile",
-        "-NonInteractive",
-        "-OutputFormat",
-        "Text",
-        "-EncodedCommand",
-        Buffer.from(script, "utf16le").toString("base64"),
-      ],
+      binary: powershellBinary,
+      args: powershellArguments(script),
     };
   }
   if (policy === "host")

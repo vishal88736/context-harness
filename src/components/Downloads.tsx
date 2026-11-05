@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Download, Laptop, TerminalSquare } from "lucide-react";
 import "../downloads.css";
+import targets from "../../shared/release-platforms.json";
 
 type Artifact = {
   platform: string;
@@ -9,11 +10,7 @@ type Artifact = {
   bytes: number;
 };
 type Release = { version: string | null; artifacts: Artifact[] };
-const platforms = [
-  ["linux-x64", "Linux", "64-bit Intel / AMD"],
-  ["darwin-arm64", "macOS", "Apple silicon"],
-  ["darwin-x64", "macOS", "Intel"],
-] as const;
+const platforms = Object.entries(targets);
 export function parseRelease(value: unknown): Release {
   const data = value as Partial<Release>;
   if (
@@ -23,17 +20,21 @@ export function parseRelease(value: unknown): Release {
     (data.version !== null && !/^v\d+\.\d+\.\d+$/.test(String(data.version)))
   )
     throw new Error("Invalid release metadata.");
-  const artifacts = data.artifacts.filter(
-    (a) =>
-      platforms.some((p) => p[0] === a.platform) &&
-      /^\/downloads\/v\d+\.\d+\.\d+\/canopy-(linux-x64|darwin-arm64|darwin-x64)\.tar\.gz$/.test(
-        a.url,
-      ) &&
-      a.url === `/downloads/${data.version}/canopy-${a.platform}.tar.gz` &&
+  const artifacts = data.artifacts.filter((a) => {
+    const target =
+      a && Object.hasOwn(targets, a.platform)
+        ? targets[a.platform as keyof typeof targets]
+        : null;
+    return (
+      data.version !== null &&
+      target &&
+      a.url ===
+        `/downloads/${data.version}/canopy-${a.platform}.${target.extension}` &&
       /^[a-f0-9]{64}$/.test(a.sha256) &&
       Number.isSafeInteger(a.bytes) &&
-      a.bytes > 0,
-  );
+      a.bytes > 0
+    );
+  });
   return { version: data.version ?? null, artifacts };
 }
 export function Downloads() {
@@ -76,7 +77,7 @@ export function Downloads() {
         </p>
       )}
       <div className="home-download-grid">
-        {platforms.map(([platform, name, architecture]) => {
+        {platforms.map(([platform, { name, architecture }]) => {
           const artifact = release?.artifacts.find(
             (a) => a.platform === platform,
           );
@@ -108,7 +109,8 @@ export function Downloads() {
       <div className="home-download-guide">
         <TerminalSquare size={19} />
         <p>
-          Extract the archive and open <strong>Launch Canopy.command</strong>.
+          Extract the archive and open <strong>Launch Canopy.cmd</strong> on
+          Windows or <strong>Launch Canopy.command</strong> on macOS/Linux.
           Canopy opens in your browser and runs on your computer. Your selected
           context is sent to the provider you connect.
         </p>

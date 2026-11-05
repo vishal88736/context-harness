@@ -70,9 +70,9 @@ In GitHub Actions, run **Build downloadable apps** on `main`:
 
 1. Set a new semantic version such as `v1.0.0`.
 2. Leave **publish** off for an artifact-only rehearsal, or enable it to publish a GitHub release after every platform's checks pass.
-3. Wait for Linux x64, macOS Apple silicon, and macOS Intel jobs to finish. Each job builds the app, includes its matching Node runtime and runtime dependencies, then extracts and starts the resulting archive and tests persistence after restart.
+3. Wait for Windows x64, Linux x64, macOS Apple silicon, and macOS Intel jobs to finish. Each job builds the app, includes its matching Node runtime and runtime dependencies, then extracts and starts the resulting archive and tests persistence after restart. Windows additionally checks its native command launcher from a path containing spaces and Unicode.
 
-Published releases cannot overwrite an existing version or tag. Packages and manifests must come from the same clean commit. Native Windows packages and signed native installers are not supplied by this workflow.
+Published releases cannot overwrite an existing version or tag. Packages and manifests must come from the same clean commit. Windows uses a portable ZIP; Linux/macOS use `.tar.gz` archives. Signed native installers and Windows ARM64 packages are not supplied by this workflow.
 
 For an artifact-only run, download each `canopy-...` artifact from Actions and extract its files into one `release-files/` directory in CloudShell. Each platform supplies its archive, `.sha256`, and `PLATFORM-manifest.json`.
 
@@ -81,8 +81,12 @@ If you published a GitHub release, CloudShell can download its public assets wit
 ```bash
 export CANOPY_VERSION=v1.0.0
 mkdir -p release-files
-for canopy_platform in linux-x64 darwin-arm64 darwin-x64; do
-  curl --fail --location "https://github.com/vishal88736/context-harness/releases/download/$CANOPY_VERSION/canopy-$canopy_platform.tar.gz" --output "release-files/canopy-$canopy_platform.tar.gz"
+for canopy_platform in linux-x64 darwin-arm64 darwin-x64 win32-x64; do
+  canopy_extension=tar.gz
+  if [[ "$canopy_platform" == win32-x64 ]]; then canopy_extension=zip; fi
+  canopy_archive="canopy-$canopy_platform.$canopy_extension"
+  curl --fail --location "https://github.com/vishal88736/context-harness/releases/download/$CANOPY_VERSION/$canopy_archive" --output "release-files/$canopy_archive"
+  curl --fail --location "https://github.com/vishal88736/context-harness/releases/download/$CANOPY_VERSION/$canopy_archive.sha256" --output "release-files/$canopy_archive.sha256"
   curl --fail --location "https://github.com/vishal88736/context-harness/releases/download/$CANOPY_VERSION/$canopy_platform-manifest.json" --output "release-files/$canopy_platform-manifest.json"
 done
 ```

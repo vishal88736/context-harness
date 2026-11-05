@@ -6,13 +6,14 @@ Canopy runs locally and opens its coding workspace in your browser. Choose proje
 
 Download the archive for your platform from a published release or the website:
 
-| Package                      | Target                  |
-| ---------------------------- | ----------------------- |
-| `canopy-linux-x64.tar.gz`    | Linux, Intel/AMD 64-bit |
-| `canopy-darwin-arm64.tar.gz` | macOS, Apple silicon    |
-| `canopy-darwin-x64.tar.gz`   | macOS, Intel            |
+| Package                      | Target                    |
+| ---------------------------- | ------------------------- |
+| `canopy-linux-x64.tar.gz`    | Linux, Intel/AMD 64-bit   |
+| `canopy-darwin-arm64.tar.gz` | macOS, Apple silicon      |
+| `canopy-darwin-x64.tar.gz`   | macOS, Intel              |
+| `canopy-win32-x64.zip`       | Windows, Intel/AMD 64-bit |
 
-The [2026-11-05 package validation](https://github.com/vishal88736/context-harness/actions/runs/41916960280) passed on all three targets at revision `6a788c0`. This was an artifact-only run, with downloads available in its Actions artifacts for 30 days; it did not publish a public release. Linux was also tested locally. Check the relevant workflow result for any later release. Windows native terminal execution is unsupported.
+The earlier [three-platform package validation](https://github.com/vishal88736/context-harness/actions/runs/41916960280) passed at revision `6a788c0`; that run predates Windows support. Current releases include a separate Windows job and must pass every target's package check before publishing. See [the dated verification record](../VERIFICATION.md) for observed results and [Windows setup](windows.md) for native ZIP instructions.
 
 Archives contain the app, runtime dependencies, matching Node runtime/license, launcher, and administrative commands. A separate Node installation is unnecessary for a normal portable launch. Project-specific compilers, interpreters, Git, and other developer tools remain your responsibility.
 
@@ -27,11 +28,13 @@ cd canopy
 
 On macOS use `shasum -a 256` for the checksum, then open **Launch Canopy.command** or run it from Terminal. These are portable apps, not signed native installers. The launcher opens `http://127.0.0.1:4317/workspace`. Keep its terminal running; Ctrl+C stops the service.
 
+On Windows, verify the ZIP with `Get-FileHash -Algorithm SHA256`, use **Extract All**, and open **Launch Canopy.cmd** inside the extracted `canopy` folder. No WSL, Git Bash, or separate Node installation is required for the app. Approved agent commands use Windows PowerShell; project-specific tools remain separate. [Full Windows instructions](windows.md).
+
 ## Projects and data
 
 The launcher initially opens `~/Canopy Projects`. Use **Open folder** to connect other project folders. Normal browsing does not automatically add files to AI context.
 
-The launcher stores app data in `${XDG_DATA_HOME:-~/.local/share}/canopy/data` unless `CANOPY_DATA_DIR` is set. This directory contains SQLite, its matching encryption key, conversations, settings, and invocation records. It lives outside the extracted app, so replacing the app directory does not delete conversations.
+The launcher stores app data in `%LOCALAPPDATA%\Canopy\data` on Windows or `${XDG_DATA_HOME:-~/.local/share}/canopy/data` on Linux/macOS, unless `CANOPY_DATA_DIR` is set. This directory contains SQLite, its matching encryption key, conversations, settings, and invocation records. It lives outside the extracted app, so replacing the app directory does not delete conversations.
 
 Optional launch configuration:
 

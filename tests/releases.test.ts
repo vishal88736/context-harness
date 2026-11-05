@@ -87,3 +87,47 @@ test("download publishing rejects unverified packages before accessing AWS", asy
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+test("Windows publishing accepts only ZIP filenames and checks their bytes before AWS access", async () => {
+  const directory = await mkdtemp(
+    path.join(tmpdir(), "canopy-windows-release-"),
+  );
+  const filename = "canopy-win32-x64.zip";
+  const archive = Buffer.from("invalid-zip-integrity-fixture");
+  const manifest = {
+    dirty: false,
+    standalone: true,
+    version: "v1.0.0",
+    commit: "a".repeat(40),
+    platform: "win32-x64",
+    filename,
+    bytes: archive.length,
+    sha256: "0".repeat(64),
+  };
+  try {
+    await writeFile(path.join(directory, filename), archive);
+    for (const [name, expected] of [
+      ["canopy-win32-x64.tar.gz", /Unreleased, dirty or malformed/],
+      [filename, /Package integrity check failed/],
+    ] as const) {
+      await writeFile(
+        path.join(directory, "win32-x64-manifest.json"),
+        JSON.stringify({ ...manifest, filename: name }),
+      );
+      const result = spawnSync(
+        process.execPath,
+        [path.resolve("scripts/publish-downloads.mjs"), directory],
+        {
+          encoding: "utf8",
+          env: { ...process.env, PATH: path.join(directory, "no-executables") },
+          timeout: 10_000,
+        },
+      );
+      assert.equal(result.error, undefined);
+      assert.notEqual(result.status, 0);
+      assert.match(result.stderr, expected);
+    }
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});

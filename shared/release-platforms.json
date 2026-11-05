@@ -1,0 +1,30 @@
+{
+  "linux-x64": {
+    "name": "Linux",
+    "architecture": "64-bit Intel / AMD",
+    "extension": "tar.gz",
+    "runtime": "node",
+    "launcher": "Launch Canopy.command"
+  },
+  "darwin-arm64": {
+    "name": "macOS",
+    "architecture": "Apple silicon",
+    "extension": "tar.gz",
+    "runtime": "node",
+    "launcher": "Launch Canopy.command"
+  },
+  "darwin-x64": {
+    "name": "macOS",
+    "architecture": "Intel",
+    "extension": "tar.gz",
+    "runtime": "node",
+    "launcher": "Launch Canopy.command"
+  },
+  "win32-x64": {
+    "name": "Windows",
+    "architecture": "64-bit Intel / AMD",
+    "extension": "zip",
+    "runtime": "node.exe",
+    "launcher": "Launch Canopy.cmd"
+  }
+}

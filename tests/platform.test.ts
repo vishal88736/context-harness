@@ -42,17 +42,44 @@ test("The native host shell preserves Unicode output and nonzero exit codes", ()
   const result = spawnSync(spec.binary, spec.args, {
     env: commandEnvironment("host"),
     encoding: "utf8",
-    timeout: 15_000,
+    stdio: ["ignore", "pipe", "pipe"],
+    timeout: 30_000,
     windowsHide: true,
   });
-  assert.equal(result.error, undefined);
+  assert.equal(
+    result.error,
+    undefined,
+    JSON.stringify({ stdout: result.stdout, stderr: result.stderr }),
+  );
   assert.equal(result.status, 7, result.stderr);
   assert.match(result.stdout, /Canopy café 😀/);
+  const executable =
+    process.platform === "win32"
+      ? `'${process.execPath.replaceAll("'", "''")}'`
+      : `'${process.execPath.replaceAll("'", "'\\''")}'`;
+  const external = commandSpec(
+    "host",
+    `${process.platform === "win32" ? "& " : ""}${executable} -e 'process.exit(9)'`,
+    process.cwd(),
+  );
+  const exit = spawnSync(external.binary, external.args, {
+    env: commandEnvironment("host"),
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+    timeout: 30_000,
+    windowsHide: true,
+  });
+  assert.equal(exit.error, undefined, exit.stderr);
+  assert.equal(
+    exit.status,
+    9,
+    "Native program errors must remain failures in the shell result.",
+  );
 });
 
 test(
   "Stopping a native command also terminates its descendants",
-  { timeout: 20_000 },
+  { timeout: 45_000 },
   async () => {
     const temp = await mkdtemp(path.join(tmpdir(), "Canopy process tree "));
     await writeFile(
@@ -78,13 +105,16 @@ test(
       env: commandEnvironment("host"),
       detached: process.platform !== "win32",
       windowsHide: true,
-      stdio: "ignore",
+      stdio: ["ignore", "pipe", "pipe"],
     });
+    let commandLog = "";
+    child.stdout.on("data", (chunk) => (commandLog += chunk));
+    child.stderr.on("data", (chunk) => (commandLog += chunk));
     const closed = once(child, "close");
     void closed.catch(() => {});
     try {
       let ready = false;
-      for (let i = 0; i < 100; i++) {
+      for (let i = 0; i < 600; i++) {
         try {
           await access(path.join(temp, "child-ready"));
           ready = true;
@@ -96,7 +126,11 @@ test(
           throw new Error("Native shell exited before starting its child.");
         await new Promise((resolve) => setTimeout(resolve, 50));
       }
-      assert.equal(ready, true, "The descendant must have actually started.");
+      assert.equal(
+        ready,
+        true,
+        `The descendant must have actually started. ${commandLog}`,
+      );
       terminateCommand(child);
       await closed;
       await new Promise((resolve) => setTimeout(resolve, 2200));

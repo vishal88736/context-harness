@@ -11,6 +11,8 @@ import {
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import path from "node:path";
+import platforms from "../shared/release-platforms.json" with { type: "json" };
+import { createArchive } from "./archives.mjs";
 const sha = execFileSync("git", ["rev-parse", "HEAD"], {
   encoding: "utf8",
 }).trim();
@@ -28,8 +30,8 @@ if (
     "Build outputs do not match this clean commit. Run npm run build first.",
   );
 const platform = `${process.platform}-${process.arch}`;
-if (!["linux-x64", "darwin-arm64", "darwin-x64"].includes(platform))
-  throw new Error("This release target is not supported yet.");
+const target = platforms[platform];
+if (!target) throw new Error("This release target is not supported yet.");
 const version =
   process.env.CANOPY_RELEASE_VERSION ??
   `v${JSON.parse(await readFile("package.json", "utf8")).version}`;
@@ -60,7 +62,7 @@ try {
     encoding: "utf8",
   })
     .trim()
-    .split("\n")
+    .split(/\r?\n/)
     .filter(Boolean)) {
     await mkdir(path.dirname(path.join(bundle, file)), { recursive: true });
     await cp(file, path.join(bundle, file));
@@ -72,14 +74,16 @@ try {
     path.join(bundle, "scripts/scheduled-backup.mjs"),
   );
   await cp(
-    "deploy/Launch Canopy.command",
-    path.join(bundle, "Launch Canopy.command"),
+    path.join("deploy", target.launcher),
+    path.join(bundle, target.launcher),
   );
-  await chmod(path.join(bundle, "Launch Canopy.command"), 0o755);
+  await chmod(path.join(bundle, target.launcher), 0o755);
+  await mkdir(path.join(bundle, "shared"));
+  await cp("shared/windows.mjs", path.join(bundle, "shared/windows.mjs"));
   if (!process.argv.includes("--thin")) {
     await mkdir(path.join(bundle, "runtime"));
-    await cp(process.execPath, path.join(bundle, "runtime/node"));
-    await chmod(path.join(bundle, "runtime/node"), 0o755);
+    await cp(process.execPath, path.join(bundle, "runtime", target.runtime));
+    await chmod(path.join(bundle, "runtime", target.runtime), 0o755);
     const license = await fetch(
       `https://raw.githubusercontent.com/nodejs/node/${process.version}/LICENSE`,
       { signal: AbortSignal.timeout(30_000) },
@@ -92,9 +96,20 @@ try {
       path.join(bundle, "runtime/LICENSE-node"),
       await license.text(),
     );
+    if (!process.env.npm_execpath)
+      throw new Error(
+        "Run packaging through npm run release:bundle so its npm CLI is available.",
+      );
     execFileSync(
-      "npm",
-      ["ci", "--omit=dev", "--ignore-scripts", "--no-fund", "--no-audit"],
+      process.execPath,
+      [
+        process.env.npm_execpath,
+        "ci",
+        "--omit=dev",
+        "--ignore-scripts",
+        "--no-fund",
+        "--no-audit",
+      ],
       { cwd: bundle, stdio: "inherit" },
     );
   }
@@ -115,8 +130,12 @@ try {
       2,
     ) + "\n",
   );
-  const archive = path.join(destination, `canopy-${platform}.tar.gz`);
-  execFileSync("tar", ["-czf", archive, "-C", temporary, "canopy"]);
+  const archive = path.join(
+    destination,
+    `canopy-${platform}.${target.extension}`,
+  );
+  await rm(archive, { force: true });
+  createArchive(bundle, archive);
   const digest = createHash("sha256")
     .update(await readFile(archive))
     .digest("hex");

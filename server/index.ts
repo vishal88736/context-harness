@@ -11,6 +11,7 @@ const service = await createApp({
   ...(existsSync(path.join(staticDir, "index.html")) ? { staticDir } : {}),
 });
 const server = service.app.listen(port, host);
+let shuttingDown = false;
 server.once("listening", () =>
   console.log(
     config.access.mode === "private"
@@ -24,11 +25,15 @@ server.once("listening", () =>
   ),
 );
 server.on("error", (error) => {
+  shuttingDown = true;
   console.error(error.message);
   service.close();
   process.exitCode = 1;
+  if (process.connected) process.disconnect();
 });
 const shutdown = () => {
+  if (shuttingDown) return;
+  shuttingDown = true;
   service.agent.stopAll();
   server.close(() => {
     service.close();
@@ -39,3 +44,15 @@ const shutdown = () => {
 };
 process.once("SIGINT", shutdown);
 process.once("SIGTERM", shutdown);
+if (process.send) {
+  process.on("message", (message) => {
+    if (
+      message &&
+      typeof message === "object" &&
+      "type" in message &&
+      message.type === "canopy:shutdown"
+    )
+      shutdown();
+  });
+  process.once("disconnect", shutdown);
+}

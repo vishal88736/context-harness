@@ -11,9 +11,12 @@ import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { aws, deployment, exists } from "./aws-common.mjs";
+import platforms from "../shared/release-platforms.json" with { type: "json" };
 const directory = path.resolve(process.argv[2] ?? "artifacts/releases");
 const entries = (await readdir(directory)).filter((name) =>
-  /^(linux-x64|darwin-arm64|darwin-x64)-manifest\.json$/.test(name),
+  Object.keys(platforms).some(
+    (platform) => name === `${platform}-manifest.json`,
+  ),
 );
 if (!entries.length)
   throw new Error("No verified app package manifests found.");
@@ -21,13 +24,15 @@ const artifacts = [];
 let version, commit;
 for (const entry of entries) {
   const m = JSON.parse(await readFile(path.join(directory, entry), "utf8"));
+  const target =
+    m && Object.hasOwn(platforms, m.platform) ? platforms[m.platform] : null;
   if (
+    !target ||
     m.dirty !== false ||
     m.standalone !== true ||
     !/^v\d+\.\d+\.\d+$/.test(m.version) ||
     !/^[a-f0-9]{40}$/.test(m.commit) ||
-    !/^(linux-x64|darwin-arm64|darwin-x64)$/.test(m.platform) ||
-    m.filename !== `canopy-${m.platform}.tar.gz`
+    m.filename !== `canopy-${m.platform}.${target.extension}`
   )
     throw new Error("Unreleased, dirty or malformed package manifest.");
   if (entry !== `${m.platform}-manifest.json`)
@@ -74,7 +79,7 @@ for (const artifact of artifacts) {
       "--body",
       path.join(directory, path.basename(key)),
       "--content-type",
-      "application/gzip",
+      artifact.url.endsWith(".zip") ? "application/zip" : "application/gzip",
       "--content-disposition",
       `attachment; filename="${path.basename(key)}"`,
       "--metadata",

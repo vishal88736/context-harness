@@ -40,15 +40,15 @@ The release model is a **public website with downloadable local apps**. AWS host
 
 ## Requirements
 
-Portable packages include their Node runtime and runtime dependencies. Source development/builds require **Node 22.13+** and npm; Node 24 is the release/CI target. Node must include built-in `node:sqlite`. Terminal tools additionally require `/bin/bash`. Release targets are Linux x64, macOS Apple silicon, and macOS Intel; native Windows command execution is not implemented. Check each platform's release job for its verification result.
+Portable packages include their Node runtime and runtime dependencies. Source development/builds require **Node 22.13+** and npm; Node 24 is the release/CI target. Node must include built-in `node:sqlite`. Commands use Bash on Linux/macOS and Windows PowerShell on Windows. Release targets are **Windows x64**, Linux x64, macOS Apple silicon, and macOS Intel. Check each platform's release job for its verification result.
 
 ## Download the local app
 
-From a published release, choose the archive for your OS, verify its SHA-256, extract it, and run **Launch Canopy.command**. The local workspace opens at `http://127.0.0.1:4317/workspace`. Keep the launcher running and use **Open folder** to connect your projects.
+From a published release, choose the archive for your OS and verify its SHA-256. On **Windows**, extract `canopy-win32-x64.zip` and open **Launch Canopy.cmd**. On Linux/macOS, extract the `.tar.gz` and run **Launch Canopy.command**. The local workspace opens at `http://127.0.0.1:4317/workspace`. Keep the launcher running and use **Open folder** to connect your projects. [Windows installation and troubleshooting](docs/windows.md).
 
-The launcher stores data outside the app directory, under `${XDG_DATA_HOME:-~/.local/share}/canopy/data` by default, so an app upgrade can preserve conversations and provider settings. It initially opens `~/Canopy Projects`; additional local folders remain available through the folder picker. See [local app setup, upgrades, and backups](docs/local-app.md).
+The launcher stores data outside the app directory: `%LOCALAPPDATA%\Canopy\data` on Windows, or `${XDG_DATA_HOME:-~/.local/share}/canopy/data` on Linux/macOS. This preserves conversations and provider settings across app upgrades. It initially opens `~/Canopy Projects`; additional local folders remain available through the folder picker. See [local app setup, upgrades, and backups](docs/local-app.md).
 
-Downloads appear on the website only after verified release manifests and archives are published. The portable package uses a browser interface; signed native installers and Windows packages are not included.
+Downloads appear on the website only after verified release manifests and archives are published. These are portable apps with a browser interface; signed native installers and native Windows ARM64 packages are not included.
 
 ## Website and releases
 
@@ -311,15 +311,16 @@ Checksums, SQLite integrity, schema compatibility, and matching encrypted provid
 
 Release/security entry points:
 
-| Module                                                              | Responsibility                                                                         |
-| ------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| `src/site.tsx`, `Downloads.tsx`, `vite.site.config.ts`              | Independent public website and validated download metadata.                            |
-| `WorkspaceAccess.tsx`, `server/access.ts`                           | Private owner login, session/CSRF enforcement, rate limits, and logout.                |
-| `server/runtime.ts`, `server/sandbox.ts`                            | Validated deployment configuration and fail-closed terminal policy.                    |
-| `server/backup.ts`, `scripts/admin.ts`                              | Consistent online snapshots, restore verification, password setup, and smoke commands. |
-| `scripts/launcher.mjs`, `package-release.mjs`, `check-package.mjs`  | Bundled local app launch, clean-source packaging, and extracted-app verification.      |
-| `deploy/aws-site.yml`, `aws-cloudshell.sh`, `scripts/publish-*.mjs` | AWS website/download infrastructure, publishing, integrity checks, and rollback.       |
-| `Dockerfile`, `deploy/compose.yml`, `Caddyfile`                     | Optional isolated private instance with HTTPS and persistent volumes.                  |
+| Module                                                                        | Responsibility                                                                         |
+| ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `src/site.tsx`, `Downloads.tsx`, `vite.site.config.ts`                        | Independent public website and validated download metadata.                            |
+| `WorkspaceAccess.tsx`, `server/access.ts`                                     | Private owner login, session/CSRF enforcement, rate limits, and logout.                |
+| `server/runtime.ts`, `server/sandbox.ts`                                      | Validated deployment configuration and fail-closed terminal policy.                    |
+| `server/backup.ts`, `scripts/admin.ts`                                        | Consistent online snapshots, restore verification, password setup, and smoke commands. |
+| `scripts/launcher.mjs`, `package-release.mjs`, `check-package.mjs`            | Bundled local app launch, clean-source packaging, and extracted-app verification.      |
+| `shared/release-platforms.json`, `shared/windows.mjs`, `scripts/archives.mjs` | Shared platform filenames, native PowerShell/process helpers, and ZIP/tar packaging.   |
+| `deploy/aws-site.yml`, `aws-cloudshell.sh`, `scripts/publish-*.mjs`           | AWS website/download infrastructure, publishing, integrity checks, and rollback.       |
+| `Dockerfile`, `deploy/compose.yml`, `Caddyfile`                               | Optional isolated private instance with HTTPS and persistent volumes.                  |
 
 ```text
 src/
@@ -457,7 +458,7 @@ Verification results and their dates are maintained in [VERIFICATION.md](VERIFIC
 - Only the four documented protocols and supported API-key authentication are implemented. Other provider-specific APIs, custom auth, OAuth subscriptions, and advanced model orchestration require further integration.
 - The integrated editor handles existing bounded text files. It does not claim language-server completion, debugging, a terminal emulator, or automatic draft recovery after a browser restart.
 - Retrieval is bounded lexical scanning, not a semantic/vector index. There is no automatic summarization, OCR, language server, or background repository index.
-- Local `host` terminal mode runs approved Bash commands with the OS account's access. Linux `sandbox` mode requires a working Bubblewrap installation; private mode rejects `host` execution. Native Windows terminal execution is unsupported.
+- Local `host` terminal mode runs approved Bash or Windows PowerShell commands with the OS account's access. Linux `sandbox` mode requires a working Bubblewrap installation; private mode rejects `host` execution. Windows ARM64 and signed native installers are not release targets.
 - Token counts are estimated until provider usage is returned. Context changes conservatively omit older dependent assistant replies; selected previous chats include user-authored turns only.
 - Browser coverage targets Chromium desktop/mobile workflows, not exhaustive cross-browser, accessibility, or adversarial security certification. Verify remote CI separately.
 

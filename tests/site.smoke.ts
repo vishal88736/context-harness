@@ -80,6 +80,12 @@ test("public website offers verified local downloads without bootstrapping a cod
           sha256: "a".repeat(64),
           bytes: 104857600,
         },
+        {
+          platform: "win32-x64",
+          url: "/downloads/v1.0.0/canopy-win32-x64.zip",
+          sha256: "b".repeat(64),
+          bytes: 94371840,
+        },
       ],
     };
     await page.route("**/downloads/latest.json", (route) =>
@@ -92,6 +98,13 @@ test("public website offers verified local downloads without bootstrapping a cod
     const link = page.getByRole("link", { name: "Download · 100 MB" });
     await link.waitFor();
     assert.equal(await link.getAttribute("href"), manifest.artifacts[0].url);
+    const windowsLink = page.getByRole("link", { name: "Download · 90 MB" });
+    await windowsLink.waitFor();
+    assert.equal(
+      await windowsLink.getAttribute("href"),
+      manifest.artifacts[1].url,
+    );
+    await page.getByText("Launch Canopy.cmd", { exact: true }).waitFor();
     await page
       .locator("#download")
       .screenshot({ path: "artifacts/canopy-public-downloads.png" });
@@ -111,6 +124,10 @@ test("public website offers verified local downloads without bootstrapping a cod
           ...manifest,
           artifacts: [
             { ...manifest.artifacts[0], url: "https://evil.example/app" },
+            {
+              ...manifest.artifacts[1],
+              url: "/downloads/v1.0.0/canopy-win32-x64.tar.gz",
+            },
           ],
         }),
       }),
